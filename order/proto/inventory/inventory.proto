@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package inventory;
+
+option go_package = "github.com/tafu/order-service/proto/inventory";
+
+service InventoryService {
+    // ReserveStock reserves stock for an order item
+    rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+
+    // ReleaseStock releases previously reserved stock
+    rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+
+    // CheckStock checks available stock for a SKU
+    rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
+
+    // ConfirmStock confirms all reservations for an order (after successful payment)
+    rpc ConfirmStock(ConfirmStockRequest) returns (ConfirmStockResponse);
+
+    // ReleaseStockByOrderId releases all reservations for an order (after failed payment)
+    rpc ReleaseStockByOrderId(ReleaseStockByOrderIdRequest) returns (ReleaseStockByOrderIdResponse);
+}
+
+message ReserveStockRequest {
+    string sku_id = 1;
+    int32 quantity = 2;
+    string order_id = 3;  // For tracking purposes
+}
+
+message ReserveStockResponse {
+    bool success = 1;
+    string reservation_id = 2;
+    string error_message = 3;
+}
+
+message ReleaseStockRequest {
+    string reservation_id = 1;
+}
+
+message ReleaseStockResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+message CheckStockRequest {
+    string sku_id = 1;
+}
+
+message CheckStockResponse {
+    bool available = 1;
+    int32 quantity = 2;
+}
+
+message ConfirmStockRequest {
+    string order_id = 1;
+}
+
+message ConfirmStockResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+message ReleaseStockByOrderIdRequest {
+    string order_id = 1;
+}
+
+message ReleaseStockByOrderIdResponse {
+    bool success = 1;
+    string error_message = 2;
+}

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "tafu-review/proto/order";
+
+service OrderService {
+  rpc GetOrderDetail(GetOrderDetailRequest) returns (GetOrderDetailResponse);
+}
+
+message GetOrderDetailRequest {
+  string order_id = 1;
+  string user_id = 2;
+}
+
+message OrderItem {
+  string product_id = 1;
+  string product_name = 2;
+  int32 quantity = 3;
+  double price = 4;
+}
+
+message GetOrderDetailResponse {
+  string order_id = 1;
+  string user_id = 2;
+  string status = 3;  // PENDING, CONFIRMED, SHIPPED, DELIVERED, COMPLETED, CANCELLED
+  repeated OrderItem items = 4;
+  string created_at = 5;
+}

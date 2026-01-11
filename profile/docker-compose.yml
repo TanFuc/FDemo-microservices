@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  tafu-profile:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tafu-profile
+    ports:
+      - "3002:3002"
+    environment:
+      - APP_NAME=tafu-profile
+      - NODE_ENV=development
+      - PORT=3002
+      - API_PREFIX=api/v1
+      - INTERNAL_SERVICE_KEY=your-internal-service-key
+      - MONGODB_URI=mongodb://mongodb:27017
+      - MONGODB_DATABASE=tafu_profile
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - tafu-network
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0
+    container_name: tafu-profile-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tafu-network
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: tafu-profile-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - tafu-network
+
+volumes:
+  mongodb-data:
+  nats-data:
+
+networks:
+  tafu-network:
+    driver: bridge

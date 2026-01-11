@@ -1,0 +1,279 @@
+# ============================================================================
+# TAFU Microservices - Docker Compose with All Databases
+# Version: 1.0.0
+# Date: 2026-01-07
+# Purpose: Complete infrastructure setup for development
+# Usage: docker-compose -f docker-compose.databases.yml up -d
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # ====================
+  # PostgreSQL (Multi-database)
+  # ====================
+  postgres:
+    image: postgres:15-alpine
+    container_name: tafu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tafu_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tafu_secret_2024}
+      POSTGRES_MULTIPLE_DATABASES: identity_db,order_db,inventory_db,payment_db,logistics_db,campaign_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh:ro
+      - ./database/COMPLETE_DATABASE_SCHEMA.sql:/docker-entrypoint-initdb.d/99-complete-schema.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - tafu-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U tafu_admin" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================
+  # MongoDB
+  # ====================
+  mongodb:
+    image: mongo:6.0
+    container_name: tafu-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: tafu_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-tafu_mongo_2024}
+    volumes:
+      - mongodb_data:/data/db
+      - ./database/mongodb/001_init_mongodb.js:/docker-entrypoint-initdb.d/001_init_mongodb.js:ro
+    ports:
+      - "27017:27017"
+    networks:
+      - tafu-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================
+  # Redis
+  # ====================
+  redis:
+    image: redis:7-alpine
+    container_name: tafu-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-tafu_redis_2024}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - tafu-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-tafu_redis_2024}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================
+  # Elasticsearch
+  # ====================
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: tafu-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - cluster.name=tafu-cluster
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - tafu-network
+    healthcheck:
+      test: curl -s http://localhost:9200/_cluster/health | grep -q '"status":"green"\|"status":"yellow"'
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ====================
+  # Kibana (Elasticsearch Dashboard)
+  # ====================
+  kibana:
+    image: kibana:8.11.0
+    container_name: tafu-kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - tafu-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # ====================
+  # ClickHouse (Analytics)
+  # ====================
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: tafu-clickhouse
+    restart: unless-stopped
+    environment:
+      - CLICKHOUSE_DB=analytics
+      - CLICKHOUSE_USER=tafu_admin
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-tafu_click_2024}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./tafu-analytic/migrations/001_init_schema.sql:/docker-entrypoint-initdb.d/001_init_schema.sql:ro
+    ports:
+      - "8123:8123" # HTTP
+      - "9000:9000" # Native
+    networks:
+      - tafu-network
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================
+  # MinIO (S3-Compatible Object Storage)
+  # ====================
+  minio:
+    image: minio/minio:latest
+    container_name: tafu-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: tafu_admin
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-tafu_minio_2024}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000" # API (conflicts with ClickHouse - change if needed)
+      - "9001:9001" # Console
+    networks:
+      - tafu-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ====================
+  # NATS JetStream (Message Broker)
+  # ====================
+  nats:
+    image: nats:2.10-alpine
+    container_name: tafu-nats
+    restart: unless-stopped
+    command: [ "-js", "-m", "8222" ]
+    ports:
+      - "4222:4222" # Client
+      - "8222:8222" # Management
+      - "6222:6222" # Cluster
+    volumes:
+      - nats_data:/data
+    networks:
+      - tafu-network
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ====================
+  # RabbitMQ (Task Queue for Notifications)
+  # ====================
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: tafu-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: tafu_admin
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-tafu_rabbit_2024}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "5672:5672" # AMQP
+      - "15672:15672" # Management UI
+    networks:
+      - tafu-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ====================
+  # Redis Commander (Redis GUI)
+  # ====================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: tafu-redis-commander
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-tafu_redis_2024}
+    ports:
+      - "8081:8081"
+    networks:
+      - tafu-network
+    depends_on:
+      - redis
+
+  # ====================
+  # Mongo Express (MongoDB GUI)
+  # ====================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: tafu-mongo-express
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: tafu_admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-tafu_mongo_2024}
+      ME_CONFIG_MONGODB_URL: mongodb://tafu_admin:${MONGO_PASSWORD:-tafu_mongo_2024}@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    ports:
+      - "8082:8081"
+    networks:
+      - tafu-network
+    depends_on:
+      - mongodb
+
+# ====================
+# Networks
+# ====================
+networks:
+  tafu-network:
+    driver: bridge
+    name: tafu-network
+
+# ====================
+# Volumes
+# ====================
+volumes:
+  postgres_data:
+    name: tafu-postgres-data
+  mongodb_data:
+    name: tafu-mongodb-data
+  redis_data:
+    name: tafu-redis-data
+  elasticsearch_data:
+    name: tafu-elasticsearch-data
+  clickhouse_data:
+    name: tafu-clickhouse-data
+  minio_data:
+    name: tafu-minio-data
+  nats_data:
+    name: tafu-nats-data
+  rabbitmq_data:
+    name: tafu-rabbitmq-data

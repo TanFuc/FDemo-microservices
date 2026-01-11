@@ -1,0 +1,37 @@
+server:
+  port: 8080
+  prefork: false
+
+services:
+  catalog_url: "http://catalog-service:3000"
+  cart_url: "http://cart-service:3000"
+  order_url: "http://order-service:3000"
+  identity_url: "http://identity-service:3000"
+  # === NEW SERVICES ===
+  profile_url: "http://profile-service:3000"
+  payment_url: "http://payment-service:3000"
+  logistic_url: "http://logistics-service:3000"
+  media_url: "http://media-service:3000"
+  review_url: "http://review-service:3000"
+  search_url: "http://search-service:3000"
+  campaign_url: "http://campaign-service:3000"
+  analytic_url: "http://analytics-service:3000"
+  inventory_url: "http://inventory-service:3000"
+  notification_url: "http://notification-service:3000"
+
+internal:
+  service_key: "change-this-internal-service-key-in-production"
+
+redis:
+  host: "localhost"
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: "your-super-secret-key-change-in-production"
+  issuer: "api-gateway"
+
+rate_limit:
+  max_requests: 100
+  expiration_seconds: 60

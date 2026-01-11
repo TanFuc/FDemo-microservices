@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  tafu-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tafu-auth
+    ports:
+      - "3001:3001"
+    environment:
+      - APP_NAME=tafu-auth
+      - NODE_ENV=development
+      - PORT=3001
+      - API_PREFIX=api/v1
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=postgres
+      - DB_DATABASE=tafu_auth
+      - DB_SSL_MODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_ACCESS_SECRET=your-super-secret-access-key-32-chars-minimum
+      - JWT_REFRESH_SECRET=your-super-secret-refresh-key-32-chars-minimum
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nats:
+        condition: service_started
+    networks:
+      - tafu-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: tafu-auth-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=tafu_auth
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tafu-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: tafu-auth-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tafu-network
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: tafu-auth-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--jetstream", "--store_dir=/data", "--http_port=8222"]
+    volumes:
+      - nats-data:/data
+    networks:
+      - tafu-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  nats-data:
+
+networks:
+  tafu-network:
+    driver: bridge
