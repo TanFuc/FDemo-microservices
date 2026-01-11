@@ -9,8 +9,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/usecase"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/usecase"
 )
 
 // PaymentHandler handles payment HTTP requests

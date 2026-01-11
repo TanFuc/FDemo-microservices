@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"cart-service/internal/domain"
+	"microservices/cart/internal/domain"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"

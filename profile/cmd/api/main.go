@@ -7,13 +7,13 @@ import (
 	"syscall"
 	"time"
 
-	"tafu-profile/internal/config"
-	"tafu-profile/internal/delivery/event"
-	"tafu-profile/internal/delivery/http/handler"
-	"tafu-profile/internal/delivery/http/router"
-	"tafu-profile/internal/domain/service"
-	"tafu-profile/internal/infrastructure/database"
-	"tafu-profile/pkg/logger"
+	"microservices/profile/internal/config"
+	"microservices/profile/internal/delivery/event"
+	"microservices/profile/internal/delivery/http/handler"
+	"microservices/profile/internal/delivery/http/router"
+	"microservices/profile/internal/domain/service"
+	"microservices/profile/internal/infrastructure/database"
+	"microservices/profile/pkg/logger"
 )
 
 func main() {

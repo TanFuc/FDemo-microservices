@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"cart-service/internal/domain"
-	mongorepo "cart-service/internal/infrastructure/mongo"
-	redisrepo "cart-service/internal/infrastructure/redis"
-	"cart-service/internal/usecase"
+	"microservices/cart/internal/domain"
+	mongorepo "microservices/cart/internal/infrastructure/mongo"
+	redisrepo "microservices/cart/internal/infrastructure/redis"
+	"microservices/cart/internal/usecase"
 )
 
 // Integration tests for CartUsecase

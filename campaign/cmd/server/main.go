@@ -10,10 +10,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	"github.com/tafu/campaign-service/internal/config"
-	postgresRepo "github.com/tafu/campaign-service/internal/repository/postgres"
-	redisRepo "github.com/tafu/campaign-service/internal/repository/redis"
-	"github.com/tafu/campaign-service/internal/usecase"
+	"microservices/campaign/internal/config"
+	postgresRepo "microservices/campaign/internal/repository/postgres"
+	redisRepo "microservices/campaign/internal/repository/redis"
+	"microservices/campaign/internal/usecase"
 )
 
 func main() {

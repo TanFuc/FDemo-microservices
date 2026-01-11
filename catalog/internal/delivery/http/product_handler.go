@@ -3,9 +3,9 @@ package http
 import (
 	"strconv"
 
-	"catalog-service/internal/domain"
-	"catalog-service/internal/repository"
-	"catalog-service/internal/usecase"
+	"microservices/catalog/internal/domain"
+	"microservices/catalog/internal/repository"
+	"microservices/catalog/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"

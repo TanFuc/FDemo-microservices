@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"inventory-service/internal/domain"
+	"microservices/inventory/internal/domain"
 
 	"gorm.io/gorm"
 )

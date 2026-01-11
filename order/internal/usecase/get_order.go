@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tafu/order-service/internal/domain"
+	"microservices/order/internal/domain"
 )
 
 // GetOrderUseCase handles getting a single order

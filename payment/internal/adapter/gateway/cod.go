@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/port"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/port"
 )
 
 // CODAdapter implements port.PaymentGateway for Cash on Delivery

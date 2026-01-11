@@ -15,10 +15,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tafu/payment-service/internal/adapter/gateway"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/port"
-	"github.com/tafu/payment-service/internal/usecase"
+	"microservices/payment/internal/adapter/gateway"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/port"
+	"microservices/payment/internal/usecase"
 )
 
 // MockRepository implements port.PaymentRepository for testing

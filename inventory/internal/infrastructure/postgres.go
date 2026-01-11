@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"inventory-service/internal/domain"
+	"microservices/inventory/internal/domain"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

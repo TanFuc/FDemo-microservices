@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/tafu/search-service/internal/domain"
-	"github.com/tafu/search-service/internal/usecase"
+	"microservices/search/internal/domain"
+	"microservices/search/internal/usecase"
 )
 
 // SearchHandler handles search API requests

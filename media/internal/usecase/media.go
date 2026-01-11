@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tafu-media/media-service/internal/config"
-	"github.com/tafu-media/media-service/internal/domain"
+	"microservices/media/internal/config"
+	"microservices/media/internal/domain"
 )
 
 type MediaUseCase struct {

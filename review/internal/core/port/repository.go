@@ -2,7 +2,7 @@ package port
 
 import (
 	"context"
-	"tafu-review/internal/core/domain"
+	"microservices/review/internal/core/domain"
 )
 
 type ReviewRepository interface {

@@ -11,8 +11,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/services"
 )
 
 // OrderPackedEvent represents the event payload from order service

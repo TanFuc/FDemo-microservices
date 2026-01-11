@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"inventory-service/internal/config"
-	"inventory-service/internal/handler"
-	"inventory-service/internal/infrastructure"
-	"inventory-service/internal/usecase"
+	"microservices/inventory/internal/config"
+	"microservices/inventory/internal/handler"
+	"microservices/inventory/internal/infrastructure"
+	"microservices/inventory/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"

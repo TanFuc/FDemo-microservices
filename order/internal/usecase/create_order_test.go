@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tafu/order-service/internal/domain"
-	"github.com/tafu/order-service/internal/infrastructure/messaging"
+	"microservices/order/internal/domain"
+	"microservices/order/internal/infrastructure/messaging"
 )
 
 func TestCreateOrderUseCase_Execute_Success(t *testing.T) {

@@ -3,8 +3,8 @@ package infrastructure
 import (
 	"context"
 
-	"inventory-service/internal/domain"
-	"inventory-service/internal/repository"
+	"microservices/inventory/internal/domain"
+	"microservices/inventory/internal/repository"
 
 	"gorm.io/gorm"
 )

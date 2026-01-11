@@ -1,4 +1,4 @@
-module inventory-service
+module microservices/inventory
 
 go 1.22
 

@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/tafu/search-service/internal/domain"
-	"github.com/tafu/search-service/internal/infrastructure/cache"
-	"github.com/tafu/search-service/internal/infrastructure/elastic"
+	"microservices/search/internal/domain"
+	"microservices/search/internal/infrastructure/cache"
+	"microservices/search/internal/infrastructure/elastic"
 )
 
 const (

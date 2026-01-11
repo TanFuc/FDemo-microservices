@@ -1,4 +1,4 @@
-module api-gateway
+module microservices/api-gateway
 
 go 1.22
 

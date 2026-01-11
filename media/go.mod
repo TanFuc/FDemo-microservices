@@ -1,4 +1,4 @@
-module github.com/tafu-media/media-service
+module microservices/media
 
 go 1.22
 

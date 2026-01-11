@@ -11,8 +11,8 @@ import (
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"github.com/stripe/stripe-go/v76/webhook"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/port"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/port"
 )
 
 // StripeConfig holds Stripe configuration

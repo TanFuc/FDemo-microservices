@@ -1,4 +1,4 @@
-module cart-service
+module microservices/cart
 
 go 1.22
 

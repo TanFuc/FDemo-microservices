@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"github.com/tafu/order-service/internal/domain"
-	"github.com/tafu/order-service/internal/infrastructure/grpc"
-	"github.com/tafu/order-service/internal/infrastructure/messaging"
+	"microservices/order/internal/domain"
+	"microservices/order/internal/infrastructure/grpc"
+	"microservices/order/internal/infrastructure/messaging"
 )
 
 // CreateOrderUseCase handles order creation logic

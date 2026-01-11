@@ -7,10 +7,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	"tafu-auth/internal/infrastructure/cache"
-	"tafu-auth/internal/infrastructure/database"
-	"tafu-auth/internal/infrastructure/queue"
-	"tafu-auth/pkg/response"
+	"microservices/auth/internal/infrastructure/cache"
+	"microservices/auth/internal/infrastructure/database"
+	"microservices/auth/internal/infrastructure/queue"
+	"microservices/auth/pkg/response"
 )
 
 type HealthStatus struct {

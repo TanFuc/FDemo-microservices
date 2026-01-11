@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"github.com/tafu/payment-service/internal/usecase"
+	"microservices/payment/internal/usecase"
 )
 
 // ReconciliationJob runs periodic reconciliation of pending payments

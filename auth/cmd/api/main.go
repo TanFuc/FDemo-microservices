@@ -9,16 +9,16 @@ import (
 
 	"gorm.io/gorm"
 
-	"tafu-auth/internal/config"
-	"tafu-auth/internal/delivery/http/handler"
-	"tafu-auth/internal/delivery/http/middleware"
-	"tafu-auth/internal/delivery/http/router"
-	"tafu-auth/internal/domain/repository"
-	"tafu-auth/internal/domain/service"
-	"tafu-auth/internal/infrastructure/cache"
-	"tafu-auth/internal/infrastructure/database"
-	"tafu-auth/internal/infrastructure/queue"
-	"tafu-auth/pkg/logger"
+	"microservices/auth/internal/config"
+	"microservices/auth/internal/delivery/http/handler"
+	"microservices/auth/internal/delivery/http/middleware"
+	"microservices/auth/internal/delivery/http/router"
+	"microservices/auth/internal/domain/repository"
+	"microservices/auth/internal/domain/service"
+	"microservices/auth/internal/infrastructure/cache"
+	"microservices/auth/internal/infrastructure/database"
+	"microservices/auth/internal/infrastructure/queue"
+	"microservices/auth/pkg/logger"
 )
 
 func main() {

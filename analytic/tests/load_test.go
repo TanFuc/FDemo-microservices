@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tafu/analytics-service/internal/config"
-	"github.com/tafu/analytics-service/internal/domain"
-	"github.com/tafu/analytics-service/internal/infrastructure/clickhouse"
-	natsClient "github.com/tafu/analytics-service/internal/infrastructure/nats"
-	"github.com/tafu/analytics-service/internal/worker"
+	"microservices/analytic/internal/config"
+	"microservices/analytic/internal/domain"
+	"microservices/analytic/internal/infrastructure/clickhouse"
+	natsClient "microservices/analytic/internal/infrastructure/nats"
+	"microservices/analytic/internal/worker"
 )
 
 // TestBatchIngestion tests that 5000 events can be ingested without data loss.

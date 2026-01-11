@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/tafu/order-service/internal/domain"
-	"github.com/tafu/order-service/internal/infrastructure/messaging"
+	"microservices/order/internal/domain"
+	"microservices/order/internal/infrastructure/messaging"
 )
 
 // MockOrderRepository is a mock implementation of domain.OrderRepository

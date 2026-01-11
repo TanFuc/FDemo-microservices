@@ -1,8 +1,8 @@
-# TÀI LIỆU HỆ THỐNG MICROSERVICES TAFU E-COMMERCE
+# TÀI LIỆU HỆ THỐNG MICROSERVICES E-COMMERCE
 
 ## Tổng Quan Hệ Thống
 
-**TAFU** là một hệ thống E-commerce được xây dựng theo kiến trúc **Microservices**, bao gồm **15 services** độc lập nhưng được liên kết chặt chẽ thông qua các cơ chế giao tiếp đồng bộ (gRPC, HTTP) và bất đồng bộ (NATS JetStream, RabbitMQ).
+Hệ thống E-commerce được xây dựng theo kiến trúc **Microservices**, bao gồm **15 services** độc lập nhưng được liên kết chặt chẽ thông qua các cơ chế giao tiếp đồng bộ (gRPC, HTTP) và bất đồng bộ (NATS JetStream, RabbitMQ).
 
 ### Sơ Đồ Kiến Trúc Tổng Quan
 
@@ -15,33 +15,33 @@
                     ┌───────────────────────────────┼───────────────────────────────┐
                     │                               │                               │
         ┌───────────▼───────────┐     ┌─────────────▼───────────────┐     ┌────────▼────────┐
-        │     TAFU-AUTH         │     │       TAFU-CATALOG          │     │   TAFU-CART     │
-        │   (NestJS + PG)       │     │      (Go + MongoDB)         │     │ (Go + Redis)    │
+        │        AUTH           │     │         CATALOG             │     │      CART       │
+        │      (Go + PG)        │     │      (Go + MongoDB)         │     │ (Go + Redis)    │
         └───────────────────────┘     └─────────────────────────────┘     └─────────────────┘
                     │                               │                               │
                     │                    ┌──────────┴──────────┐                    │
                     │                    │                     │                    │
         ┌───────────▼───────────┐       │         ┌────────────▼────────────┐      │
-        │    TAFU-PROFILE       │       │         │      TAFU-SEARCH        │      │
-        │  (NestJS + MongoDB)   │       │         │   (Go + Elasticsearch)  │      │
+        │       PROFILE         │       │         │         SEARCH          │      │
+        │   (Go + MongoDB)      │       │         │   (Go + Elasticsearch)  │      │
         └───────────────────────┘       │         └─────────────────────────┘      │
                                         │                                           │
                               ┌─────────▼─────────┐                  ┌──────────────▼──────────────┐
-                              │   TAFU-INVENTORY  │◄─────────────────│        TAFU-ORDER           │
+                              │     INVENTORY     │◄─────────────────│           ORDER             │
                               │  (Go + PG + Redis)│   (gRPC/NATS)    │     (Go + PG + NATS)        │
                               └───────────────────┘                  └─────────────────────────────┘
                                         │                                           │
                               ┌─────────┴─────────┐                  ┌──────────────┴──────────────┐
                               │                   │                  │                              │
                     ┌─────────▼─────────┐  ┌──────▼───────┐  ┌───────▼───────┐  ┌──────────────────▼───────────────────┐
-                    │   TAFU-PAYMENT    │  │ TAFU-LOGISTIC│  │TAFU-CAMPAIGN  │  │         TAFU-NOTIFICATION            │
+                    │      PAYMENT      │  │   LOGISTIC   │  │   CAMPAIGN    │  │          NOTIFICATION                │
                     │    (Go + PG)      │  │  (Go + PG)   │  │ (Go + PG)     │  │    (Go + RabbitMQ + MongoDB)         │
                     └───────────────────┘  └──────────────┘  └───────────────┘  └──────────────────────────────────────┘
                               │                   │                  │                              │
                     ┌─────────┴───────────────────┴──────────────────┴──────────────────────────────┘
                     │
         ┌───────────▼───────────┐     ┌─────────────────────────────┐     ┌─────────────────────────┐
-        │     TAFU-MEDIA        │     │       TAFU-ANALYTIC         │     │      TAFU-REVIEW        │
+        │        MEDIA          │     │         ANALYTIC            │     │         REVIEW          │
         │    (Go + MinIO)       │     │     (Go + ClickHouse)       │     │   (Go + MongoDB)        │
         └───────────────────────┘     └─────────────────────────────┘     └─────────────────────────┘
 ```
@@ -50,7 +50,7 @@
 
 ## Chi Tiết Từng Service
 
-### 1. 🚪 TAFU-API-GATEWAY
+### 1. 🚪 API-GATEWAY
 **Công nghệ:** Go 1.22+ | Fiber | Redis | JWT
 
 **Mục đích:** Cổng vào duy nhất (Single Entry Point) cho toàn bộ hệ thống E-commerce.
@@ -73,8 +73,8 @@
 
 ---
 
-### 2. 🔐 TAFU-AUTH (Identity Service)
-**Công nghệ:** NestJS | TypeORM | PostgreSQL | Redis | JWT
+### 2. 🔐 AUTH (Identity Service)
+**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis | JWT
 
 **Mục đích:** Quản lý xác thực và phân quyền người dùng.
 
@@ -105,8 +105,8 @@
 
 ---
 
-### 3. 👤 TAFU-PROFILE
-**Công nghệ:** NestJS | Mongoose | MongoDB
+### 3. 👤 PROFILE
+**Công nghệ:** Go 1.22+ | Fiber | MongoDB
 
 **Mục đích:** Quản lý thông tin cá nhân, địa chỉ giao hàng và Shop profiles.
 
@@ -133,7 +133,7 @@
 
 ---
 
-### 4. 📦 TAFU-CATALOG
+### 4. 📦 CATALOG
 **Công nghệ:** Go 1.22+ | Fiber | MongoDB | Redis | NATS JetStream
 
 **Mục đích:** Quản lý danh mục sản phẩm, thương hiệu và metadata linh hoạt.
@@ -159,7 +159,7 @@
 
 ---
 
-### 5. 🛒 TAFU-CART
+### 5. 🛒 CART
 **Công nghệ:** Go 1.22+ | Fiber | Redis | MongoDB
 
 **Mục đích:** Giỏ hàng hiệu suất cao với "Write-Behind Caching" strategy.
@@ -191,7 +191,7 @@
 
 ---
 
-### 6. 📋 TAFU-ORDER
+### 6. 📋 ORDER
 **Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | NATS JetStream | gRPC
 
 **Mục đích:** Trung tâm giao dịch - Quản lý vòng đời đơn hàng.
@@ -222,7 +222,7 @@
 
 ---
 
-### 7. 📊 TAFU-INVENTORY
+### 7. 📊 INVENTORY
 **Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis (Lua Scripts)
 
 **Mục đích:** Quản lý tồn kho với Two-Phase Reservation pattern.
@@ -257,7 +257,7 @@ end
 
 ---
 
-### 8. 💳 TAFU-PAYMENT
+### 8. 💳 PAYMENT
 **Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | NATS JetStream
 
 **Mục đích:** Payment Aggregator - Tích hợp nhiều cổng thanh toán.
@@ -288,7 +288,7 @@ type PaymentGateway interface {
 
 ---
 
-### 9. 🚚 TAFU-LOGISTIC
+### 9. 🚚 LOGISTIC
 **Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis | NATS
 
 **Mục đích:** Logistics Aggregator - Tích hợp các đơn vị vận chuyển.
@@ -328,7 +328,7 @@ type Provider interface {
 
 ---
 
-### 10. 📧 TAFU-NOTIFICATION
+### 10. 📧 NOTIFICATION
 **Công nghệ:** Go 1.22+ | NATS | RabbitMQ | MongoDB | Gomail
 
 **Mục đích:** Notification Hub với Dual-Consumer architecture.
@@ -360,7 +360,7 @@ NATS Events → Bridge → RabbitMQ → Worker → Email/Push
 
 ---
 
-### 11. 🖼️ TAFU-MEDIA
+### 11. 🖼️ MEDIA
 **Công nghệ:** Go 1.22+ | Fiber | MinIO (S3) | NATS
 
 **Mục đích:** Media Service với Presigned URL pattern.
@@ -384,7 +384,7 @@ NATS Events → Bridge → RabbitMQ → Worker → Email/Push
 
 ---
 
-### 12. 📈 TAFU-ANALYTIC
+### 12. 📈 ANALYTIC
 **Công nghệ:** Go 1.22+ | ClickHouse | NATS JetStream
 
 **Mục đích:** Real-time Analytics với Batch Ingestion.
@@ -422,7 +422,7 @@ POST /collect → NATS → Batch Worker → ClickHouse
 
 ---
 
-### 13. 🎯 TAFU-CAMPAIGN
+### 13. 🎯 CAMPAIGN
 **Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis (Lua Scripts)
 
 **Mục đích:** Quản lý Vouchers/Coupons với Rule Engine.
@@ -456,7 +456,7 @@ POST /collect → NATS → Batch Worker → ClickHouse
 
 ---
 
-### 14. ⭐ TAFU-REVIEW
+### 14. ⭐ REVIEW
 **Công nghệ:** Go 1.22+ | Fiber | MongoDB | Redis | gRPC
 
 **Mục đích:** Review & Rating với Materialized View pattern.
@@ -486,7 +486,7 @@ NewAvg = ((OldAvg * OldTotal) + NewRating) / (OldTotal + 1)
 
 ---
 
-### 15. 🔍 TAFU-SEARCH
+### 15. 🔍 SEARCH
 **Công nghệ:** Go 1.22+ | Fiber | Elasticsearch | Redis | NATS
 
 **Mục đích:** Search Service với CQRS Read-Model pattern.
@@ -622,20 +622,20 @@ Missing:
 
 | Database | Engine | Service(s) | Port |
 |----------|--------|------------|------|
-| identity_db | PostgreSQL 15 | tafu-auth | 5432 |
-| order_db | PostgreSQL 15 | tafu-order | 5432 |
-| inventory_db | PostgreSQL 15 | tafu-inventory | 5432 |
-| payment_db | PostgreSQL 15 | tafu-payment | 5432 |
-| logistics_db | PostgreSQL 15 | tafu-logistic | 5432 |
-| campaign_db | PostgreSQL 15 | tafu-campaign | 5432 |
-| tafu_profile | MongoDB 6 | tafu-profile | 27017 |
-| tafu_catalog | MongoDB 6 | tafu-catalog | 27017 |
-| tafu_cart | MongoDB 6 | tafu-cart | 27017 |
-| tafu_review | MongoDB 6 | tafu-review | 27017 |
-| tafu_notification | MongoDB 6 | tafu-notification | 27017 |
-| tafu_media | MongoDB 6 | tafu-media | 27017 |
-| analytics | ClickHouse 23 | tafu-analytic | 8123/9000 |
-| products_index | Elasticsearch 8 | tafu-search | 9200 |
+| identity_db | PostgreSQL 15 | auth | 5432 |
+| order_db | PostgreSQL 15 | order | 5432 |
+| inventory_db | PostgreSQL 15 | inventory | 5432 |
+| payment_db | PostgreSQL 15 | payment | 5432 |
+| logistics_db | PostgreSQL 15 | logistic | 5432 |
+| campaign_db | PostgreSQL 15 | campaign | 5432 |
+| profile_db | MongoDB 6 | profile | 27017 |
+| catalog_db | MongoDB 6 | catalog | 27017 |
+| cart_db | MongoDB 6 | cart | 27017 |
+| review_db | MongoDB 6 | review | 27017 |
+| notification_db | MongoDB 6 | notification | 27017 |
+| media_db | MongoDB 6 | media | 27017 |
+| analytics_db | ClickHouse 23 | analytic | 8123/9000 |
+| products_index | Elasticsearch 8 | search | 9200 |
 
 ### Caching Layer (Redis)
 
@@ -666,7 +666,7 @@ Missing:
 ### Files Database Đã Tạo
 
 ```
-tafu/
+microservices/
 ├── database/
 │   ├── COMPLETE_DATABASE_SCHEMA.sql      # Schema tổng hợp tất cả services
 │   ├── postgres/
@@ -675,26 +675,26 @@ tafu/
 │   │   └── 001_init_mongodb.js           # Script khởi tạo collections
 │   └── redis/
 │       └── REDIS_KEY_PATTERNS.md         # Documentation Redis keys
-├── tafu-auth/migrations/
+├── auth/migrations/
 │   └── 001_init_schema.sql               # Auth service schema
-├── tafu-order/migrations/
+├── order/migrations/
 │   └── 001_init_schema.sql               # Order service schema
-├── tafu-inventory/migrations/
+├── inventory/migrations/
 │   └── 001_init_schema.sql               # Inventory service schema
 │   └── scripts/
 │       ├── reserve_stock.lua             # Atomic stock reservation
 │       └── release_stock.lua             # Release reserved stock
-├── tafu-campaign/
-│   ├── migrations/001_init.sql           # Campaign schema (existing)
+├── campaign/
+│   ├── migrations/001_init.sql           # Campaign schema
 │   └── scripts/claim_voucher.lua         # Atomic voucher claiming
-├── tafu-payment/migrations/
-│   └── 001_init.sql                      # Payment schema (existing)
-├── tafu-logistic/migrations/
-│   ├── 001_create_shipping_orders.sql    # Shipping (existing)
-│   └── 002_create_webhook_logs.sql       # Webhook logs (existing)
-├── tafu-analytic/migrations/
+├── payment/migrations/
+│   └── 001_init.sql                      # Payment schema
+├── logistic/migrations/
+│   ├── 001_create_shipping_orders.sql    # Shipping orders
+│   └── 002_create_webhook_logs.sql       # Webhook logs
+├── analytic/migrations/
 │   └── 001_init_schema.sql               # ClickHouse analytics schema
-├── tafu-search/elasticsearch/
+├── search/elasticsearch/
 │   └── products_index_mapping.json       # Elasticsearch index mapping
 └── docker-compose.databases.yml          # All databases Docker Compose
 ```

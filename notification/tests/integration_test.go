@@ -10,12 +10,12 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"notification-service/internal/bridge"
-	"notification-service/internal/config"
-	"notification-service/internal/infrastructure"
-	"notification-service/internal/models"
-	"notification-service/internal/provider"
-	"notification-service/internal/worker"
+	"microservices/notification/internal/bridge"
+	"microservices/notification/internal/config"
+	"microservices/notification/internal/infrastructure"
+	"microservices/notification/internal/models"
+	"microservices/notification/internal/provider"
+	"microservices/notification/internal/worker"
 )
 
 // TestIntegration_OrderCreatedFlow tests the full flow from NATS event to email notification

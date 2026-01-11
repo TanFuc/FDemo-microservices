@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"catalog-service/internal/config"
-	httpdelivery "catalog-service/internal/delivery/http"
-	"catalog-service/internal/infrastructure/nats"
-	mongorepo "catalog-service/internal/repository/mongo"
-	redisrepo "catalog-service/internal/repository/redis"
-	"catalog-service/internal/usecase"
+	"microservices/catalog/internal/config"
+	httpdelivery "microservices/catalog/internal/delivery/http"
+	"microservices/catalog/internal/infrastructure/nats"
+	mongorepo "microservices/catalog/internal/repository/mongo"
+	redisrepo "microservices/catalog/internal/repository/redis"
+	"microservices/catalog/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

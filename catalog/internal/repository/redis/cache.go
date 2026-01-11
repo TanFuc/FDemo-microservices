@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"catalog-service/internal/domain"
-	"catalog-service/internal/repository"
+	"microservices/catalog/internal/domain"
+	"microservices/catalog/internal/repository"
 
 	"github.com/redis/go-redis/v9"
 )

@@ -7,11 +7,11 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"tafu-auth/internal/domain/entity"
-	"tafu-auth/internal/domain/repository"
-	"tafu-auth/internal/infrastructure/cache"
-	"tafu-auth/pkg/errors"
-	"tafu-auth/pkg/logger"
+	"microservices/auth/internal/domain/entity"
+	"microservices/auth/internal/domain/repository"
+	"microservices/auth/internal/infrastructure/cache"
+	"microservices/auth/pkg/errors"
+	"microservices/auth/pkg/logger"
 )
 
 const (

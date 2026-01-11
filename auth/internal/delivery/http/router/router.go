@@ -5,9 +5,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
 
-	"tafu-auth/internal/config"
-	"tafu-auth/internal/delivery/http/handler"
-	"tafu-auth/internal/delivery/http/middleware"
+	"microservices/auth/internal/config"
+	"microservices/auth/internal/delivery/http/handler"
+	"microservices/auth/internal/delivery/http/middleware"
 )
 
 type Router struct {

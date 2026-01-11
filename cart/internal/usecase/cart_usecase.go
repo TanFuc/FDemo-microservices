@@ -7,9 +7,9 @@ import (
 	"math"
 	"time"
 
-	"cart-service/internal/adapter"
-	"cart-service/internal/domain"
-	redisrepo "cart-service/internal/infrastructure/redis"
+	"microservices/cart/internal/adapter"
+	"microservices/cart/internal/domain"
+	redisrepo "microservices/cart/internal/infrastructure/redis"
 )
 
 // PriceValidationConfig holds configuration for price validation

@@ -7,7 +7,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/tafu-media/media-service/internal/config"
+	"microservices/media/internal/config"
 )
 
 type NATSClient struct {

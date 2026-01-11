@@ -6,11 +6,11 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-auth/internal/domain/entity"
-	"tafu-auth/internal/infrastructure/cache"
-	"tafu-auth/internal/infrastructure/queue"
-	"tafu-auth/pkg/errors"
-	"tafu-auth/pkg/logger"
+	"microservices/auth/internal/domain/entity"
+	"microservices/auth/internal/infrastructure/cache"
+	"microservices/auth/internal/infrastructure/queue"
+	"microservices/auth/pkg/errors"
+	"microservices/auth/pkg/logger"
 )
 
 type RegisterInput struct {

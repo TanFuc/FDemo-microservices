@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/ports"
 )
 
 // Publisher implements ports.EventPublisher using NATS JetStream

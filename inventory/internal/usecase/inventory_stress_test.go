@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"inventory-service/internal/domain"
-	"inventory-service/internal/infrastructure"
+	"microservices/inventory/internal/domain"
+	"microservices/inventory/internal/infrastructure"
 
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"

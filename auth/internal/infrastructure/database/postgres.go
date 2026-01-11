@@ -8,9 +8,9 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	"tafu-auth/internal/config"
-	"tafu-auth/internal/domain/entity"
-	"tafu-auth/pkg/logger"
+	"microservices/auth/internal/config"
+	"microservices/auth/internal/domain/entity"
+	"microservices/auth/pkg/logger"
 )
 
 func NewPostgresDB(cfg *config.Config) (*gorm.DB, error) {

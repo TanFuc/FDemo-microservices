@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/tafu/campaign-service/internal/domain"
+	"microservices/campaign/internal/domain"
 )
 
 // MockVoucherRepository is a mock implementation of VoucherRepository for testing

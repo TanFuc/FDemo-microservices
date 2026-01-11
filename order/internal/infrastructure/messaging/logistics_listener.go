@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/nats-io/nats.go"
-	"github.com/tafu/order-service/internal/config"
-	"github.com/tafu/order-service/internal/domain"
+	"microservices/order/internal/config"
+	"microservices/order/internal/domain"
 )
 
 // LogisticsStatusEvent represents the event from Logistics Service

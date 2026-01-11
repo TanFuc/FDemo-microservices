@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"github.com/tafu/campaign-service/internal/domain"
+	"microservices/campaign/internal/domain"
 )
 
 const (

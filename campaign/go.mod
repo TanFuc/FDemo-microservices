@@ -1,4 +1,4 @@
-module github.com/tafu/campaign-service
+module microservices/campaign
 
 go 1.22
 

@@ -7,8 +7,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"tafu-auth/internal/config"
-	"tafu-auth/pkg/logger"
+	"microservices/auth/internal/config"
+	"microservices/auth/pkg/logger"
 )
 
 type RedisClient struct {

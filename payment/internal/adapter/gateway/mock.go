@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/port"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/port"
 )
 
 // MockGateway implements port.PaymentGateway for testing

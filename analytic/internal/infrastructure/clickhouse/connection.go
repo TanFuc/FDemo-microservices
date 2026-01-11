@@ -7,7 +7,7 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/tafu/analytics-service/internal/config"
+	"microservices/analytic/internal/config"
 )
 
 func NewConnection(cfg config.ClickHouseConfig) (driver.Conn, error) {

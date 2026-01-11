@@ -8,10 +8,10 @@ import (
 	"syscall"
 	"time"
 
-	httpdelivery "cart-service/internal/delivery/http"
-	mongorepo "cart-service/internal/infrastructure/mongo"
-	redisrepo "cart-service/internal/infrastructure/redis"
-	"cart-service/internal/usecase"
+	httpdelivery "microservices/cart/internal/delivery/http"
+	mongorepo "microservices/cart/internal/infrastructure/mongo"
+	redisrepo "microservices/cart/internal/infrastructure/redis"
+	"microservices/cart/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

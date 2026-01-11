@@ -7,8 +7,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/tafu/analytics-service/internal/config"
-	"github.com/tafu/analytics-service/internal/domain"
+	"microservices/analytic/internal/config"
+	"microservices/analytic/internal/domain"
 )
 
 type Client struct {

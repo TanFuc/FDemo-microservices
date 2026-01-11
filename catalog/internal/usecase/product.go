@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"catalog-service/internal/domain"
-	"catalog-service/internal/repository"
+	"microservices/catalog/internal/domain"
+	"microservices/catalog/internal/repository"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

@@ -3,10 +3,10 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"tafu-profile/internal/config"
-	"tafu-profile/internal/domain/service"
-	"tafu-profile/pkg/errors"
-	"tafu-profile/pkg/response"
+	"microservices/profile/internal/config"
+	"microservices/profile/internal/domain/service"
+	"microservices/profile/pkg/errors"
+	"microservices/profile/pkg/response"
 )
 
 type InternalHandler struct {

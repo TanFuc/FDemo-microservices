@@ -2,7 +2,7 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/tafu/order-service/internal/infrastructure/database"
+	"microservices/order/internal/infrastructure/database"
 )
 
 // HealthHandler handles health check endpoints

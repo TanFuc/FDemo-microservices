@@ -8,7 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"tafu-auth/pkg/logger"
+	"microservices/auth/pkg/logger"
 )
 
 const (

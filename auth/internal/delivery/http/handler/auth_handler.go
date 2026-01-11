@@ -6,11 +6,11 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 
-	"tafu-auth/internal/delivery/http/dto"
-	"tafu-auth/internal/delivery/http/middleware"
-	"tafu-auth/internal/domain/service"
-	"tafu-auth/pkg/errors"
-	"tafu-auth/pkg/response"
+	"microservices/auth/internal/delivery/http/dto"
+	"microservices/auth/internal/delivery/http/middleware"
+	"microservices/auth/internal/domain/service"
+	"microservices/auth/pkg/errors"
+	"microservices/auth/pkg/response"
 )
 
 type AuthHandler struct {

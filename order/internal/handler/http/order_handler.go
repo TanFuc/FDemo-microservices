@@ -6,8 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
-	"github.com/tafu/order-service/internal/domain"
-	"github.com/tafu/order-service/internal/usecase"
+	"microservices/order/internal/domain"
+	"microservices/order/internal/usecase"
 )
 
 // OrderHandler handles HTTP requests for orders

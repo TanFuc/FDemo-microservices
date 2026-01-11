@@ -8,9 +8,9 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 
-	"tafu-profile/internal/config"
-	"tafu-profile/internal/domain/service"
-	"tafu-profile/pkg/logger"
+	"microservices/profile/internal/config"
+	"microservices/profile/internal/domain/service"
+	"microservices/profile/pkg/logger"
 )
 
 const (

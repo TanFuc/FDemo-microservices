@@ -1,4 +1,4 @@
-module github.com/tafu/payment-service
+module microservices/payment
 
 go 1.22
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tafu/campaign-service/internal/domain"
+	"microservices/campaign/internal/domain"
 )
 
 func setupTestUsecase() (*CampaignUsecase, *MockVoucherRepository, *MockUserVoucherRepository, *MockVoucherCacheRepository) {

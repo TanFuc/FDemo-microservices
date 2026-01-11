@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/tafu-media/media-service/internal/domain"
-	"github.com/tafu-media/media-service/internal/usecase"
+	"microservices/media/internal/domain"
+	"microservices/media/internal/usecase"
 )
 
 type MediaHandler struct {

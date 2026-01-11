@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/tafu/search-service/internal/config"
-	"github.com/tafu/search-service/internal/infrastructure/elastic"
-	"github.com/tafu/search-service/internal/infrastructure/nats"
+	"microservices/search/internal/config"
+	"microservices/search/internal/infrastructure/elastic"
+	"microservices/search/internal/infrastructure/nats"
 )
 
 func main() {

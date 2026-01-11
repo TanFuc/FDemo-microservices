@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/port"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/port"
 )
 
 var (

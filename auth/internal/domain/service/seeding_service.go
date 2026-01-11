@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 
-	"tafu-auth/internal/domain/entity"
-	"tafu-auth/internal/domain/repository"
-	"tafu-auth/pkg/logger"
+	"microservices/auth/internal/domain/entity"
+	"microservices/auth/internal/domain/repository"
+	"microservices/auth/pkg/logger"
 )
 
 type SeedingService struct {

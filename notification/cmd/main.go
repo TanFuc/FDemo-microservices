@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"notification-service/internal/bridge"
-	"notification-service/internal/config"
-	"notification-service/internal/infrastructure"
-	"notification-service/internal/provider"
-	"notification-service/internal/worker"
+	"microservices/notification/internal/bridge"
+	"microservices/notification/internal/config"
+	"microservices/notification/internal/infrastructure"
+	"microservices/notification/internal/provider"
+	"microservices/notification/internal/worker"
 )
 
 func main() {

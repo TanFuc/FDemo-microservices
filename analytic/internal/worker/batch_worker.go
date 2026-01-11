@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/tafu/analytics-service/internal/config"
-	"github.com/tafu/analytics-service/internal/domain"
-	"github.com/tafu/analytics-service/internal/infrastructure/clickhouse"
-	natsClient "github.com/tafu/analytics-service/internal/infrastructure/nats"
+	"microservices/analytic/internal/config"
+	"microservices/analytic/internal/domain"
+	"microservices/analytic/internal/infrastructure/clickhouse"
+	natsClient "microservices/analytic/internal/infrastructure/nats"
 )
 
 type BatchWorker struct {

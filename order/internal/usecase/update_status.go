@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tafu/order-service/internal/domain"
-	"github.com/tafu/order-service/internal/infrastructure/messaging"
+	"microservices/order/internal/domain"
+	"microservices/order/internal/infrastructure/messaging"
 )
 
 // MarkAsPaidUseCase handles marking an order as paid

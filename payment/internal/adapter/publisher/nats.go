@@ -8,8 +8,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/port"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/port"
 )
 
 const (

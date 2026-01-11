@@ -6,8 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"tafu-profile/internal/infrastructure/database"
-	"tafu-profile/pkg/response"
+	"microservices/profile/internal/infrastructure/database"
+	"microservices/profile/pkg/response"
 )
 
 type HealthStatus struct {

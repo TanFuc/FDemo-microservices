@@ -10,10 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"tafu-profile/internal/domain/entity"
-	"tafu-profile/internal/domain/repository"
-	"tafu-profile/pkg/errors"
-	"tafu-profile/pkg/logger"
+	"microservices/profile/internal/domain/entity"
+	"microservices/profile/internal/domain/repository"
+	"microservices/profile/pkg/errors"
+	"microservices/profile/pkg/logger"
 )
 
 type ProfileService struct {

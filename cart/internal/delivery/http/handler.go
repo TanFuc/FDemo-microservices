@@ -1,8 +1,8 @@
 package http
 
 import (
-	"cart-service/internal/domain"
-	"cart-service/internal/usecase"
+	"microservices/cart/internal/domain"
+	"microservices/cart/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 )

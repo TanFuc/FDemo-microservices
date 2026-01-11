@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"catalog-service/internal/domain"
+	"microservices/catalog/internal/domain"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

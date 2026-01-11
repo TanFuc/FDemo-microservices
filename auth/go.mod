@@ -1,4 +1,4 @@
-module tafu-auth
+module microservices/auth
 
 go 1.21
 

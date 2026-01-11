@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tafu/payment-service/internal/domain"
+	"microservices/payment/internal/domain"
 )
 
 // PaymentRepository defines the interface for payment data persistence

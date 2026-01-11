@@ -12,14 +12,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/tafu/payment-service/internal/adapter/gateway"
-	"github.com/tafu/payment-service/internal/adapter/publisher"
-	"github.com/tafu/payment-service/internal/adapter/repository"
-	"github.com/tafu/payment-service/internal/handler"
-	"github.com/tafu/payment-service/internal/job"
-	"github.com/tafu/payment-service/internal/port"
-	"github.com/tafu/payment-service/internal/usecase"
-	"github.com/tafu/payment-service/pkg/config"
+	"microservices/payment/internal/adapter/gateway"
+	"microservices/payment/internal/adapter/publisher"
+	"microservices/payment/internal/adapter/repository"
+	"microservices/payment/internal/handler"
+	"microservices/payment/internal/job"
+	"microservices/payment/internal/port"
+	"microservices/payment/internal/usecase"
+	"microservices/payment/pkg/config"
 )
 
 func main() {

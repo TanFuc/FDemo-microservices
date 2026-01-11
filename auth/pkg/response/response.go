@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"tafu-auth/pkg/errors"
+	"microservices/auth/pkg/errors"
 )
 
 type Response struct {

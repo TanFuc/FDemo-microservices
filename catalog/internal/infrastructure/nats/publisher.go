@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"catalog-service/internal/domain"
-	"catalog-service/internal/repository"
+	"microservices/catalog/internal/domain"
+	"microservices/catalog/internal/repository"
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"

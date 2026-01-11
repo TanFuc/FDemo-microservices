@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"tafu-auth/internal/domain/entity"
-	"tafu-auth/internal/domain/repository"
+	"microservices/auth/internal/domain/entity"
+	"microservices/auth/internal/domain/repository"
 )
 
 type loginHistoryRepository struct {

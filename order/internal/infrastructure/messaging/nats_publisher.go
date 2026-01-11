@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"github.com/nats-io/nats.go"
-	"github.com/tafu/order-service/internal/config"
-	"github.com/tafu/order-service/internal/domain"
+	"microservices/order/internal/config"
+	"microservices/order/internal/domain"
 )
 
 // NATSPublisher handles event publishing to NATS JetStream

@@ -10,8 +10,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	"github.com/tafu/search-service/internal/domain"
-	"github.com/tafu/search-service/internal/infrastructure/elastic"
+	"microservices/search/internal/domain"
+	"microservices/search/internal/infrastructure/elastic"
 )
 
 const (

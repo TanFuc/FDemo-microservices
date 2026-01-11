@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"tafu-review/internal/core/domain"
-	"tafu-review/internal/core/dto"
-	"tafu-review/internal/core/service"
+	"microservices/review/internal/core/domain"
+	"microservices/review/internal/core/dto"
+	"microservices/review/internal/core/service"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"cart-service/internal/domain"
+	"microservices/cart/internal/domain"
 
 	"github.com/redis/go-redis/v9"
 )

@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-	"github.com/tafu/campaign-service/internal/domain"
+	"microservices/campaign/internal/domain"
 )
 
 type CampaignUsecase struct {

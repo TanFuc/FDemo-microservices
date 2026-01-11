@@ -3,8 +3,8 @@ package handler
 import (
 	"errors"
 
-	"inventory-service/internal/domain"
-	"inventory-service/internal/usecase"
+	"microservices/inventory/internal/domain"
+	"microservices/inventory/internal/usecase"
 
 	"github.com/gofiber/fiber/v2"
 )

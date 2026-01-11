@@ -8,12 +8,12 @@ import (
 	"syscall"
 	"time"
 
-	grpcclient "tafu-review/internal/adapter/grpc"
-	"tafu-review/internal/adapter/mongodb"
-	rediscache "tafu-review/internal/adapter/redis"
-	"tafu-review/internal/config"
-	"tafu-review/internal/core/service"
-	"tafu-review/internal/handler"
+	grpcclient "microservices/review/internal/adapter/grpc"
+	"microservices/review/internal/adapter/mongodb"
+	rediscache "microservices/review/internal/adapter/redis"
+	"microservices/review/internal/config"
+	"microservices/review/internal/core/service"
+	"microservices/review/internal/handler"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

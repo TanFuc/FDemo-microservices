@@ -10,15 +10,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"tafu-logistic/logistics-service/config"
-	rediscache "tafu-logistic/logistics-service/internal/adapters/cache/redis"
-	"tafu-logistic/logistics-service/internal/adapters/messaging/nats"
-	"tafu-logistic/logistics-service/internal/adapters/providers"
-	"tafu-logistic/logistics-service/internal/adapters/providers/ghn"
-	"tafu-logistic/logistics-service/internal/adapters/providers/ghtk"
-	"tafu-logistic/logistics-service/internal/adapters/repository/postgres"
-	"tafu-logistic/logistics-service/internal/api/http"
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/config"
+	rediscache "microservices/logistic/internal/adapters/cache/redis"
+	"microservices/logistic/internal/adapters/messaging/nats"
+	"microservices/logistic/internal/adapters/providers"
+	"microservices/logistic/internal/adapters/providers/ghn"
+	"microservices/logistic/internal/adapters/providers/ghtk"
+	"microservices/logistic/internal/adapters/repository/postgres"
+	"microservices/logistic/internal/api/http"
+	"microservices/logistic/internal/core/services"
 )
 
 func main() {

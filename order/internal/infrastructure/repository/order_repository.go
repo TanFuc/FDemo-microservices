@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	"github.com/tafu/order-service/internal/domain"
-	"github.com/tafu/order-service/internal/infrastructure/database"
+	"microservices/order/internal/domain"
+	"microservices/order/internal/infrastructure/database"
 	"gorm.io/gorm"
 )
 

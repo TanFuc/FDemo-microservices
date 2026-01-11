@@ -16,8 +16,8 @@ import (
 	"sync"
 
 	"github.com/disintegration/imaging"
-	"github.com/tafu-media/media-service/internal/config"
-	"github.com/tafu-media/media-service/internal/domain"
+	"microservices/media/internal/config"
+	"microservices/media/internal/domain"
 )
 
 type ImageProcessor struct {

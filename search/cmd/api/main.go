@@ -12,11 +12,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/tafu/search-service/internal/api/handler"
-	"github.com/tafu/search-service/internal/config"
-	"github.com/tafu/search-service/internal/infrastructure/cache"
-	"github.com/tafu/search-service/internal/infrastructure/elastic"
-	"github.com/tafu/search-service/internal/usecase"
+	"microservices/search/internal/api/handler"
+	"microservices/search/internal/config"
+	"microservices/search/internal/infrastructure/cache"
+	"microservices/search/internal/infrastructure/elastic"
+	"microservices/search/internal/usecase"
 )
 
 func main() {

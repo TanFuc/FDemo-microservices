@@ -1,4 +1,4 @@
-module github.com/tafu/order-service
+module microservices/order
 
 go 1.22
 

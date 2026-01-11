@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tafu/analytics-service/internal/api"
-	"github.com/tafu/analytics-service/internal/config"
-	"github.com/tafu/analytics-service/internal/infrastructure/clickhouse"
-	natsClient "github.com/tafu/analytics-service/internal/infrastructure/nats"
-	"github.com/tafu/analytics-service/internal/worker"
+	"microservices/analytic/internal/api"
+	"microservices/analytic/internal/config"
+	"microservices/analytic/internal/infrastructure/clickhouse"
+	natsClient "microservices/analytic/internal/infrastructure/nats"
+	"microservices/analytic/internal/worker"
 )
 
 func main() {

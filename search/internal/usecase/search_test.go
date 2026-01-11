@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/tafu/search-service/internal/domain"
+	"microservices/search/internal/domain"
 )
 
 // MockElasticClient mocks the Elasticsearch client

@@ -8,7 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/tafu/search-service/internal/domain"
+	"microservices/search/internal/domain"
 )
 
 const (

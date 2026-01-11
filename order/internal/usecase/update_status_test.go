@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/tafu/order-service/internal/domain"
+	"microservices/order/internal/domain"
 )
 
 func TestMarkAsPaidUseCase_Execute(t *testing.T) {

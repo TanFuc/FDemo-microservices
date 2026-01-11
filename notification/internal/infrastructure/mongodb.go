@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"notification-service/internal/models"
+	"microservices/notification/internal/models"
 )
 
 const (

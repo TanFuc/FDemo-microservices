@@ -1,4 +1,4 @@
-module github.com/tafu/analytics-service
+module microservices/analytic
 
 go 1.22
 

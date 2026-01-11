@@ -1,4 +1,4 @@
-module github.com/tafu/search-service
+module microservices/search
 
 go 1.22
 

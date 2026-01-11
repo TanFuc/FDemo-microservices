@@ -13,13 +13,13 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/tafu/order-service/internal/config"
-	"github.com/tafu/order-service/internal/handler/http"
-	"github.com/tafu/order-service/internal/infrastructure/database"
-	inventorygrpc "github.com/tafu/order-service/internal/infrastructure/grpc"
-	"github.com/tafu/order-service/internal/infrastructure/messaging"
-	"github.com/tafu/order-service/internal/infrastructure/repository"
-	"github.com/tafu/order-service/internal/usecase"
+	"microservices/order/internal/config"
+	"microservices/order/internal/handler/http"
+	"microservices/order/internal/infrastructure/database"
+	inventorygrpc "microservices/order/internal/infrastructure/grpc"
+	"microservices/order/internal/infrastructure/messaging"
+	"microservices/order/internal/infrastructure/repository"
+	"microservices/order/internal/usecase"
 )
 
 func main() {

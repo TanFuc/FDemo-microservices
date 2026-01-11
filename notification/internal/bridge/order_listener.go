@@ -8,8 +8,8 @@ import (
 
 	"github.com/nats-io/nats.go"
 
-	"notification-service/internal/infrastructure"
-	"notification-service/internal/models"
+	"microservices/notification/internal/infrastructure"
+	"microservices/notification/internal/models"
 )
 
 const (

@@ -1,4 +1,4 @@
-module tafu-logistic/logistics-service
+module microservices/logistic
 
 go 1.22
 

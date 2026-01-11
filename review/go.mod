@@ -1,4 +1,4 @@
-module tafu-review
+module microservices/review
 
 go 1.22
 

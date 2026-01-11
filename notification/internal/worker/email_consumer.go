@@ -9,9 +9,9 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
-	"notification-service/internal/infrastructure"
-	"notification-service/internal/models"
-	"notification-service/internal/provider"
+	"microservices/notification/internal/infrastructure"
+	"microservices/notification/internal/models"
+	"microservices/notification/internal/provider"
 )
 
 // EmailConsumer consumes email notification jobs from RabbitMQ

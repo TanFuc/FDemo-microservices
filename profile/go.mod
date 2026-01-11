@@ -1,4 +1,4 @@
-module tafu-profile
+module microservices/profile
 
 go 1.21
 

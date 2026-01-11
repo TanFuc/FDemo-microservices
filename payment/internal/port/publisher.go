@@ -3,7 +3,7 @@ package port
 import (
 	"context"
 
-	"github.com/tafu/payment-service/internal/domain"
+	"microservices/payment/internal/domain"
 )
 
 // EventPublisher defines the interface for publishing payment events

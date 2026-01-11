@@ -10,12 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tafu-media/media-service/internal/config"
-	"github.com/tafu-media/media-service/internal/handler"
-	"github.com/tafu-media/media-service/internal/infrastructure/queue"
-	"github.com/tafu-media/media-service/internal/infrastructure/storage"
-	"github.com/tafu-media/media-service/internal/usecase"
-	"github.com/tafu-media/media-service/internal/worker"
+	"microservices/media/internal/config"
+	"microservices/media/internal/handler"
+	"microservices/media/internal/infrastructure/queue"
+	"microservices/media/internal/infrastructure/storage"
+	"microservices/media/internal/usecase"
+	"microservices/media/internal/worker"
 )
 
 func main() {

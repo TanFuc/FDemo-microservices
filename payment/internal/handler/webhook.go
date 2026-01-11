@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/tafu/payment-service/internal/domain"
-	"github.com/tafu/payment-service/internal/usecase"
+	"microservices/payment/internal/domain"
+	"microservices/payment/internal/usecase"
 )
 
 // WebhookHandler handles webhook HTTP requests from payment providers

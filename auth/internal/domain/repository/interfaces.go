@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-auth/internal/domain/entity"
+	"microservices/auth/internal/domain/entity"
 )
 
 type UserRepository interface {

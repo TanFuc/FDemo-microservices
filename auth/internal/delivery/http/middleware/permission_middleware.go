@@ -3,9 +3,9 @@ package middleware
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"tafu-auth/internal/domain/service"
-	"tafu-auth/pkg/errors"
-	"tafu-auth/pkg/response"
+	"microservices/auth/internal/domain/service"
+	"microservices/auth/pkg/errors"
+	"microservices/auth/pkg/response"
 )
 
 type PermissionMiddleware struct {

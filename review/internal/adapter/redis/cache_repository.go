@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"tafu-review/internal/core/domain"
+	"microservices/review/internal/core/domain"
 	"time"
 
 	"github.com/redis/go-redis/v9"

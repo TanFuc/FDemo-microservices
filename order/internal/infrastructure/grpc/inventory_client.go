@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/tafu/order-service/internal/config"
-	"github.com/tafu/order-service/internal/domain"
-	pb "github.com/tafu/order-service/proto/inventory"
+	"microservices/order/internal/config"
+	"microservices/order/internal/domain"
+	pb "microservices/order/proto/inventory"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

@@ -1,4 +1,4 @@
-module catalog-service
+module microservices/catalog
 
 go 1.22
 

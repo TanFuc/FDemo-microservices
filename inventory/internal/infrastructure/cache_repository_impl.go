@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"inventory-service/internal/repository"
+	"microservices/inventory/internal/repository"
 
 	"github.com/redis/go-redis/v9"
 )

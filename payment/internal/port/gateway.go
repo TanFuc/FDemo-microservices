@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/shopspring/decimal"
-	"github.com/tafu/payment-service/internal/domain"
+	"microservices/payment/internal/domain"
 )
 
 // PaymentRequest represents a request to create a payment

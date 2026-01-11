@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"tafu-auth/internal/domain/entity"
-	"tafu-auth/internal/domain/repository"
+	"microservices/auth/internal/domain/entity"
+	"microservices/auth/internal/domain/repository"
 )
 
 type roleRepository struct {

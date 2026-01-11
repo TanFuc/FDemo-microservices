@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/gomail.v2"
 
-	"notification-service/internal/config"
+	"microservices/notification/internal/config"
 )
 
 // EmailProvider defines the interface for sending emails

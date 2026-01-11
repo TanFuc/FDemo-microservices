@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/tafu/analytics-service/internal/domain"
+	"microservices/analytic/internal/domain"
 )
 
 type EventRepository struct {

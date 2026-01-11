@@ -1,4 +1,4 @@
-module notification-service
+module microservices/notification
 
 go 1.22
 

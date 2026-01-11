@@ -7,8 +7,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
-	"tafu-profile/internal/config"
-	"tafu-profile/internal/delivery/http/handler"
+	"microservices/profile/internal/config"
+	"microservices/profile/internal/delivery/http/handler"
 )
 
 type Router struct {
