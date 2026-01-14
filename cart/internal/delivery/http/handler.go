@@ -35,7 +35,7 @@ func (h *CartHandler) GetCart(c *fiber.Ctx) error {
 	userID := c.Params("userId")
 	if userID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(domain.ErrorResponse{
-			Error: "invalid_request",
+			Error:   "invalid_request",
 			Message: "userId is required",
 		})
 	}
