@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+
 	"microservices/order/internal/config"
 	"microservices/order/internal/handler/http"
 	"microservices/order/internal/infrastructure/database"
@@ -20,11 +21,18 @@ import (
 	"microservices/order/internal/infrastructure/messaging"
 	"microservices/order/internal/infrastructure/repository"
 	"microservices/order/internal/usecase"
+
+	// Shared packages
+	"microservices/pkg/cache"
+	"microservices/pkg/cache/redis"
 )
 
 func main() {
 	// Load configuration
 	cfg := config.Load()
+
+	// Load shared packages configuration
+	pkgCfg := config.LoadSharedPackagesConfig()
 
 	// Initialize database
 	db, err := database.NewDatabase(&cfg.Database)
@@ -38,6 +46,23 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 	log.Println("Database migrations completed")
+
+	// Initialize cache (shared package)
+	var cacheClient cache.Cache
+	if pkgCfg.Cache.Enabled {
+		cacheCfg := pkgCfg.Cache.ToCacheConfig()
+		cacheClient, err = redis.New(cacheCfg.Redis, &redis.Options{
+			Metrics: true,
+			Prefix:  cacheCfg.ServiceName + ":",
+		})
+		if err != nil {
+			log.Printf("Warning: Failed to connect to cache: %v", err)
+			// Continue without cache
+		} else {
+			defer cacheClient.Close()
+			log.Println("Cache initialized successfully")
+		}
+	}
 
 	// Initialize inventory gRPC client
 	inventoryClient, err := inventorygrpc.NewInventoryClient(&cfg.Inventory)
@@ -57,8 +82,8 @@ func main() {
 		defer natsPublisher.Close()
 	}
 
-	// Initialize repository
-	orderRepo := repository.NewOrderRepository(db)
+	// Initialize repository with cache
+	orderRepo := repository.NewOrderRepository(db, cacheClient)
 
 	// Create mock implementations for development if services are unavailable
 	var stockReserver inventorygrpc.StockReserver = inventoryClient

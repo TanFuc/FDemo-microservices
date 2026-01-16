@@ -6,6 +6,13 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.0
 	github.com/redis/go-redis/v9 v9.4.0
 	go.mongodb.org/mongo-driver v1.13.1
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/customfields v0.0.0
+)
+
+replace (
+	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/customfields => ../pkg/customfields
 )
 
 require (

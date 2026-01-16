@@ -7,8 +7,16 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.31.0
 	github.com/rabbitmq/amqp091-go v1.9.0
+	github.com/redis/go-redis/v9 v9.7.0
 	go.mongodb.org/mongo-driver v1.13.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
 )
 
 require (

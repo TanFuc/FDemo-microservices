@@ -10,6 +10,15 @@ require (
 	go.mongodb.org/mongo-driver v1.17.1
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.2
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/customfields v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/customfields => ../pkg/customfields
 )
 
 require (

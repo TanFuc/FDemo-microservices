@@ -9,6 +9,15 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nats-io/nats.go v1.34.0
 	github.com/redis/go-redis/v9 v9.5.1
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/customfields v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/customfields => ../pkg/customfields
 )
 
 require (

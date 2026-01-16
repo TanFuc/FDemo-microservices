@@ -7,6 +7,15 @@ require (
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/shopspring/decimal v1.4.0
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/customfields v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/customfields => ../pkg/customfields
 )
 
 require (

@@ -8,6 +8,14 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/nats-io/nats.go v1.34.0
+	github.com/redis/go-redis/v9 v9.7.0
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
 )
 
 require (

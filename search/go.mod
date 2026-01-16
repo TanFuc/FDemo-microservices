@@ -8,6 +8,13 @@ require (
 	github.com/nats-io/nats.go v1.37.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/stretchr/testify v1.9.0
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/customfields v0.0.0
+)
+
+replace (
+	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/customfields => ../pkg/customfields
 )
 
 require (

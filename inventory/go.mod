@@ -8,6 +8,13 @@ require (
 	github.com/redis/go-redis/v9 v9.4.0
 	gorm.io/driver/postgres v1.5.6
 	gorm.io/gorm v1.25.7
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
 )
 
 require (

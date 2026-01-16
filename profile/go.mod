@@ -8,7 +8,17 @@ require (
 	github.com/go-playground/validator/v10 v10.16.0
 	github.com/google/uuid v1.5.0
 	github.com/nats-io/nats.go v1.31.0
+	github.com/redis/go-redis/v9 v9.7.0
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/viper v1.18.2
 	go.mongodb.org/mongo-driver v1.13.1
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/customfields v0.0.0
+)
+
+replace (
+	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/customfields => ../pkg/customfields
 )
