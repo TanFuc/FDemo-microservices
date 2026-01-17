@@ -64,4 +64,4 @@ func (r *loginHistoryRepository) CountFailedAttempts(ctx context.Context, userID
 		Where("user_id = ? AND status = ? AND created_at > ?", userID, entity.LoginStatusFailed, sinceTime).
 		Count(&count).Error
 	return count, err
-}
+	}
