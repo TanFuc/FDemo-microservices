@@ -40,9 +40,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      const exceptionResponse = exception.getResponse() as
-        | string
-        | ExceptionResponse;
+      const exceptionResponse = exception.getResponse() as string | ExceptionResponse;
 
       if (typeof exceptionResponse === 'string') {
         message = exceptionResponse;
@@ -52,18 +50,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
             ? exceptionResponse.message
             : exceptionResponse.message?.[0] || exception.message;
 
-        errors = Array.isArray(exceptionResponse.message)
-          ? exceptionResponse.message
-          : [];
+        errors = Array.isArray(exceptionResponse.message) ? exceptionResponse.message : [];
       }
 
       code = this.getErrorCode(status);
     } else if (exception instanceof Error) {
       message = exception.message || ERROR_MESSAGES.INTERNAL_ERROR;
-      this.logger.error(
-        `Unhandled exception: ${exception.message}`,
-        exception.stack,
-      );
+      this.logger.error(`Unhandled exception: ${exception.message}`, exception.stack);
     } else {
       this.logger.error('Unknown exception type', String(exception));
     }
@@ -84,9 +77,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         exception instanceof Error ? exception.stack : undefined,
       );
     } else {
-      this.logger.warn(
-        `[${request.method}] ${request.url} - ${status}: ${message}`,
-      );
+      this.logger.warn(`[${request.method}] ${request.url} - ${status}: ${message}`);
     }
 
     response.status(status).json(errorResponse);

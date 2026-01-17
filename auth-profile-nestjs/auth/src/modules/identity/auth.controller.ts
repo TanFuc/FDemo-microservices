@@ -51,9 +51,7 @@ export class AuthController {
   @SwaggerResponse({ status: 201, description: 'User registered successfully' })
   @SwaggerResponse({ status: 400, description: 'Validation error' })
   @SwaggerResponse({ status: 409, description: 'Email already exists' })
-  async register(
-    @Body() dto: RegisterDto,
-  ): Promise<ApiResponse<RegisterResponse>> {
+  async register(@Body() dto: RegisterDto): Promise<ApiResponse<RegisterResponse>> {
     const result = await this.authService.register(dto);
 
     return {
@@ -75,10 +73,7 @@ export class AuthController {
   @ApiHeader({ name: 'x-device-id', required: false, description: 'Device identifier' })
   @SwaggerResponse({ status: 200, description: 'Login successful' })
   @SwaggerResponse({ status: 401, description: 'Invalid credentials' })
-  async login(
-    @Body() dto: LoginDto,
-    @Req() req: Request,
-  ): Promise<ApiResponse<LoginResponse>> {
+  async login(@Body() dto: LoginDto, @Req() req: Request): Promise<ApiResponse<LoginResponse>> {
     const deviceInfo = this.extractDeviceInfo(req);
     const result = await this.authService.login(dto, deviceInfo);
 
@@ -152,9 +147,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Logout from all devices' })
   @SwaggerResponse({ status: 200, description: 'Logged out from all devices' })
   @SwaggerResponse({ status: 401, description: 'Unauthorized' })
-  async logoutAll(
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<ApiResponse<null>> {
+  async logoutAll(@CurrentUser() user: AuthenticatedUser): Promise<ApiResponse<null>> {
     await this.authService.logoutAllDevices(user.id);
 
     return {
@@ -175,9 +168,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Get current user profile' })
   @SwaggerResponse({ status: 200, description: 'Profile retrieved' })
   @SwaggerResponse({ status: 401, description: 'Unauthorized' })
-  async getProfile(
-    @CurrentUser() user: AuthenticatedUser,
-  ): Promise<ApiResponse<UserResponse>> {
+  async getProfile(@CurrentUser() user: AuthenticatedUser): Promise<ApiResponse<UserResponse>> {
     const profile = await this.authService.getProfile(user.id);
 
     return {

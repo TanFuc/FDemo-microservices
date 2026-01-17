@@ -1,4 +1,1 @@
-export {
-  identityConfig,
-  identityConfigValidationSchema,
-} from './identity.config';
+export { identityConfig, identityConfigValidationSchema } from './identity.config';

@@ -12,12 +12,7 @@ import * as bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 
 import { RefreshToken } from '../entities';
-import {
-  AccessTokenPayload,
-  RefreshTokenPayload,
-  AuthTokens,
-  DeviceInfo,
-} from '../interfaces';
+import { AccessTokenPayload, RefreshTokenPayload, AuthTokens, DeviceInfo } from '../interfaces';
 import { TOKEN_CONFIG, ERROR_MESSAGES } from '../constants';
 import { RedisCacheService } from './redis-cache.service';
 
@@ -69,12 +64,7 @@ export class TokenService {
       ]);
 
       // Save refresh token to database
-      await this.saveRefreshToken(
-        refreshTokenJti,
-        userId,
-        refreshToken,
-        deviceInfo,
-      );
+      await this.saveRefreshToken(refreshTokenJti, userId, refreshToken, deviceInfo);
 
       // Calculate expiresIn in seconds
       const decoded = this.jwtService.decode(accessToken) as AccessTokenPayload;
@@ -210,10 +200,7 @@ export class TokenService {
    */
   async revokeAllUserTokens(userId: string): Promise<void> {
     try {
-      await this.refreshTokenRepository.update(
-        { userId, isRevoked: false },
-        { isRevoked: true },
-      );
+      await this.refreshTokenRepository.update({ userId, isRevoked: false }, { isRevoked: true });
       this.logger.debug(`Revoked all tokens for user ${userId}`);
     } catch (error) {
       this.logger.error(
