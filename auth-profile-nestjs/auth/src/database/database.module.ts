@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { PrismaService } from './prisma.service';
-
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
@@ -26,7 +24,7 @@ import { PrismaService } from './prisma.service';
       inject: [ConfigService],
     }),
   ],
-  providers: [PrismaService],
-  exports: [PrismaService],
+  providers: [],
+  exports: [],
 })
 export class DatabaseModule {}
