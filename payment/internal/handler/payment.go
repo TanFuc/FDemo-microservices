@@ -11,25 +11,33 @@ import (
 	"github.com/shopspring/decimal"
 	"microservices/payment/internal/domain"
 	"microservices/payment/internal/usecase"
+	"microservices/pkg/authclient"
 )
 
 // PaymentHandler handles payment HTTP requests
 type PaymentHandler struct {
-	uc     *usecase.PaymentUseCase
-	logger *slog.Logger
+	uc             *usecase.PaymentUseCase
+	logger         *slog.Logger
+	authMiddleware *authclient.ChiMiddleware
 }
 
 // NewPaymentHandler creates a new payment handler
-func NewPaymentHandler(uc *usecase.PaymentUseCase, logger *slog.Logger) *PaymentHandler {
+func NewPaymentHandler(uc *usecase.PaymentUseCase, logger *slog.Logger, authMiddleware *authclient.ChiMiddleware) *PaymentHandler {
 	return &PaymentHandler{
-		uc:     uc,
-		logger: logger,
+		uc:             uc,
+		logger:         logger,
+		authMiddleware: authMiddleware,
 	}
 }
 
 // RegisterRoutes registers the payment routes
 func (h *PaymentHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/api/v1/payments", func(r chi.Router) {
+		// Apply auth middleware if available
+		if h.authMiddleware != nil {
+			r.Use(h.authMiddleware.RequireAuth)
+		}
+
 		r.Post("/", h.CreatePayment)
 		r.Get("/{id}", h.GetPayment)
 		r.Get("/order/{orderId}", h.GetPaymentsByOrder)

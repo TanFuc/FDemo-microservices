@@ -12,6 +12,7 @@ import (
 	mongorepo "microservices/cart/internal/infrastructure/mongo"
 	redisrepo "microservices/cart/internal/infrastructure/redis"
 	"microservices/cart/internal/usecase"
+	"microservices/pkg/authclient"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -56,6 +57,27 @@ func main() {
 	// Initialize usecase
 	cartUsecase := usecase.NewCartUsecase(redisRepo, mongoRepo)
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware
+	var authMiddleware *authclient.FiberMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewFiberMiddleware(authClient)
+	}
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		AppName:      "Cart Service",
@@ -85,7 +107,7 @@ func main() {
 	})
 
 	// Register routes
-	cartHandler := httpdelivery.NewCartHandler(cartUsecase)
+	cartHandler := httpdelivery.NewCartHandler(cartUsecase, authMiddleware)
 	cartHandler.RegisterRoutes(app)
 
 	// Get port from environment or default to 8080

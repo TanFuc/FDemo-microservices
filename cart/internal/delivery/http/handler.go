@@ -3,23 +3,33 @@ package http
 import (
 	"microservices/cart/internal/domain"
 	"microservices/cart/internal/usecase"
+	"microservices/pkg/authclient"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 // CartHandler handles HTTP requests for cart operations.
 type CartHandler struct {
-	usecase *usecase.CartUsecase
+	usecase        *usecase.CartUsecase
+	authMiddleware *authclient.FiberMiddleware
 }
 
 // NewCartHandler creates a new cart handler.
-func NewCartHandler(uc *usecase.CartUsecase) *CartHandler {
-	return &CartHandler{usecase: uc}
+func NewCartHandler(uc *usecase.CartUsecase, authMiddleware *authclient.FiberMiddleware) *CartHandler {
+	return &CartHandler{
+		usecase:        uc,
+		authMiddleware: authMiddleware,
+	}
 }
 
 // RegisterRoutes registers all cart routes.
 func (h *CartHandler) RegisterRoutes(app *fiber.App) {
 	cart := app.Group("/api/v1/cart")
+
+	// Apply auth middleware if available
+	if h.authMiddleware != nil {
+		cart.Use(h.authMiddleware.RequireAuth())
+	}
 
 	cart.Get("/:userId", h.GetCart)
 	cart.Post("/:userId/items", h.AddToCart)

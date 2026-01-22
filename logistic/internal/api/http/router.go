@@ -3,6 +3,7 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 
+	"microservices/pkg/authclient"
 	"tafu-logistic/logistics-service/internal/api/http/handlers"
 	"tafu-logistic/logistics-service/internal/api/http/middleware"
 	"tafu-logistic/logistics-service/internal/core/services"
@@ -14,6 +15,7 @@ type Router struct {
 	shippingHandler *handlers.ShippingHandler
 	webhookHandler  *handlers.WebhookHandler
 	healthHandler   *handlers.HealthHandler
+	authMiddleware  *authclient.GinMiddleware
 }
 
 // NewRouter creates a new HTTP router
@@ -21,7 +23,7 @@ func NewRouter(
 	shippingService *services.ShippingService,
 	webhookService *services.WebhookService,
 ) *Router {
-	return NewRouterWithHealth(shippingService, webhookService, nil)
+	return NewRouterWithHealth(shippingService, webhookService, nil, nil)
 }
 
 // NewRouterWithHealth creates a new HTTP router with health service
@@ -29,6 +31,7 @@ func NewRouterWithHealth(
 	shippingService *services.ShippingService,
 	webhookService *services.WebhookService,
 	healthService *services.HealthService,
+	authMiddleware *authclient.GinMiddleware,
 ) *Router {
 	// Set Gin mode
 	gin.SetMode(gin.ReleaseMode)
@@ -45,6 +48,7 @@ func NewRouterWithHealth(
 		shippingHandler: handlers.NewShippingHandler(shippingService),
 		webhookHandler:  handlers.NewWebhookHandler(webhookService),
 		healthHandler:   handlers.NewHealthHandler(healthService),
+		authMiddleware:  authMiddleware,
 	}
 
 	// Setup routes
@@ -66,6 +70,12 @@ func (r *Router) setupRoutes() {
 	{
 		// Shipping routes
 		shipping := v1.Group("/shipping")
+
+		// Apply auth middleware if available
+		if r.authMiddleware != nil {
+			shipping.Use(r.authMiddleware.RequireAuth())
+		}
+
 		{
 			shipping.POST("/calculate-fee", r.shippingHandler.CalculateFee)
 			shipping.POST("/create", r.shippingHandler.CreateShipment)
@@ -74,7 +84,7 @@ func (r *Router) setupRoutes() {
 			shipping.GET("/track/:tracking_code", r.shippingHandler.GetShipmentByTracking)
 		}
 
-		// Webhook routes
+		// Webhook routes (no auth - external providers need to call these)
 		webhooks := v1.Group("/webhooks")
 		{
 			webhooks.POST("/:provider", r.webhookHandler.HandleWebhook)
