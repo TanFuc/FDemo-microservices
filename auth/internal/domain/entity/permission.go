@@ -133,60 +133,57 @@ var RolePermissionMapping = map[string][]string{
 	RoleSuperAdmin: {"*"}, // All permissions
 
 	RoleAdmin: {
-		"user:create", "user:read", "user:update", "user:ban", "user:export",
+		"user:create", "user:read", "user:update", "user:delete", "user:ban", "user:impersonate", "user:export",
 		"product:read", "product:approve", "product:feature", "product:bulk_edit",
 		"order:read_all", "order:update", "order:cancel", "order:refund", "order:export",
-		"shop:read", "shop:update", "shop:verify", "shop:suspend", "shop:manage",
+		"shop:read", "shop:update", "shop:delete", "shop:verify", "shop:suspend", "shop:manage",
 		"campaign:create", "campaign:read", "campaign:update", "campaign:delete", "campaign:approve",
 		"voucher:create", "voucher:read", "voucher:update", "voucher:delete",
 		"banner:create", "banner:read", "banner:update", "banner:delete",
 		"category:manage", "notification:send",
 		"report:view", "report:export", "dashboard:view", "analytics:view",
-		"settings:read", "role:manage", "audit:view",
+		"settings:read", "settings:update", "role:manage", "permission:manage", "audit:view",
+		"payment:view", "payment:process", "payout:approve", "finance:report",
+		"inventory:read", "inventory:update", "warehouse:manage", "stock:adjust", "shipping:manage", "carrier:manage",
 		"review:read", "review:moderate", "review:delete",
 		"media:upload", "media:delete", "media:manage",
 	},
 
-	RoleSupport: {
+	RoleManager: {
 		"user:read",
+		"product:read", "product:approve",
+		"order:read_all", "order:update", "order:cancel", "order:refund", "order:export",
+		"shop:read", "shop:verify", "shop:suspend",
+		"review:read", "review:moderate", "review:delete",
+		"report:view", "report:export", "dashboard:view",
+		"inventory:read", "inventory:update", "warehouse:manage", "stock:adjust",
+		"shipping:manage", "carrier:manage",
+		"payment:view", "finance:report",
+	},
+
+	RoleSale: {
+		"campaign:create", "campaign:read", "campaign:update", "campaign:delete", "campaign:approve",
+		"voucher:create", "voucher:read", "voucher:update", "voucher:delete",
+		"banner:create", "banner:read", "banner:update", "banner:delete",
+		"analytics:view", "dashboard:view",
+		"notification:send",
 		"product:read",
-		"order:read_all", "order:update", "order:cancel",
-		"shop:read",
-		"review:read", "review:moderate",
-		"dashboard:view",
-	},
-
-	RoleFinance: {
-		"order:read_all", "order:export",
-		"payment:view", "payment:process",
-		"payout:approve",
-		"finance:report",
-		"report:view", "report:export",
-		"dashboard:view",
-	},
-
-	RoleWarehouse: {
-		"order:read_all", "order:update",
-		"inventory:read", "inventory:update",
-		"warehouse:manage",
-		"stock:adjust",
-		"shipping:manage",
-		"dashboard:view",
 	},
 
 	RoleSeller: {
 		"product:create", "product:read", "product:update_own",
-		"order:read_own", "order:update",
-		"shop:create", "shop:read", "shop:update",
+		"order:read_own",
+		"shop:create", "shop:read", "shop:manage",
 		"inventory:read",
-		"voucher:create", "voucher:read", "voucher:update",
+		"voucher:create", "voucher:read",
 		"media:upload", "media:delete",
 		"analytics:view",
 	},
 
-	RoleCustomer: {
+	RoleUser: {
 		"product:read",
 		"order:create", "order:read_own", "order:cancel",
+		"review:read",
 		"media:upload",
 	},
 }

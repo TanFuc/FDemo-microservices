@@ -7,11 +7,10 @@ import (
 const (
 	RoleSuperAdmin = "SUPER_ADMIN"
 	RoleAdmin      = "ADMIN"
-	RoleSupport    = "SUPPORT"
-	RoleFinance    = "FINANCE"
-	RoleWarehouse  = "WAREHOUSE"
+	RoleManager    = "MANAGER"
+	RoleSale       = "SALE"
 	RoleSeller     = "SELLER"
-	RoleCustomer   = "CUSTOMER"
+	RoleUser       = "USER"
 )
 
 type Role struct {
@@ -48,31 +47,23 @@ var DefaultRoles = []Role{
 	{
 		Name:        RoleAdmin,
 		DisplayName: "Administrator",
-		Description: strPtr("Administrative access for managing the platform"),
+		Description: strPtr("Platform administration and management"),
 		IsSystem:    true,
 		IsDefault:   false,
 		Priority:    80,
 	},
 	{
-		Name:        RoleSupport,
-		DisplayName: "Customer Support",
-		Description: strPtr("Customer support and issue resolution"),
+		Name:        RoleManager,
+		DisplayName: "Manager",
+		Description: strPtr("Operations management including orders, shops, and reviews"),
 		IsSystem:    true,
 		IsDefault:   false,
 		Priority:    60,
 	},
 	{
-		Name:        RoleFinance,
-		DisplayName: "Finance",
-		Description: strPtr("Financial operations and reporting"),
-		IsSystem:    true,
-		IsDefault:   false,
-		Priority:    60,
-	},
-	{
-		Name:        RoleWarehouse,
-		DisplayName: "Warehouse",
-		Description: strPtr("Inventory and warehouse management"),
+		Name:        RoleSale,
+		DisplayName: "Sale",
+		Description: strPtr("Marketing, campaigns, vouchers, and promotions"),
 		IsSystem:    true,
 		IsDefault:   false,
 		Priority:    40,
@@ -80,15 +71,15 @@ var DefaultRoles = []Role{
 	{
 		Name:        RoleSeller,
 		DisplayName: "Seller",
-		Description: strPtr("Merchant/seller account"),
+		Description: strPtr("Merchant/shop owner account"),
 		IsSystem:    true,
 		IsDefault:   false,
 		Priority:    30,
 	},
 	{
-		Name:        RoleCustomer,
-		DisplayName: "Customer",
-		Description: strPtr("Regular customer account"),
+		Name:        RoleUser,
+		DisplayName: "User",
+		Description: strPtr("Regular buyer account"),
 		IsSystem:    true,
 		IsDefault:   true,
 		Priority:    10,

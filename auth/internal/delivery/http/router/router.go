@@ -1,9 +1,12 @@
 package router
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
+	swagger "github.com/swaggo/fiber-swagger"
 
 	"microservices/auth/internal/config"
 	"microservices/auth/internal/delivery/http/handler"
@@ -43,11 +46,13 @@ func NewRouter(
 func (r *Router) Setup() *fiber.App {
 	// Global middleware
 	r.app.Use(helmet.New())
+	origins := strings.Join(r.cfg.App.CORSOrigins, ",")
 	r.app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
+		AllowOrigins:     origins,
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Device-ID,X-Request-ID",
-		AllowCredentials: true,
+		ExposeHeaders:    "Set-Cookie",
+		AllowCredentials: origins != "*",
 	}))
 	r.app.Use(middleware.RequestID())
 	r.app.Use(middleware.RequestLogger())
@@ -55,6 +60,9 @@ func (r *Router) Setup() *fiber.App {
 
 	// API routes
 	api := r.app.Group("/" + r.cfg.App.APIPrefix)
+
+	// Swagger
+	r.app.Get("/swagger/*", swagger.WrapHandler)
 
 	// Health routes (public)
 	r.app.Get("/health", r.healthHandler.Health)

@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 
+	"microservices/auth/internal/config"
 	"microservices/auth/internal/delivery/http/dto"
 	"microservices/auth/internal/delivery/http/middleware"
 	"microservices/auth/internal/domain/service"
@@ -15,12 +17,14 @@ import (
 
 type AuthHandler struct {
 	authService *service.AuthService
+	cfg         *config.Config
 	validate    *validator.Validate
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(authService *service.AuthService, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
+		cfg:         cfg,
 		validate:    validator.New(),
 	}
 }
@@ -98,6 +102,8 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return response.Error(c, err)
 	}
 
+	h.setTokenCookies(c, result.Tokens.AccessToken, result.Tokens.RefreshToken)
+
 	return response.Success(c, &dto.LoginResponse{
 		User: toUserResponseDTO(result.User),
 		Tokens: &dto.AuthTokensResponse{
@@ -122,21 +128,26 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 // @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 	var req dto.RefreshTokenRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "Invalid request body")
+	c.BodyParser(&req) // Optional body - may come from cookie instead
+
+	// Fallback to cookie if no refresh token in body
+	refreshToken := req.RefreshToken
+	if refreshToken == "" {
+		refreshToken = c.Cookies("refresh_token")
 	}
 
-	if err := h.validate.Struct(&req); err != nil {
-		validationErrors := formatValidationErrors(err)
-		return response.ValidationError(c, validationErrors)
+	if refreshToken == "" {
+		return response.BadRequest(c, "Refresh token is required")
 	}
 
 	deviceInfo := extractDeviceInfo(c)
 
-	tokens, err := h.authService.RefreshTokens(c.Context(), req.RefreshToken, deviceInfo)
+	tokens, err := h.authService.RefreshTokens(c.Context(), refreshToken, deviceInfo)
 	if err != nil {
 		return response.Error(c, err)
 	}
+
+	h.setTokenCookies(c, tokens.AccessToken, tokens.RefreshToken)
 
 	return response.Success(c, &dto.AuthTokensResponse{
 		AccessToken:  tokens.AccessToken,
@@ -175,6 +186,8 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 		return response.Error(c, err)
 	}
 
+	h.clearTokenCookies(c)
+
 	return response.SuccessWithMessage(c, nil, "Logged out successfully")
 }
 
@@ -198,6 +211,8 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, err)
 	}
+
+	h.clearTokenCookies(c)
 
 	return response.SuccessWithMessage(c, nil, "Logged out from all devices successfully")
 }
@@ -280,6 +295,69 @@ func (h *AuthHandler) CheckPermission(c *fiber.Ctx) error {
 	// If we reach here, user has the required permission
 	return response.Success(c, &dto.CheckPermissionResponse{
 		HasAccess: true,
+	})
+}
+
+func parseSameSite(s string) string {
+	switch strings.ToLower(s) {
+	case "strict":
+		return "Strict"
+	case "none":
+		return "None"
+	default:
+		return "Lax"
+	}
+}
+
+func (h *AuthHandler) setTokenCookies(c *fiber.Ctx, accessToken, refreshToken string) {
+	sameSite := parseSameSite(h.cfg.Cookie.SameSite)
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/api",
+		Domain:   h.cfg.Cookie.Domain,
+		MaxAge:   int(h.cfg.JWT.AccessExpiry.Seconds()),
+		Secure:   h.cfg.Cookie.Secure,
+		HTTPOnly: true,
+		SameSite: sameSite,
+	})
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/api/v1/auth/refresh",
+		Domain:   h.cfg.Cookie.Domain,
+		MaxAge:   int(h.cfg.JWT.RefreshExpiry.Seconds()),
+		Secure:   h.cfg.Cookie.Secure,
+		HTTPOnly: true,
+		SameSite: sameSite,
+	})
+}
+
+func (h *AuthHandler) clearTokenCookies(c *fiber.Ctx) {
+	sameSite := parseSameSite(h.cfg.Cookie.SameSite)
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/api",
+		Domain:   h.cfg.Cookie.Domain,
+		MaxAge:   -1,
+		Secure:   h.cfg.Cookie.Secure,
+		HTTPOnly: true,
+		SameSite: sameSite,
+	})
+
+	c.Cookie(&fiber.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/api/v1/auth/refresh",
+		Domain:   h.cfg.Cookie.Domain,
+		MaxAge:   -1,
+		Secure:   h.cfg.Cookie.Secure,
+		HTTPOnly: true,
+		SameSite: sameSite,
 	})
 }
 

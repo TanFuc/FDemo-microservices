@@ -91,16 +91,16 @@ func (s *UserService) CreateUser(ctx context.Context, input *CreateUserInput) (*
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to create user", 500)
 	}
 
-	// Assign default role (CUSTOMER)
+	// Assign default role (USER)
 	defaultRole, err := s.roleRepo.FindDefault(ctx)
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
 			logger.Error().Err(err).Msg("Failed to find default role")
 		}
-		// Try to find CUSTOMER role
-		defaultRole, err = s.roleRepo.FindByName(ctx, entity.RoleCustomer)
+		// Try to find USER role
+		defaultRole, err = s.roleRepo.FindByName(ctx, entity.RoleUser)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to find CUSTOMER role")
+			logger.Error().Err(err).Msg("Failed to find USER role")
 		}
 	}
 
