@@ -12,6 +12,7 @@ import (
 	"microservices/auth/internal/delivery/http/middleware"
 	"microservices/auth/internal/domain/service"
 	"microservices/auth/pkg/errors"
+	"microservices/auth/pkg/logger"
 	"microservices/auth/pkg/response"
 )
 
@@ -43,11 +44,13 @@ func NewAuthHandler(authService *service.AuthService, cfg *config.Config) *AuthH
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	var req dto.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
+		logger.Error().Err(err).Msg("Register: Body parsing failed")
 		return response.BadRequest(c, "Invalid request body")
 	}
 
 	if err := h.validate.Struct(&req); err != nil {
 		validationErrors := formatValidationErrors(err)
+		logger.Error().Interface("errors", validationErrors).Msg("Register: Validation failed")
 		return response.ValidationError(c, validationErrors)
 	}
 

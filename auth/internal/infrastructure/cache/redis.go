@@ -26,7 +26,7 @@ func NewRedisClient(cfg *config.Config) (*RedisClient, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+		return &RedisClient{client: client}, fmt.Errorf("failed to connect to Redis: %w", err)
 	}
 
 	logger.Info().Msg("Connected to Redis")

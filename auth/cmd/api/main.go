@@ -71,7 +71,7 @@ func main() {
 	// Initialize Redis
 	redisClient, err := cache.NewRedisClient(cfg)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to connect to Redis")
+		logger.Warn().Err(err).Msg("Failed to connect to Redis, continuing without cache")
 	}
 
 	// Initialize NATS (optional)
