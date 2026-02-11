@@ -45,7 +45,9 @@ func NewRouter(
 
 func (r *Router) Setup() *fiber.App {
 	// Global middleware
-	r.app.Use(helmet.New())
+	r.app.Use(helmet.New(helmet.Config{
+		ContentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+	}))
 	origins := strings.Join(r.cfg.App.CORSOrigins, ",")
 	r.app.Use(cors.New(cors.Config{
 		AllowOrigins:     origins,
@@ -63,6 +65,11 @@ func (r *Router) Setup() *fiber.App {
 
 	// Swagger
 	r.app.Get("/swagger/*", swagger.WrapHandler)
+
+	// Redirect /api/swagger to /swagger/index.html
+	r.app.Get("/api/swagger", func(c *fiber.Ctx) error {
+		return c.Redirect("/swagger/index.html", fiber.StatusFound)
+	})
 
 	// Health routes (public)
 	r.app.Get("/health", r.healthHandler.Health)
