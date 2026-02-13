@@ -32,7 +32,8 @@ import { JwtAuthGuard, PermissionsGuard } from './guards';
 import { HttpExceptionFilter } from './filters';
 
 // Controller
-import { AuthController } from './auth.controller';
+import { AuthController } from './controllers/auth.controller';
+import { AuthGrpcController } from './controllers/auth.grpc.controller';
 
 // Config
 import { identityConfig } from './config';
@@ -77,7 +78,7 @@ import { identityConfig } from './config';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthGrpcController],
   providers: [
     // Services
     AuthService,

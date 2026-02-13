@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
   NotFoundException,
 } from '@nestjs/common';
-import { ProfileService } from './profile.service';
+import { ProfileService } from '../services/profile.service';
 
 // Internal service key header
 const INTERNAL_SERVICE_KEY_HEADER = 'x-internal-service-key';

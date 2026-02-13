@@ -13,7 +13,7 @@ import {
   DeviceInfo,
   UserResponse,
 } from '../interfaces';
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants';
+import { ERROR_MESSAGES } from '../constants';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 import { RedisCacheService } from './redis-cache.service';
@@ -194,6 +194,36 @@ export class AuthService {
         error instanceof Error ? error.stack : String(error),
       );
       throw new InternalServerErrorException(ERROR_MESSAGES.LOGOUT_FAILED);
+    }
+  }
+
+  /**
+   * Authorize user action on resource
+   * Used by gRPC
+   */
+  async authorize(userId: string, resource: string, action: string): Promise<{ allowed: boolean; reason?: string }> {
+    try {
+      const permissionSlug = `${resource}:${action}`;
+      
+      // Check cache for specific permission result if needed?
+      // Since userService.hasPermission already uses cached permission list, 
+      // which is efficient enough (one redis call per request mostly).
+      // But we can cache the specific result too if the list is huge.
+      // For now, let's rely on userService's permission list cache.
+      
+      const hasPermission = await this.userService.hasPermission(userId, permissionSlug);
+      
+      if (hasPermission) {
+        return { allowed: true };
+      }
+
+      return { allowed: false, reason: 'Permission denied' };
+    } catch (error) {
+      this.logger.error(
+        `Authorization failed for user ${userId} on ${resource}:${action}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return { allowed: false, reason: 'Internal error' };
     }
   }
 

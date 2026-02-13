@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package auth;
+
+service AuthService {
+  rpc Authorize (AuthorizeRequest) returns (AuthorizeResponse);
+}
+
+message AuthorizeRequest {
+  string userId = 1;
+  string resource = 2;
+  string action = 3;
+}
+
+message AuthorizeResponse {
+  bool allowed = 1;
+  string reason = 2;
+}

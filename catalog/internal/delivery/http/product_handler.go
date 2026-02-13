@@ -3,7 +3,9 @@ package http
 import (
 	"strconv"
 
+	"microservices/catalog/internal/delivery/http/middleware"
 	"microservices/catalog/internal/domain"
+	"microservices/catalog/internal/infrastructure/grpc"
 	"microservices/catalog/internal/repository"
 	"microservices/catalog/internal/usecase"
 
@@ -12,22 +14,46 @@ import (
 )
 
 type ProductHandler struct {
-	usecase *usecase.ProductUsecase
+	usecase    *usecase.ProductUsecase
+	authClient *grpc.AuthClient
 }
 
-func NewProductHandler(uc *usecase.ProductUsecase) *ProductHandler {
-	return &ProductHandler{usecase: uc}
+func NewProductHandler(uc *usecase.ProductUsecase, authClient *grpc.AuthClient) *ProductHandler {
+	return &ProductHandler{
+		usecase:    uc,
+		authClient: authClient,
+	}
 }
 
-func (h *ProductHandler) RegisterRoutes(app fiber.Router) {
+func (h *ProductHandler) RegisterRoutes(app fiber.Router, authMiddleware *middleware.AuthMiddleware) {
 	products := app.Group("/products")
-	products.Post("/", h.Create)
+
+	// Public routes
 	products.Get("/", h.GetAll)
 	products.Get("/:id", h.GetByID)
 	products.Get("/slug/:slug", h.GetBySlug)
-	products.Put("/:id", h.Update)
-	products.Patch("/:id/metadata", h.UpdateMetadata)
-	products.Delete("/:id", h.Delete)
+
+	// Protected routes - require authentication and permission
+	products.Post("/",
+		authMiddleware.RequireAuth(),
+		authMiddleware.RequirePermission("products", "create"),
+		h.Create,
+	)
+	products.Put("/:id",
+		authMiddleware.RequireAuth(),
+		authMiddleware.RequirePermission("products", "update"),
+		h.Update,
+	)
+	products.Patch("/:id/metadata",
+		authMiddleware.RequireAuth(),
+		authMiddleware.RequirePermission("products", "update"),
+		h.UpdateMetadata,
+	)
+	products.Delete("/:id",
+		authMiddleware.RequireAuth(),
+		authMiddleware.RequirePermission("products", "delete"),
+		h.Delete,
+	)
 }
 
 type CreateProductRequest struct {
@@ -71,6 +97,10 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 		})
 	}
 
+	// Get user info from context (set by middleware)
+	userID, _ := c.Locals("userId").(string)
+	email, _ := c.Locals("email").(string)
+
 	dto := usecase.CreateProductDTO{
 		Name:        req.Name,
 		CategoryID:  categoryID,
@@ -82,6 +112,8 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 		Specs:       req.Specs,
 		Variations:  req.Variations,
 		Metadata:    req.Metadata,
+		CreatedBy:   userID,
+		CreatedByEmail: email,
 	}
 
 	product, err := h.usecase.Create(c.Context(), dto)
@@ -102,7 +134,10 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(product)
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"success": true,
+		"data":    product,
+	})
 }
 
 func (h *ProductHandler) GetAll(c *fiber.Ctx) error {

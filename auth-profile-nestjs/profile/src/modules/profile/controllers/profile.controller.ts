@@ -9,14 +9,13 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ProfileService } from './profile.service';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { CreateAddressDto } from './dto/address.dto';
-import { RegisterShopDto } from './dto/register-shop.dto';
-import { UserId } from './decorators/user-id.decorator';
-import { StandardResponse } from './interfaces/response.interface';
-import { ProfileDocument } from './schemas/profile.schema';
-import { AddressDocument } from './schemas/address.schema';
+import { ProfileService } from '../services/profile.service';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { CreateAddressDto } from '../dto/address.dto';
+import { RegisterShopDto } from '../dto/register-shop.dto';
+import { UserId } from '../decorators/user-id.decorator';
+import { StandardResponse } from '../interfaces/response.interface';
+import { Profile, Address } from '../../../generated/client/client';
 
 @Controller('profiles')
 export class ProfileController {
@@ -25,7 +24,7 @@ export class ProfileController {
   @Get('me')
   async getMyProfile(
     @UserId() userId: string,
-  ): Promise<StandardResponse<ProfileDocument>> {
+  ): Promise<StandardResponse<Profile>> {
     const profile = await this.profileService.getOrCreateProfile(userId);
     return {
       success: true,
@@ -37,7 +36,7 @@ export class ProfileController {
   async updateMyProfile(
     @UserId() userId: string,
     @Body() dto: UpdateProfileDto,
-  ): Promise<StandardResponse<ProfileDocument>> {
+  ): Promise<StandardResponse<Profile>> {
     const profile = await this.profileService.updateProfile(userId, dto);
     return {
       success: true,
@@ -50,7 +49,7 @@ export class ProfileController {
   async registerShop(
     @UserId() userId: string,
     @Body() dto: RegisterShopDto,
-  ): Promise<StandardResponse<ProfileDocument>> {
+  ): Promise<StandardResponse<Profile>> {
     const profile = await this.profileService.registerShop(userId, dto);
     return {
       success: true,
@@ -63,7 +62,7 @@ export class ProfileController {
   async updateShop(
     @UserId() userId: string,
     @Body() dto: Partial<RegisterShopDto>,
-  ): Promise<StandardResponse<ProfileDocument>> {
+  ): Promise<StandardResponse<Profile>> {
     const profile = await this.profileService.updateShop(userId, dto);
     return {
       success: true,
@@ -75,7 +74,7 @@ export class ProfileController {
   @Get('me/addresses')
   async getMyAddresses(
     @UserId() userId: string,
-  ): Promise<StandardResponse<AddressDocument[]>> {
+  ): Promise<StandardResponse<Address[]>> {
     const addresses = await this.profileService.getAddresses(userId);
     return {
       success: true,
@@ -87,7 +86,7 @@ export class ProfileController {
   async addAddress(
     @UserId() userId: string,
     @Body() dto: CreateAddressDto,
-  ): Promise<StandardResponse<AddressDocument>> {
+  ): Promise<StandardResponse<Address>> {
     const address = await this.profileService.addAddress(userId, dto);
     return {
       success: true,
@@ -100,7 +99,7 @@ export class ProfileController {
   async getAddressById(
     @UserId() userId: string,
     @Param('id') addressId: string,
-  ): Promise<StandardResponse<AddressDocument>> {
+  ): Promise<StandardResponse<Address>> {
     const address = await this.profileService.getAddressById(userId, addressId);
     return {
       success: true,
@@ -112,7 +111,7 @@ export class ProfileController {
   async setDefaultAddress(
     @UserId() userId: string,
     @Param('id') addressId: string,
-  ): Promise<StandardResponse<AddressDocument>> {
+  ): Promise<StandardResponse<Address>> {
     const address = await this.profileService.setDefaultAddress(
       userId,
       addressId,

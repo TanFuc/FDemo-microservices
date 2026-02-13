@@ -19,6 +19,7 @@ import (
 	"microservices/logistic/internal/adapters/repository/postgres"
 	"microservices/logistic/internal/api/http"
 	"microservices/logistic/internal/core/services"
+	"microservices/pkg/authclient"
 )
 
 func main() {
@@ -120,8 +121,29 @@ func main() {
 	// Initialize health service
 	healthService := services.NewHealthService(dbPool, redisClient)
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware for Gin
+	var authMiddleware *authclient.GinMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewGinMiddleware(authClient)
+	}
+
 	// Initialize HTTP router with health service
-	router := http.NewRouterWithHealth(shippingService, webhookService, healthService)
+	router := http.NewRouterWithHealth(shippingService, webhookService, healthService, authMiddleware)
 
 	// Initialize and start NATS consumer for order.packed events
 	natsConsumer, err := nats.NewConsumer(nats.ConsumerConfig{

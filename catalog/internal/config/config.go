@@ -11,6 +11,7 @@ type Config struct {
 	MongoDB  MongoDBConfig
 	Redis    RedisConfig
 	NATS     NATSConfig
+	Auth     AuthConfig
 }
 
 type ServerConfig struct {
@@ -37,6 +38,11 @@ type NATSConfig struct {
 	StreamName string
 }
 
+type AuthConfig struct {
+	GRPCAddr string
+	Timeout  time.Duration
+}
+
 func Load() *Config {
 	return &Config{
 		Server: ServerConfig{
@@ -58,6 +64,10 @@ func Load() *Config {
 		NATS: NATSConfig{
 			URL:        getEnv("NATS_URL", "nats://localhost:4222"),
 			StreamName: getEnv("NATS_STREAM_NAME", "CATALOG"),
+		},
+		Auth: AuthConfig{
+			GRPCAddr: getEnv("AUTH_GRPC_ADDR", "localhost:50051"),
+			Timeout:  getEnvDuration("AUTH_TIMEOUT", 3*time.Second),
 		},
 	}
 }
