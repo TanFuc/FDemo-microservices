@@ -19,7 +19,28 @@ import (
 	"microservices/auth/internal/infrastructure/database"
 	"microservices/auth/internal/infrastructure/queue"
 	"microservices/auth/pkg/logger"
+
+	_ "microservices/auth/docs"
 )
+
+// @title Tafu Auth Service API
+// @version 1.0
+// @description Authentication and authorization service for Tafu e-commerce platform
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email support@tafu.vn
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:3001
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Enter your bearer token in the format: Bearer {token}
 
 func main() {
 	// Load configuration
@@ -50,7 +71,7 @@ func main() {
 	// Initialize Redis
 	redisClient, err := cache.NewRedisClient(cfg)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("Failed to connect to Redis")
+		logger.Warn().Err(err).Msg("Failed to connect to Redis, continuing without cache")
 	}
 
 	// Initialize NATS (optional)
@@ -73,7 +94,7 @@ func main() {
 	}
 
 	// Initialize handlers
-	handlers := initHandlers(services, db, redisClient, natsClient)
+	handlers := initHandlers(cfg, services, db, redisClient, natsClient)
 
 	// Initialize middleware
 	middlewares := initMiddleware(services)
@@ -179,9 +200,9 @@ type Handlers struct {
 	healthHandler *handler.HealthHandler
 }
 
-func initHandlers(services *Services, db *gorm.DB, redisClient *cache.RedisClient, natsClient *queue.NATSClient) *Handlers {
+func initHandlers(cfg *config.Config, services *Services, db *gorm.DB, redisClient *cache.RedisClient, natsClient *queue.NATSClient) *Handlers {
 	return &Handlers{
-		authHandler:   handler.NewAuthHandler(services.authService),
+		authHandler:   handler.NewAuthHandler(services.authService, cfg),
 		healthHandler: handler.NewHealthHandler(db, redisClient, natsClient),
 	}
 }

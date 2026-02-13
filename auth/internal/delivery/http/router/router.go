@@ -1,9 +1,12 @@
 package router
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
+	swagger "github.com/swaggo/fiber-swagger"
 
 	"microservices/auth/internal/config"
 	"microservices/auth/internal/delivery/http/handler"
@@ -42,12 +45,16 @@ func NewRouter(
 
 func (r *Router) Setup() *fiber.App {
 	// Global middleware
-	r.app.Use(helmet.New())
+	r.app.Use(helmet.New(helmet.Config{
+		ContentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+	}))
+	origins := strings.Join(r.cfg.App.CORSOrigins, ",")
 	r.app.Use(cors.New(cors.Config{
-		AllowOrigins:     "*",
+		AllowOrigins:     origins,
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Device-ID,X-Request-ID",
-		AllowCredentials: true,
+		ExposeHeaders:    "Set-Cookie",
+		AllowCredentials: origins != "*",
 	}))
 	r.app.Use(middleware.RequestID())
 	r.app.Use(middleware.RequestLogger())
@@ -55,6 +62,14 @@ func (r *Router) Setup() *fiber.App {
 
 	// API routes
 	api := r.app.Group("/" + r.cfg.App.APIPrefix)
+
+	// Swagger
+	r.app.Get("/swagger/*", swagger.WrapHandler)
+
+	// Redirect /api/swagger to /swagger/index.html
+	r.app.Get("/api/swagger", func(c *fiber.Ctx) error {
+		return c.Redirect("/swagger/index.html", fiber.StatusFound)
+	})
 
 	// Health routes (public)
 	r.app.Get("/health", r.healthHandler.Health)

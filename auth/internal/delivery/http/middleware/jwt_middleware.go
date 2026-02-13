@@ -41,20 +41,24 @@ func NewJWTMiddleware(tokenService *service.TokenService, authService *service.A
 
 func (m *JWTMiddleware) Authenticate() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// Get authorization header
+		var tokenString string
+
+		// Priority 1: Authorization header
 		authHeader := c.Get(AuthorizationHeader)
-		if authHeader == "" {
-			return response.Error(c, errors.New("MISSING_TOKEN", "Authorization header is required", fiber.StatusUnauthorized))
+		if authHeader != "" {
+			if !strings.HasPrefix(authHeader, BearerPrefix) {
+				return response.Error(c, errors.New("INVALID_TOKEN_FORMAT", "Invalid authorization header format", fiber.StatusUnauthorized))
+			}
+			tokenString = strings.TrimPrefix(authHeader, BearerPrefix)
 		}
 
-		// Extract token
-		if !strings.HasPrefix(authHeader, BearerPrefix) {
-			return response.Error(c, errors.New("INVALID_TOKEN_FORMAT", "Invalid authorization header format", fiber.StatusUnauthorized))
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, BearerPrefix)
+		// Priority 2: access_token cookie fallback
 		if tokenString == "" {
-			return response.Error(c, errors.New("MISSING_TOKEN", "Token is required", fiber.StatusUnauthorized))
+			tokenString = c.Cookies("access_token")
+		}
+
+		if tokenString == "" {
+			return response.Error(c, errors.New("MISSING_TOKEN", "Authentication token is required", fiber.StatusUnauthorized))
 		}
 
 		// Verify token
