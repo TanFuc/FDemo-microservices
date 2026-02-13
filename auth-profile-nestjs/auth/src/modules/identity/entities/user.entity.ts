@@ -77,7 +77,13 @@ export class User {
   @Column({ name: 'two_factor_enabled', type: 'boolean', default: false })
   twoFactorEnabled!: boolean;
 
-  @Column({ name: 'two_factor_secret', type: 'varchar', length: 255, nullable: true, select: false })
+  @Column({
+    name: 'two_factor_secret',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    select: false,
+  })
   twoFactorSecret!: string | null;
 
   @Column({ name: 'backup_codes', type: 'jsonb', nullable: true, select: false })

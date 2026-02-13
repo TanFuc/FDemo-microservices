@@ -1,16 +1,22 @@
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { ProfileController } from './profile.controller';
-import { InternalController } from './internal.controller';
-import { ProfileService } from './profile.service';
-import { Profile, ProfileSchema } from './schemas/profile.schema';
-import { Address, AddressSchema } from './schemas/address.schema';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { join } from 'path';
+import { ProfileController } from './controllers/profile.controller';
+import { InternalController } from './controllers/internal.controller';
+import { ProfileService } from './services/profile.service';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Profile.name, schema: ProfileSchema },
-      { name: Address.name, schema: AddressSchema },
+    ClientsModule.register([
+      {
+        name: 'AUTH_PACKAGE',
+        transport: Transport.GRPC,
+        options: {
+          package: 'auth',
+          protoPath: join(__dirname, '../../protos/auth.proto'),
+          url: process.env.AUTH_GRPC_URL || '0.0.0.0:50051',
+        },
+      },
     ]),
   ],
   controllers: [ProfileController, InternalController],

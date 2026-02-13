@@ -65,28 +65,8 @@ func (c *Client) EnsureIndex(ctx context.Context) error {
 		return nil
 	}
 
-	// Create index with mapping
-	mapping := map[string]interface{}{
-		"mappings": map[string]interface{}{
-			"properties": map[string]interface{}{
-				"id":         map[string]interface{}{"type": "keyword"},
-				"name":       map[string]interface{}{"type": "text", "analyzer": "standard"},
-				"slug":       map[string]interface{}{"type": "keyword"},
-				"categoryId": map[string]interface{}{"type": "keyword"},
-				"brandId":    map[string]interface{}{"type": "keyword"},
-				"price":      map[string]interface{}{"type": "double"},
-				"thumbnail":  map[string]interface{}{"type": "keyword"},
-				"status":     map[string]interface{}{"type": "keyword"},
-				"createdAt":  map[string]interface{}{"type": "date"},
-				"specs":      map[string]interface{}{"type": "object", "dynamic": true},
-				"metadata":   map[string]interface{}{"type": "object", "dynamic": true},
-			},
-		},
-		"settings": map[string]interface{}{
-			"number_of_shards":   1,
-			"number_of_replicas": 0,
-		},
-	}
+	// Create index with Vietnamese analyzer and advanced mapping
+	mapping := c.buildIndexMapping()
 
 	mappingJSON, err := json.Marshal(mapping)
 	if err != nil {
@@ -109,6 +89,175 @@ func (c *Client) EnsureIndex(ctx context.Context) error {
 
 	c.logger.Info("index created successfully", "index", IndexName)
 	return nil
+}
+
+// buildIndexMapping creates the Elasticsearch mapping with Vietnamese analyzer
+func (c *Client) buildIndexMapping() map[string]interface{} {
+	return map[string]interface{}{
+		"settings": map[string]interface{}{
+			"number_of_shards":   3,
+			"number_of_replicas": 1,
+			"max_result_window":  50000,
+			"analysis": map[string]interface{}{
+				"analyzer": map[string]interface{}{
+					"vietnamese_analyzer": map[string]interface{}{
+						"type":      "custom",
+						"tokenizer": "standard",
+						"filter": []string{
+							"lowercase",
+							"asciifolding",
+							"vietnamese_stop",
+							"vietnamese_synonym",
+						},
+					},
+					"autocomplete_analyzer": map[string]interface{}{
+						"type":      "custom",
+						"tokenizer": "autocomplete_tokenizer",
+						"filter": []string{
+							"lowercase",
+							"asciifolding",
+						},
+					},
+					"autocomplete_search": map[string]interface{}{
+						"type":      "custom",
+						"tokenizer": "standard",
+						"filter": []string{
+							"lowercase",
+							"asciifolding",
+						},
+					},
+					"keyword_analyzer": map[string]interface{}{
+						"type":      "custom",
+						"tokenizer": "keyword",
+						"filter":    []string{"lowercase"},
+					},
+				},
+				"tokenizer": map[string]interface{}{
+					"autocomplete_tokenizer": map[string]interface{}{
+						"type":        "edge_ngram",
+						"min_gram":    2,
+						"max_gram":    20,
+						"token_chars": []string{"letter", "digit"},
+					},
+				},
+				"filter": map[string]interface{}{
+					"vietnamese_stop": map[string]interface{}{
+						"type": "stop",
+						"stopwords": []string{
+							"và", "của", "là", "có", "được", "trong", "cho", "với",
+							"này", "các", "để", "một", "những", "không", "từ", "như",
+							"khi", "theo", "vào", "ra", "lên", "về", "đến", "hoặc",
+							"nhưng", "thì", "nếu", "hay", "mà", "đã", "còn", "cũng",
+						},
+					},
+					"vietnamese_synonym": map[string]interface{}{
+						"type": "synonym",
+						"synonyms": []string{
+							"điện thoại, dt, smartphone, phone",
+							"máy tính, laptop, pc, computer",
+							"tai nghe, headphone, earphone",
+							"sạc, charger, cốc sạc",
+							"pin, battery, ắc quy",
+						},
+					},
+				},
+			},
+		},
+		"mappings": map[string]interface{}{
+			"properties": map[string]interface{}{
+				"id":   map[string]interface{}{"type": "keyword"},
+				"name": map[string]interface{}{
+					"type":     "text",
+					"analyzer": "vietnamese_analyzer",
+					"fields": map[string]interface{}{
+						"keyword": map[string]interface{}{
+							"type":         "keyword",
+							"ignore_above": 256,
+						},
+						"autocomplete": map[string]interface{}{
+							"type":            "text",
+							"analyzer":        "autocomplete_analyzer",
+							"search_analyzer": "autocomplete_search",
+						},
+						"exact": map[string]interface{}{
+							"type":     "text",
+							"analyzer": "keyword_analyzer",
+						},
+					},
+				},
+				"slug":             map[string]interface{}{"type": "keyword"},
+				"description":      map[string]interface{}{"type": "text", "analyzer": "vietnamese_analyzer"},
+				"shortDescription": map[string]interface{}{"type": "text", "analyzer": "vietnamese_analyzer"},
+				"categoryId":       map[string]interface{}{"type": "keyword"},
+				"categoryName": map[string]interface{}{
+					"type":     "text",
+					"analyzer": "vietnamese_analyzer",
+					"fields": map[string]interface{}{
+						"keyword": map[string]interface{}{"type": "keyword"},
+					},
+				},
+				"categoryPath": map[string]interface{}{"type": "keyword"},
+				"brandId":      map[string]interface{}{"type": "keyword"},
+				"brandName": map[string]interface{}{
+					"type":     "text",
+					"analyzer": "vietnamese_analyzer",
+					"fields": map[string]interface{}{
+						"keyword": map[string]interface{}{"type": "keyword"},
+					},
+				},
+				"shopId": map[string]interface{}{"type": "keyword"},
+				"shopName": map[string]interface{}{
+					"type":     "text",
+					"analyzer": "vietnamese_analyzer",
+					"fields": map[string]interface{}{
+						"keyword": map[string]interface{}{"type": "keyword"},
+					},
+				},
+				"basePrice":  map[string]interface{}{"type": "double"},
+				"minPrice":   map[string]interface{}{"type": "double"},
+				"maxPrice":   map[string]interface{}{"type": "double"},
+				"currency":   map[string]interface{}{"type": "keyword"},
+				"thumbnail":  map[string]interface{}{"type": "keyword", "index": false},
+				"images":     map[string]interface{}{"type": "keyword", "index": false},
+				"status":     map[string]interface{}{"type": "keyword"},
+				"visibility": map[string]interface{}{"type": "keyword"},
+				"totalStock": map[string]interface{}{"type": "integer"},
+				"soldCount":  map[string]interface{}{"type": "integer"},
+				"viewCount":  map[string]interface{}{"type": "integer"},
+				"rating":     map[string]interface{}{"type": "float"},
+				"reviewCount": map[string]interface{}{"type": "integer"},
+				"hasVariants":    map[string]interface{}{"type": "boolean"},
+				"isDigital":      map[string]interface{}{"type": "boolean"},
+				"isFreeShipping": map[string]interface{}{"type": "boolean"},
+				"weight":         map[string]interface{}{"type": "float"},
+				"specifications": map[string]interface{}{
+					"type": "nested",
+					"properties": map[string]interface{}{
+						"group": map[string]interface{}{"type": "keyword"},
+						"key":   map[string]interface{}{"type": "keyword"},
+						"name": map[string]interface{}{
+							"type":     "text",
+							"analyzer": "vietnamese_analyzer",
+						},
+						"value": map[string]interface{}{
+							"type":     "text",
+							"analyzer": "vietnamese_analyzer",
+							"fields": map[string]interface{}{
+								"keyword": map[string]interface{}{"type": "keyword"},
+							},
+						},
+						"unit": map[string]interface{}{"type": "keyword"},
+					},
+				},
+				"attributes":  map[string]interface{}{"type": "object", "enabled": true},
+				"metadata":    map[string]interface{}{"type": "object", "enabled": true},
+				"tags":        map[string]interface{}{"type": "keyword"},
+				"createdAt":   map[string]interface{}{"type": "date"},
+				"updatedAt":   map[string]interface{}{"type": "date"},
+				"publishedAt": map[string]interface{}{"type": "date"},
+			},
+		},
+	}
 }
 
 // IndexProduct indexes or updates a product document (idempotent using product ID)
@@ -228,31 +377,76 @@ func (c *Client) Search(ctx context.Context, params *domain.SearchParams) (*doma
 	}, nil
 }
 
-// buildSearchQuery constructs an Elasticsearch bool query from search params
+// buildSearchQuery constructs an Elasticsearch bool query with multi-match and filters
 func (c *Client) buildSearchQuery(params *domain.SearchParams) map[string]interface{} {
-	boolQuery := map[string]interface{}{}
 	must := []interface{}{}
 	filter := []interface{}{}
 
-	// Multi-match for keyword search with boosted name field
+	// Keyword search with multi-match (Vietnamese analyzer + autocomplete)
 	if params.Keyword != "" {
 		must = append(must, map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":  params.Keyword,
-				"fields": []string{"name^3", "slug"},
-				"type":   "best_fields",
+			"bool": map[string]interface{}{
+				"should": []interface{}{
+					// Exact match boost
+					map[string]interface{}{
+						"match": map[string]interface{}{
+							"name.exact": map[string]interface{}{
+								"query": params.Keyword,
+								"boost": 10,
+							},
+						},
+					},
+					// Autocomplete match
+					map[string]interface{}{
+						"match": map[string]interface{}{
+							"name.autocomplete": map[string]interface{}{
+								"query": params.Keyword,
+								"boost": 5,
+							},
+						},
+					},
+					// Standard Vietnamese analyzer
+					map[string]interface{}{
+						"match": map[string]interface{}{
+							"name": map[string]interface{}{
+								"query": params.Keyword,
+								"boost": 3,
+							},
+						},
+					},
+					// Description match
+					map[string]interface{}{
+						"match": map[string]interface{}{
+							"description": map[string]interface{}{
+								"query": params.Keyword,
+								"boost": 1,
+							},
+						},
+					},
+					// Brand and category match
+					map[string]interface{}{
+						"match": map[string]interface{}{
+							"brandName": map[string]interface{}{
+								"query": params.Keyword,
+								"boost": 2,
+							},
+						},
+					},
+					map[string]interface{}{
+						"match": map[string]interface{}{
+							"categoryName": map[string]interface{}{
+								"query": params.Keyword,
+								"boost": 2,
+							},
+						},
+					},
+				},
+				"minimum_should_match": 1,
 			},
 		})
 	}
 
-	// Filter by status = PUBLISHED
-	filter = append(filter, map[string]interface{}{
-		"term": map[string]interface{}{
-			"status": "PUBLISHED",
-		},
-	})
-
-	// Filter by categoryId
+	// Filter by category
 	if params.CategoryID != "" {
 		filter = append(filter, map[string]interface{}{
 			"term": map[string]interface{}{
@@ -261,7 +455,7 @@ func (c *Client) buildSearchQuery(params *domain.SearchParams) map[string]interf
 		})
 	}
 
-	// Filter by brandId
+	// Filter by brand
 	if params.BrandID != "" {
 		filter = append(filter, map[string]interface{}{
 			"term": map[string]interface{}{
@@ -270,32 +464,72 @@ func (c *Client) buildSearchQuery(params *domain.SearchParams) map[string]interf
 		})
 	}
 
+	// Filter by shop
+	if params.ShopID != "" {
+		filter = append(filter, map[string]interface{}{
+			"term": map[string]interface{}{
+				"shopId": params.ShopID,
+			},
+		})
+	}
+
 	// Price range filter
 	if params.PriceMin != nil || params.PriceMax != nil {
-		priceRange := map[string]interface{}{}
+		rangeFilter := map[string]interface{}{}
 		if params.PriceMin != nil {
-			priceRange["gte"] = *params.PriceMin
+			rangeFilter["gte"] = *params.PriceMin
 		}
 		if params.PriceMax != nil {
-			priceRange["lte"] = *params.PriceMax
+			rangeFilter["lte"] = *params.PriceMax
 		}
 		filter = append(filter, map[string]interface{}{
 			"range": map[string]interface{}{
-				"price": priceRange,
+				"minPrice": rangeFilter,
 			},
 		})
 	}
 
-	// Dynamic specs filters
-	for key, value := range params.Specs {
+	// Filter by status (default: only ACTIVE)
+	if params.Status != "" {
 		filter = append(filter, map[string]interface{}{
 			"term": map[string]interface{}{
-				fmt.Sprintf("specs.%s.keyword", key): value,
+				"status": params.Status,
+			},
+		})
+	} else {
+		filter = append(filter, map[string]interface{}{
+			"term": map[string]interface{}{
+				"status": "ACTIVE",
 			},
 		})
 	}
 
-	// Metadata filters (e.g., isFlashSale)
+	// Nested specifications filter
+	for key, value := range params.Specs {
+		filter = append(filter, map[string]interface{}{
+			"nested": map[string]interface{}{
+				"path": "specifications",
+				"query": map[string]interface{}{
+					"bool": map[string]interface{}{
+						"must": []interface{}{
+							map[string]interface{}{
+								"term": map[string]interface{}{
+									"specifications.key": key,
+								},
+							},
+							map[string]interface{}{
+								"match": map[string]interface{}{
+									"specifications.value": value,
+								},
+							},
+						},
+					},
+				},
+			},
+		})
+	}
+
+	// Metadata filters
 	for key, value := range params.Metadata {
 		filter = append(filter, map[string]interface{}{
 			"term": map[string]interface{}{
@@ -304,6 +538,8 @@ func (c *Client) buildSearchQuery(params *domain.SearchParams) map[string]interf
 		})
 	}
 
+	// Build final query
+	boolQuery := map[string]interface{}{}
 	if len(must) > 0 {
 		boolQuery["must"] = must
 	}
@@ -318,21 +554,70 @@ func (c *Client) buildSearchQuery(params *domain.SearchParams) map[string]interf
 	}
 
 	// Sorting
+	sort := []interface{}{}
 	if params.SortBy != "" {
 		order := "asc"
 		if params.SortOrder == "desc" {
 			order = "desc"
 		}
-		query["sort"] = []interface{}{
-			map[string]interface{}{
-				params.SortBy: map[string]interface{}{
-					"order": order,
-				},
+		sort = append(sort, map[string]interface{}{
+			params.SortBy: map[string]interface{}{
+				"order": order,
 			},
-		}
+		})
+	} else {
+		// Default sort by relevance (_score) and createdAt
+		sort = append(sort,
+			map[string]interface{}{"_score": "desc"},
+			map[string]interface{}{"createdAt": "desc"},
+		)
 	}
+	query["sort"] = sort
 
 	return query
+}
+
+// BulkIndex indexes multiple products efficiently
+func (c *Client) BulkIndex(ctx context.Context, products []domain.Product) error {
+	if len(products) == 0 {
+		return nil
+	}
+
+	var buf bytes.Buffer
+
+	for _, product := range products {
+		meta := map[string]interface{}{
+			"index": map[string]interface{}{
+				"_index": IndexName,
+				"_id":    product.ID,
+			},
+		}
+
+		metaJSON, _ := json.Marshal(meta)
+		productJSON, _ := json.Marshal(product)
+
+		buf.Write(metaJSON)
+		buf.WriteByte('\n')
+		buf.Write(productJSON)
+		buf.WriteByte('\n')
+	}
+
+	res, err := c.es.Bulk(
+		bytes.NewReader(buf.Bytes()),
+		c.es.Bulk.WithContext(ctx),
+		c.es.Bulk.WithRefresh("true"),
+	)
+	if err != nil {
+		return fmt.Errorf("bulk indexing failed: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return fmt.Errorf("bulk indexing error: %s", res.String())
+	}
+
+	c.logger.Info("bulk indexed products", "count", len(products))
+	return nil
 }
 
 // Close closes the Elasticsearch client (no-op for current client)

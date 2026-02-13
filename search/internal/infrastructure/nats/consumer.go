@@ -179,6 +179,95 @@ func (c *Consumer) worker(ctx context.Context, id int, msgChan <-chan jetstream.
 	}
 }
 
+// CatalogProductEvent represents the full product event from catalog service
+type CatalogProductEvent struct {
+	EventType string                 `json:"eventType"`
+	ProductID string                 `json:"productId,omitempty"`
+	Product   *CatalogProduct        `json:"product,omitempty"`
+}
+
+// CatalogProduct represents the product structure from catalog service
+type CatalogProduct struct {
+	ID               string                 `json:"id"`
+	ShopID           string                 `json:"shopId,omitempty"`
+	ShopName         string                 `json:"shopName,omitempty"`
+	Name             string                 `json:"name"`
+	Slug             string                 `json:"slug"`
+	Description      string                 `json:"description,omitempty"`
+	ShortDescription string                 `json:"shortDescription,omitempty"`
+	CategoryID       string                 `json:"categoryId"`
+	CategoryName     string                 `json:"categoryName,omitempty"`
+	CategoryPath     string                 `json:"categoryPath,omitempty"`
+	BrandID          string                 `json:"brandId"`
+	BrandName        string                 `json:"brandName,omitempty"`
+	Thumbnail        string                 `json:"thumbnail"`
+	Images           []string               `json:"images,omitempty"`
+	BasePrice        float64                `json:"basePrice"`
+	MinPrice         float64                `json:"minPrice"`
+	MaxPrice         float64                `json:"maxPrice"`
+	Currency         string                 `json:"currency,omitempty"`
+	TotalStock       int                    `json:"totalStock"`
+	Status           string                 `json:"status"`
+	Visibility       string                 `json:"visibility,omitempty"`
+	HasVariants      bool                   `json:"hasVariants"`
+	IsDigital        bool                   `json:"isDigital"`
+	IsFreeShipping   bool                   `json:"isFreeShipping"`
+	Weight           float64                `json:"weight,omitempty"`
+	Specifications   []domain.Specification `json:"specifications,omitempty"`
+	Attributes       map[string]interface{} `json:"attributes,omitempty"`
+	Metadata         map[string]interface{} `json:"metadata,omitempty"`
+	Tags             []string               `json:"tags,omitempty"`
+	CreatedAt        string                 `json:"createdAt"`
+	UpdatedAt        string                 `json:"updatedAt"`
+}
+
+// transformToSearchProduct converts catalog product to search product
+func (c *Consumer) transformToSearchProduct(catalogProduct *CatalogProduct) *domain.Product {
+	return &domain.Product{
+		ID:               catalogProduct.ID,
+		ShopID:           catalogProduct.ShopID,
+		ShopName:         catalogProduct.ShopName,
+		Name:             catalogProduct.Name,
+		Slug:             catalogProduct.Slug,
+		Description:      catalogProduct.Description,
+		ShortDescription: catalogProduct.ShortDescription,
+		CategoryID:       catalogProduct.CategoryID,
+		CategoryName:     catalogProduct.CategoryName,
+		CategoryPath:     catalogProduct.CategoryPath,
+		BrandID:          catalogProduct.BrandID,
+		BrandName:        catalogProduct.BrandName,
+		Thumbnail:        catalogProduct.Thumbnail,
+		Images:           catalogProduct.Images,
+		BasePrice:        catalogProduct.BasePrice,
+		MinPrice:         catalogProduct.MinPrice,
+		MaxPrice:         catalogProduct.MaxPrice,
+		Currency:         catalogProduct.Currency,
+		TotalStock:       catalogProduct.TotalStock,
+		Status:           catalogProduct.Status,
+		Visibility:       catalogProduct.Visibility,
+		HasVariants:      catalogProduct.HasVariants,
+		IsDigital:        catalogProduct.IsDigital,
+		IsFreeShipping:   catalogProduct.IsFreeShipping,
+		Weight:           catalogProduct.Weight,
+		Specifications:   catalogProduct.Specifications,
+		Attributes:       catalogProduct.Attributes,
+		Metadata:         catalogProduct.Metadata,
+		Tags:             catalogProduct.Tags,
+		SoldCount:        0,
+		ViewCount:        0,
+		Rating:           0,
+		ReviewCount:      0,
+		CreatedAt:        parseTime(catalogProduct.CreatedAt),
+		UpdatedAt:        parseTime(catalogProduct.UpdatedAt),
+	}
+}
+
+// parseTime parses RFC3339 time string
+func parseTime(timeStr string) time.Time {
+	t, _ := time.Parse(time.RFC3339, timeStr)
+	return t
+}
+
 // processMessage handles a single NATS message
 func (c *Consumer) processMessage(ctx context.Context, msg jetstream.Msg) {
 	subject := msg.Subject()
@@ -187,16 +276,86 @@ func (c *Consumer) processMessage(ctx context.Context, msg jetstream.Msg) {
 
 	logger.Debug("processing message")
 
-	var event domain.ProductEvent
-	if err := json.Unmarshal(msg.Data(), &event); err != nil {
-		logger.Error("failed to unmarshal event", "error", err)
-		// Ack to prevent redelivery of malformed messages
+	// Try parsing as CatalogProductEvent first (new format)
+	var catalogEvent CatalogProductEvent
+	if err := json.Unmarshal(msg.Data(), &catalogEvent); err != nil {
+		// Fallback to legacy ProductEvent format
+		var legacyEvent domain.ProductEvent
+		if err := json.Unmarshal(msg.Data(), &legacyEvent); err != nil {
+			logger.Error("failed to unmarshal event", "error", err)
+			if err := msg.Ack(); err != nil {
+				logger.Error("failed to ack malformed message", "error", err)
+			}
+			return
+		}
+		// Handle legacy format
+		c.processLegacyMessage(ctx, msg, logger, subject, &legacyEvent)
+		return
+	}
+
+	var processErr error
+	switch subject {
+	case "catalog.product.created", "catalog.product.updated":
+		if catalogEvent.Product == nil {
+			logger.Error("product data missing in event")
+			if err := msg.Ack(); err != nil {
+				logger.Error("failed to ack", "error", err)
+			}
+			return
+		}
+
+		// Transform to search product
+		searchProduct := c.transformToSearchProduct(catalogEvent.Product)
+		logger = logger.With("productId", searchProduct.ID)
+
+		processErr = c.elasticClient.IndexProduct(ctx, searchProduct)
+		if processErr == nil {
+			logger.Info("product indexed successfully")
+		}
+
+	case "catalog.product.deleted":
+		productID := catalogEvent.ProductID
+		if productID == "" && catalogEvent.Product != nil {
+			productID = catalogEvent.Product.ID
+		}
+		if productID == "" {
+			logger.Error("product ID missing in delete event")
+			if err := msg.Ack(); err != nil {
+				logger.Error("failed to ack", "error", err)
+			}
+			return
+		}
+		logger = logger.With("productId", productID)
+		processErr = c.elasticClient.DeleteProduct(ctx, productID)
+		if processErr == nil {
+			logger.Info("product deleted successfully")
+		}
+
+	default:
+		logger.Warn("unknown event subject, acknowledging")
 		if err := msg.Ack(); err != nil {
-			logger.Error("failed to ack malformed message", "error", err)
+			logger.Error("failed to ack unknown event", "error", err)
 		}
 		return
 	}
 
+	if processErr != nil {
+		logger.Error("failed to process event", "error", processErr)
+		// NAK with delay to retry - Elasticsearch might be temporarily unavailable
+		if err := msg.NakWithDelay(5 * time.Second); err != nil {
+			logger.Error("failed to nak message", "error", err)
+		}
+		return
+	}
+
+	// ACK only after successful processing
+	if err := msg.Ack(); err != nil {
+		logger.Error("failed to ack message", "error", err)
+	}
+}
+
+// processLegacyMessage handles legacy ProductEvent format for backward compatibility
+func (c *Consumer) processLegacyMessage(ctx context.Context, msg jetstream.Msg, logger *slog.Logger, subject string, event *domain.ProductEvent) {
 	var processErr error
 	switch subject {
 	case "catalog.product.created", "catalog.product.updated":
@@ -210,7 +369,7 @@ func (c *Consumer) processMessage(ctx context.Context, msg jetstream.Msg) {
 		logger = logger.With("productId", event.Product.ID)
 		processErr = c.elasticClient.IndexProduct(ctx, event.Product)
 		if processErr == nil {
-			logger.Info("product indexed successfully")
+			logger.Info("product indexed successfully (legacy format)")
 		}
 
 	case "catalog.product.deleted":
@@ -241,14 +400,12 @@ func (c *Consumer) processMessage(ctx context.Context, msg jetstream.Msg) {
 
 	if processErr != nil {
 		logger.Error("failed to process event", "error", processErr)
-		// NAK to retry - Elasticsearch might be temporarily unavailable
 		if err := msg.Nak(); err != nil {
 			logger.Error("failed to nak message", "error", err)
 		}
 		return
 	}
 
-	// ACK only after successful processing
 	if err := msg.Ack(); err != nil {
 		logger.Error("failed to ack message", "error", err)
 	}

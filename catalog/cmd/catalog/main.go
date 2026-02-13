@@ -11,6 +11,8 @@ import (
 
 	"microservices/catalog/internal/config"
 	httpdelivery "microservices/catalog/internal/delivery/http"
+	"microservices/catalog/internal/delivery/http/middleware"
+	authgrpc "microservices/catalog/internal/infrastructure/grpc"
 	"microservices/catalog/internal/infrastructure/nats"
 	mongorepo "microservices/catalog/internal/repository/mongo"
 	redisrepo "microservices/catalog/internal/repository/redis"
@@ -75,6 +77,16 @@ func main() {
 		defer publisher.Close()
 	}
 
+	// Connect to Auth gRPC Service
+	authClient, err := authgrpc.NewAuthClient(cfg.Auth.GRPCAddr)
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+		authClient = nil
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", cfg.Auth.GRPCAddr)
+		defer authClient.Close()
+	}
+
 	// Create usecases
 	categoryUsecase := usecase.NewCategoryUsecase(categoryRepo, cacheRepo)
 	brandUsecase := usecase.NewBrandUsecase(brandRepo)
@@ -100,6 +112,12 @@ func main() {
 		})
 	})
 
+	// Create auth middleware
+	var authMiddleware *middleware.AuthMiddleware
+	if authClient != nil {
+		authMiddleware = middleware.NewAuthMiddleware(authClient)
+	}
+
 	// API routes
 	api := app.Group("/api/v1")
 
@@ -110,8 +128,8 @@ func main() {
 	brandHandler := httpdelivery.NewBrandHandler(brandUsecase)
 	brandHandler.RegisterRoutes(api)
 
-	productHandler := httpdelivery.NewProductHandler(productUsecase)
-	productHandler.RegisterRoutes(api)
+	productHandler := httpdelivery.NewProductHandler(productUsecase, authClient)
+	productHandler.RegisterRoutes(api, authMiddleware)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
