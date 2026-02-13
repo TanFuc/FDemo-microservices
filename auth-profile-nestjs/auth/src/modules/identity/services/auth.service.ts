@@ -64,10 +64,7 @@ export class AuthService {
   async login(dto: LoginDto, deviceInfo: DeviceInfo): Promise<LoginResponse> {
     try {
       // Validate credentials
-      const user = await this.userService.validateCredentials(
-        dto.email,
-        dto.password,
-      );
+      const user = await this.userService.validateCredentials(dto.email, dto.password);
 
       if (!user) {
         throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
@@ -78,11 +75,7 @@ export class AuthService {
       await this.redisCacheService.cacheUserPermissions(user.id, permissions);
 
       // Generate token pair
-      const tokens = await this.tokenService.generateTokenPair(
-        user.id,
-        user.email,
-        deviceInfo,
-      );
+      const tokens = await this.tokenService.generateTokenPair(user.id, user.email, deviceInfo);
 
       // Get user response
       const userResponse = await this.userService.toUserResponse(user);
@@ -97,10 +90,7 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      this.logger.error(
-        'Login failed',
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error('Login failed', error instanceof Error ? error.stack : String(error));
       throw new InternalServerErrorException(ERROR_MESSAGES.LOGIN_FAILED);
     }
   }
@@ -108,15 +98,9 @@ export class AuthService {
   /**
    * Refresh access and refresh tokens
    */
-  async refreshTokens(
-    dto: RefreshTokenDto,
-    deviceInfo: DeviceInfo,
-  ): Promise<AuthTokens> {
+  async refreshTokens(dto: RefreshTokenDto, deviceInfo: DeviceInfo): Promise<AuthTokens> {
     try {
-      const result = await this.tokenService.rotateRefreshToken(
-        dto.refreshToken,
-        deviceInfo,
-      );
+      const result = await this.tokenService.rotateRefreshToken(dto.refreshToken, deviceInfo);
 
       this.logger.debug(`Tokens refreshed for user: ${result.userId}`);
 

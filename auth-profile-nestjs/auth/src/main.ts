@@ -40,9 +40,7 @@ async function bootstrap() {
   if (swaggerEnabled) {
     const config = new DocumentBuilder()
       .setTitle(configService.get<string>('SWAGGER_TITLE', 'Tafu Auth API'))
-      .setDescription(
-        configService.get<string>('SWAGGER_DESCRIPTION', 'Identity Service API'),
-      )
+      .setDescription(configService.get<string>('SWAGGER_DESCRIPTION', 'Identity Service API'))
       .setVersion(configService.get<string>('SWAGGER_VERSION', '1.0'))
       .addBearerAuth(
         {

@@ -38,10 +38,7 @@ export class Permission {
   @Column({ name: 'is_dangerous', type: 'boolean', default: false })
   isDangerous!: boolean; // Requires extra confirmation
 
-  @OneToMany(
-    () => RolePermission,
-    (rolePermission) => rolePermission.permission,
-  )
+  @OneToMany(() => RolePermission, (rolePermission) => rolePermission.permission)
   rolePermissions!: RolePermission[];
 
   @BeforeInsert()

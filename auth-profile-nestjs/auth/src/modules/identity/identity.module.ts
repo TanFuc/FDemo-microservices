@@ -8,14 +8,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { redisStore } from 'cache-manager-redis-yet';
 
 // Entities
-import {
-  User,
-  Role,
-  Permission,
-  RolePermission,
-  UserRole,
-  RefreshToken,
-} from './entities';
+import { User, Role, Permission, RolePermission, UserRole, RefreshToken } from './entities';
 
 // Services
 import {
@@ -51,14 +44,7 @@ import { identityConfig } from './config';
     ConfigModule.forFeature(identityConfig),
 
     // TypeORM entities
-    TypeOrmModule.forFeature([
-      User,
-      Role,
-      Permission,
-      RolePermission,
-      UserRole,
-      RefreshToken,
-    ]),
+    TypeOrmModule.forFeature([User, Role, Permission, RolePermission, UserRole, RefreshToken]),
 
     // Passport configuration
     PassportModule.register({ defaultStrategy: 'jwt' }),

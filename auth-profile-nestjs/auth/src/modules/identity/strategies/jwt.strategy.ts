@@ -29,9 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: AccessTokenPayload): Promise<AuthenticatedUser> {
     // Check if token is blacklisted
-    const isBlacklisted = await this.redisCacheService.isTokenBlacklisted(
-      payload.jti,
-    );
+    const isBlacklisted = await this.redisCacheService.isTokenBlacklisted(payload.jti);
 
     if (isBlacklisted) {
       throw new UnauthorizedException(ERROR_MESSAGES.TOKEN_REVOKED);

@@ -19,17 +19,10 @@ export class RedisCacheService {
    * Key: identity:user:{userId}:permissions
    * TTL: 3600 seconds (1 hour)
    */
-  async cacheUserPermissions(
-    userId: string,
-    permissions: string[],
-  ): Promise<void> {
+  async cacheUserPermissions(userId: string, permissions: string[]): Promise<void> {
     try {
       const key = `${this.PERMISSIONS_KEY_PREFIX}${userId}${this.PERMISSIONS_KEY_SUFFIX}`;
-      await this.cacheManager.set(
-        key,
-        JSON.stringify(permissions),
-        this.PERMISSIONS_TTL * 1000,
-      );
+      await this.cacheManager.set(key, JSON.stringify(permissions), this.PERMISSIONS_TTL * 1000);
       this.logger.debug(`Cached permissions for user ${userId}`);
     } catch (error) {
       this.logger.error(
@@ -138,11 +131,7 @@ export class RedisCacheService {
   ): Promise<void> {
     try {
       const key = `${this.SESSION_KEY_PREFIX}${userId}:${deviceId}`;
-      await this.cacheManager.set(
-        key,
-        JSON.stringify(sessionData),
-        ttlSeconds * 1000,
-      );
+      await this.cacheManager.set(key, JSON.stringify(sessionData), ttlSeconds * 1000);
       this.logger.debug(`Set active session for user ${userId}, device ${deviceId}`);
     } catch (error) {
       this.logger.error(
