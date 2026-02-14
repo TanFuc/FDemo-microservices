@@ -1,4 +1,4 @@
-package dto
+package http
 
 type RegisterRequest struct {
 	Email    string `json:"email" validate:"required,email"`

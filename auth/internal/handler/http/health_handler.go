@@ -1,4 +1,4 @@
-package handler
+package http
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	"microservices/auth/internal/infrastructure/cache"
-	"microservices/auth/internal/infrastructure/database"
-	"microservices/auth/internal/infrastructure/queue"
+	"microservices/auth/internal/cache"
+	"microservices/auth/internal/queue"
+	"microservices/auth/internal/repository/postgres"
 	"microservices/auth/pkg/response"
 )
 
@@ -33,27 +33,17 @@ func NewHealthHandler(db *gorm.DB, redis *cache.RedisClient, natsClient *queue.N
 	}
 }
 
-// Health godoc
-// @Summary Health check
-// @Description Check the health status of the service and its dependencies
-// @Tags health
-// @Produce json
-// @Success 200 {object} response.Response{data=HealthStatus}
-// @Failure 503 {object} response.ErrorResponse
-// @Router /health [get]
 func (h *HealthHandler) Health(c *fiber.Ctx) error {
 	services := make(map[string]string)
 	overallStatus := "healthy"
 
-	// Check PostgreSQL
-	if err := database.HealthCheck(h.db); err != nil {
+	if err := postgres.HealthCheck(h.db); err != nil {
 		services["postgres"] = "unhealthy: " + err.Error()
 		overallStatus = "unhealthy"
 	} else {
 		services["postgres"] = "healthy"
 	}
 
-	// Check Redis
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 	if err := h.redis.HealthCheck(ctx); err != nil {
@@ -63,11 +53,9 @@ func (h *HealthHandler) Health(c *fiber.Ctx) error {
 		services["redis"] = "healthy"
 	}
 
-	// Check NATS
 	if h.natsClient != nil {
 		if err := h.natsClient.HealthCheck(); err != nil {
 			services["nats"] = "unhealthy: " + err.Error()
-			// NATS is optional, don't mark overall as unhealthy
 		} else {
 			services["nats"] = "healthy"
 		}
@@ -95,37 +83,20 @@ func (h *HealthHandler) Health(c *fiber.Ctx) error {
 	return response.Success(c, status)
 }
 
-// Liveness godoc
-// @Summary Liveness probe
-// @Description Simple liveness check for Kubernetes
-// @Tags health
-// @Produce json
-// @Success 200 {object} map[string]string
-// @Router /health/live [get]
 func (h *HealthHandler) Liveness(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"status": "ok",
 	})
 }
 
-// Readiness godoc
-// @Summary Readiness probe
-// @Description Readiness check for Kubernetes
-// @Tags health
-// @Produce json
-// @Success 200 {object} map[string]string
-// @Failure 503 {object} map[string]string
-// @Router /health/ready [get]
 func (h *HealthHandler) Readiness(c *fiber.Ctx) error {
-	// Check PostgreSQL
-	if err := database.HealthCheck(h.db); err != nil {
+	if err := postgres.HealthCheck(h.db); err != nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"status": "not ready",
 			"reason": "database connection failed",
 		})
 	}
 
-	// Check Redis
 	ctx, cancel := context.WithTimeout(c.Context(), 5*time.Second)
 	defer cancel()
 	if err := h.redis.HealthCheck(ctx); err != nil {

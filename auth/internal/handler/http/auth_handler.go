@@ -1,4 +1,4 @@
-package handler
+package http
 
 import (
 	"strings"
@@ -8,9 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"microservices/auth/internal/config"
-	"microservices/auth/internal/delivery/http/dto"
-	"microservices/auth/internal/delivery/http/middleware"
-	"microservices/auth/internal/domain/service"
+	"microservices/auth/internal/middleware"
+	"microservices/auth/internal/service"
 	"microservices/auth/pkg/errors"
 	"microservices/auth/pkg/logger"
 	"microservices/auth/pkg/response"
@@ -30,19 +29,8 @@ func NewAuthHandler(authService *service.AuthService, cfg *config.Config) *AuthH
 	}
 }
 
-// Register godoc
-// @Summary Register a new user
-// @Description Register a new user with email and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body dto.RegisterRequest true "Registration details"
-// @Success 201 {object} response.Response{data=dto.RegisterResponse}
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 409 {object} response.ErrorResponse
-// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *fiber.Ctx) error {
-	var req dto.RegisterRequest
+	var req RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
 		logger.Error().Err(err).Msg("Register: Body parsing failed")
 		return response.BadRequest(c, "Invalid request body")
@@ -65,25 +53,13 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return response.Error(c, err)
 	}
 
-	return response.CreatedWithMessage(c, &dto.RegisterResponse{
+	return response.CreatedWithMessage(c, &RegisterResponse{
 		User: toUserResponseDTO(result.User),
 	}, "User registered successfully")
 }
 
-// Login godoc
-// @Summary Login user
-// @Description Login with email and password
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body dto.LoginRequest true "Login credentials"
-// @Param X-Device-ID header string false "Device ID"
-// @Success 200 {object} response.Response{data=dto.LoginResponse}
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/login [post]
 func (h *AuthHandler) Login(c *fiber.Ctx) error {
-	var req dto.LoginRequest
+	var req LoginRequest
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Invalid request body")
 	}
@@ -107,9 +83,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 
 	h.setTokenCookies(c, result.Tokens.AccessToken, result.Tokens.RefreshToken)
 
-	return response.Success(c, &dto.LoginResponse{
+	return response.Success(c, &LoginResponse{
 		User: toUserResponseDTO(result.User),
-		Tokens: &dto.AuthTokensResponse{
+		Tokens: &AuthTokensResponse{
 			AccessToken:  result.Tokens.AccessToken,
 			RefreshToken: result.Tokens.RefreshToken,
 			ExpiresIn:    result.Tokens.ExpiresIn,
@@ -117,23 +93,10 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	})
 }
 
-// RefreshToken godoc
-// @Summary Refresh access token
-// @Description Get new access token using refresh token
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param request body dto.RefreshTokenRequest true "Refresh token"
-// @Param X-Device-ID header string false "Device ID"
-// @Success 200 {object} response.Response{data=dto.AuthTokensResponse}
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/refresh [post]
 func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
-	var req dto.RefreshTokenRequest
-	c.BodyParser(&req) // Optional body - may come from cookie instead
+	var req RefreshTokenRequest
+	c.BodyParser(&req)
 
-	// Fallback to cookie if no refresh token in body
 	refreshToken := req.RefreshToken
 	if refreshToken == "" {
 		refreshToken = c.Cookies("refresh_token")
@@ -152,32 +115,21 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 
 	h.setTokenCookies(c, tokens.AccessToken, tokens.RefreshToken)
 
-	return response.Success(c, &dto.AuthTokensResponse{
+	return response.Success(c, &AuthTokensResponse{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 		ExpiresIn:    tokens.ExpiresIn,
 	})
 }
 
-// Logout godoc
-// @Summary Logout user
-// @Description Logout and invalidate tokens
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param request body dto.LogoutRequest false "Logout options"
-// @Success 200 {object} response.Response
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/logout [post]
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	user := middleware.GetAuthenticatedUser(c)
 	if user == nil {
 		return response.Error(c, errors.New("UNAUTHORIZED", "Authentication required", fiber.StatusUnauthorized))
 	}
 
-	var req dto.LogoutRequest
-	c.BodyParser(&req) // Optional body
+	var req LogoutRequest
+	c.BodyParser(&req)
 
 	deviceID := req.DeviceID
 	if deviceID == "" {
@@ -194,16 +146,6 @@ func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	return response.SuccessWithMessage(c, nil, "Logged out successfully")
 }
 
-// LogoutAll godoc
-// @Summary Logout from all devices
-// @Description Logout and invalidate all tokens for the user
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} response.Response
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/logout-all [post]
 func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	user := middleware.GetAuthenticatedUser(c)
 	if user == nil {
@@ -220,15 +162,6 @@ func (h *AuthHandler) LogoutAll(c *fiber.Ctx) error {
 	return response.SuccessWithMessage(c, nil, "Logged out from all devices successfully")
 }
 
-// GetProfile godoc
-// @Summary Get current user profile
-// @Description Get the authenticated user's profile
-// @Tags auth
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} response.Response{data=dto.UserResponse}
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/profile [get]
 func (h *AuthHandler) GetProfile(c *fiber.Ctx) error {
 	user := middleware.GetAuthenticatedUser(c)
 	if user == nil {
@@ -243,15 +176,6 @@ func (h *AuthHandler) GetProfile(c *fiber.Ctx) error {
 	return response.Success(c, toUserResponseDTO(profile))
 }
 
-// GetSessions godoc
-// @Summary Get active sessions
-// @Description Get all active sessions for the authenticated user
-// @Tags auth
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} response.Response{data=[]dto.SessionResponse}
-// @Failure 401 {object} response.ErrorResponse
-// @Router /auth/sessions [get]
 func (h *AuthHandler) GetSessions(c *fiber.Ctx) error {
 	user := middleware.GetAuthenticatedUser(c)
 	if user == nil {
@@ -264,9 +188,9 @@ func (h *AuthHandler) GetSessions(c *fiber.Ctx) error {
 		return response.Error(c, err)
 	}
 
-	sessionResponses := make([]dto.SessionResponse, len(sessions))
+	sessionResponses := make([]SessionResponse, len(sessions))
 	for i, s := range sessions {
-		sessionResponses[i] = dto.SessionResponse{
+		sessionResponses[i] = SessionResponse{
 			ID:         s.ID,
 			DeviceID:   s.DeviceID,
 			DeviceName: s.DeviceName,
@@ -283,20 +207,8 @@ func (h *AuthHandler) GetSessions(c *fiber.Ctx) error {
 	return response.Success(c, sessionResponses)
 }
 
-// CheckPermission godoc
-// @Summary Check permission
-// @Description Check if user has a specific permission (example endpoint)
-// @Tags auth
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} response.Response{data=dto.CheckPermissionResponse}
-// @Failure 401 {object} response.ErrorResponse
-// @Failure 403 {object} response.ErrorResponse
-// @Router /auth/check-permission [get]
 func (h *AuthHandler) CheckPermission(c *fiber.Ctx) error {
-	// This endpoint is protected by PermissionsGuard in the router
-	// If we reach here, user has the required permission
-	return response.Success(c, &dto.CheckPermissionResponse{
+	return response.Success(c, &CheckPermissionResponse{
 		HasAccess: true,
 	})
 }
@@ -364,7 +276,6 @@ func (h *AuthHandler) clearTokenCookies(c *fiber.Ctx) {
 	})
 }
 
-// Helper functions
 func extractDeviceInfo(c *fiber.Ctx) *service.DeviceInfo {
 	return &service.DeviceInfo{
 		DeviceID:  middleware.GetDeviceID(c),
@@ -373,11 +284,11 @@ func extractDeviceInfo(c *fiber.Ctx) *service.DeviceInfo {
 	}
 }
 
-func toUserResponseDTO(user *service.UserResponse) *dto.UserResponse {
+func toUserResponseDTO(user *service.UserResponse) *UserResponse {
 	if user == nil {
 		return nil
 	}
-	return &dto.UserResponse{
+	return &UserResponse{
 		ID:        user.ID.String(),
 		Email:     user.Email,
 		FullName:  user.FullName,
