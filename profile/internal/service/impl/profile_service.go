@@ -1,4 +1,4 @@
-package service
+package impl
 
 import (
 	"context"
@@ -10,13 +10,14 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"microservices/profile/internal/domain/entity"
-	"microservices/profile/internal/domain/repository"
+	"microservices/profile/internal/model"
+	"microservices/profile/internal/repository"
+	"microservices/profile/internal/service"
 	"microservices/profile/pkg/errors"
 	"microservices/profile/pkg/logger"
 )
 
-type ProfileService struct {
+type profileService struct {
 	profileRepo repository.ProfileRepository
 	addressRepo repository.AddressRepository
 }
@@ -24,8 +25,8 @@ type ProfileService struct {
 func NewProfileService(
 	profileRepo repository.ProfileRepository,
 	addressRepo repository.AddressRepository,
-) *ProfileService {
-	return &ProfileService{
+) service.ProfileService {
+	return &profileService{
 		profileRepo: profileRepo,
 		addressRepo: addressRepo,
 	}
@@ -33,7 +34,7 @@ func NewProfileService(
 
 // Profile operations
 
-func (s *ProfileService) GetOrCreateProfile(ctx context.Context, userID string) (*entity.Profile, error) {
+func (s *profileService) GetOrCreateProfile(ctx context.Context, userID string) (*model.Profile, error) {
 	profile, err := s.profileRepo.FindByUserID(ctx, userID)
 	if err == nil {
 		return profile, nil
@@ -45,7 +46,7 @@ func (s *ProfileService) GetOrCreateProfile(ctx context.Context, userID string) 
 
 	// Create default profile
 	displayName := "User-" + userID[len(userID)-4:]
-	profile = entity.NewProfile(userID, displayName, "")
+	profile = model.NewProfile(userID, displayName, "")
 
 	if err := s.profileRepo.Create(ctx, profile); err != nil {
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to create profile", 500)
@@ -54,7 +55,7 @@ func (s *ProfileService) GetOrCreateProfile(ctx context.Context, userID string) 
 	return profile, nil
 }
 
-func (s *ProfileService) CreateInitialProfile(ctx context.Context, userID, displayName, email string) (*entity.Profile, error) {
+func (s *profileService) CreateInitialProfile(ctx context.Context, userID, displayName, email string) (*model.Profile, error) {
 	// Check if profile already exists
 	exists, err := s.profileRepo.ExistsByUserID(ctx, userID)
 	if err != nil {
@@ -65,7 +66,7 @@ func (s *ProfileService) CreateInitialProfile(ctx context.Context, userID, displ
 		return s.profileRepo.FindByUserID(ctx, userID)
 	}
 
-	profile := entity.NewProfile(userID, displayName, email)
+	profile := model.NewProfile(userID, displayName, email)
 	if err := s.profileRepo.Create(ctx, profile); err != nil {
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to create profile", 500)
 	}
@@ -78,7 +79,18 @@ func (s *ProfileService) CreateInitialProfile(ctx context.Context, userID, displ
 	return profile, nil
 }
 
-func (s *ProfileService) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*entity.Profile, error) {
+func (s *profileService) GetProfileByUserID(ctx context.Context, userID string) (*model.Profile, error) {
+	profile, err := s.profileRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.ErrProfileNotFound
+		}
+		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to fetch profile", 500)
+	}
+	return profile, nil
+}
+
+func (s *profileService) UpdateProfile(ctx context.Context, userID string, updates map[string]interface{}) (*model.Profile, error) {
 	profile, err := s.GetOrCreateProfile(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -107,33 +119,22 @@ func (s *ProfileService) UpdateProfile(ctx context.Context, userID string, updat
 	return profile, nil
 }
 
-func (s *ProfileService) GetProfileByUserID(ctx context.Context, userID string) (*entity.Profile, error) {
-	profile, err := s.profileRepo.FindByUserID(ctx, userID)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, errors.ErrProfileNotFound
-		}
-		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to fetch profile", 500)
-	}
-	return profile, nil
-}
-
 // Address operations
 
-func (s *ProfileService) AddAddress(ctx context.Context, userID string, input *CreateAddressInput) (*entity.Address, error) {
-	address := entity.NewAddress(userID)
-	address.ContactName = input.ContactName
-	address.Phone = input.Phone
+func (s *profileService) AddAddress(ctx context.Context, userID string, req *model.CreateAddressRequest) (*model.Address, error) {
+	address := model.NewAddress(userID)
+	address.ContactName = req.ContactName
+	address.Phone = req.Phone
 	address.CountryCode = "VN" // Default to Vietnam
-	address.ProvinceCode = input.ProvinceCode
-	address.DistrictCode = input.DistrictCode
-	address.WardCode = input.WardCode
-	address.StreetAddress = input.StreetLine
-	address.Type = input.Type
-	address.IsDefault = input.IsDefault
+	address.ProvinceCode = req.ProvinceCode
+	address.DistrictCode = req.DistrictCode
+	address.WardCode = req.WardCode
+	address.StreetAddress = req.StreetLine
+	address.Type = req.Type
+	address.IsDefault = req.IsDefault
 
-	if input.FullAddress != "" {
-		address.FullAddress = input.FullAddress
+	if req.FullAddress != "" {
+		address.FullAddress = req.FullAddress
 	}
 
 	// Check if this is the first address - make it default
@@ -158,7 +159,7 @@ func (s *ProfileService) AddAddress(ctx context.Context, userID string, input *C
 	return address, nil
 }
 
-func (s *ProfileService) GetAddresses(ctx context.Context, userID string) ([]*entity.Address, error) {
+func (s *profileService) GetAddresses(ctx context.Context, userID string) ([]*model.Address, error) {
 	addresses, err := s.addressRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to fetch addresses", 500)
@@ -166,7 +167,7 @@ func (s *ProfileService) GetAddresses(ctx context.Context, userID string) ([]*en
 	return addresses, nil
 }
 
-func (s *ProfileService) GetAddressByID(ctx context.Context, userID string, addressID string) (*entity.Address, error) {
+func (s *profileService) GetAddressByID(ctx context.Context, userID string, addressID string) (*model.Address, error) {
 	objID, err := primitive.ObjectIDFromHex(addressID)
 	if err != nil {
 		return nil, errors.New("INVALID_ADDRESS_ID", "Invalid address ID format", 400)
@@ -183,40 +184,40 @@ func (s *ProfileService) GetAddressByID(ctx context.Context, userID string, addr
 	return address, nil
 }
 
-func (s *ProfileService) UpdateAddress(ctx context.Context, userID, addressID string, input *UpdateAddressInput) (*entity.Address, error) {
+func (s *profileService) UpdateAddress(ctx context.Context, userID, addressID string, req *model.UpdateAddressRequest) (*model.Address, error) {
 	address, err := s.GetAddressByID(ctx, userID, addressID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Apply updates
-	if input.ContactName != "" {
-		address.ContactName = input.ContactName
+	if req.ContactName != "" {
+		address.ContactName = req.ContactName
 	}
-	if input.Phone != "" {
-		address.Phone = input.Phone
+	if req.Phone != "" {
+		address.Phone = req.Phone
 	}
-	if input.ProvinceCode != "" {
-		address.ProvinceCode = input.ProvinceCode
+	if req.ProvinceCode != "" {
+		address.ProvinceCode = req.ProvinceCode
 	}
-	if input.DistrictCode != "" {
-		address.DistrictCode = input.DistrictCode
+	if req.DistrictCode != "" {
+		address.DistrictCode = req.DistrictCode
 	}
-	if input.WardCode != "" {
-		address.WardCode = input.WardCode
+	if req.WardCode != "" {
+		address.WardCode = req.WardCode
 	}
-	if input.StreetLine != "" {
-		address.StreetAddress = input.StreetLine
+	if req.StreetLine != "" {
+		address.StreetAddress = req.StreetLine
 	}
-	if input.FullAddress != "" {
-		address.FullAddress = input.FullAddress
+	if req.FullAddress != "" {
+		address.FullAddress = req.FullAddress
 	}
-	if input.Type != "" {
-		address.Type = input.Type
+	if req.Type != "" {
+		address.Type = req.Type
 	}
 
 	// Handle default flag
-	if input.IsDefault && !address.IsDefault {
+	if req.IsDefault && !address.IsDefault {
 		if err := s.addressRepo.UnsetAllDefaults(ctx, userID); err != nil {
 			return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to unset defaults", 500)
 		}
@@ -232,7 +233,7 @@ func (s *ProfileService) UpdateAddress(ctx context.Context, userID, addressID st
 	return address, nil
 }
 
-func (s *ProfileService) SetDefaultAddress(ctx context.Context, userID, addressID string) (*entity.Address, error) {
+func (s *profileService) SetDefaultAddress(ctx context.Context, userID, addressID string) (*model.Address, error) {
 	objID, err := primitive.ObjectIDFromHex(addressID)
 	if err != nil {
 		return nil, errors.New("INVALID_ADDRESS_ID", "Invalid address ID format", 400)
@@ -261,7 +262,7 @@ func (s *ProfileService) SetDefaultAddress(ctx context.Context, userID, addressI
 	return address, nil
 }
 
-func (s *ProfileService) DeleteAddress(ctx context.Context, userID, addressID string) error {
+func (s *profileService) DeleteAddress(ctx context.Context, userID, addressID string) error {
 	objID, err := primitive.ObjectIDFromHex(addressID)
 	if err != nil {
 		return errors.New("INVALID_ADDRESS_ID", "Invalid address ID format", 400)
@@ -296,14 +297,14 @@ func (s *ProfileService) DeleteAddress(ctx context.Context, userID, addressID st
 
 // Shop operations
 
-func (s *ProfileService) RegisterShop(ctx context.Context, userID string, input *RegisterShopInput) (*entity.Profile, error) {
+func (s *profileService) RegisterShop(ctx context.Context, userID string, req *model.RegisterShopRequest) (*model.Profile, error) {
 	profile, err := s.GetOrCreateProfile(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if shop name is unique
-	exists, err := s.profileRepo.ExistsByShopName(ctx, input.ShopName, userID)
+	exists, err := s.profileRepo.ExistsByShopName(ctx, req.ShopName, userID)
 	if err != nil {
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to check shop name", 500)
 	}
@@ -312,14 +313,14 @@ func (s *ProfileService) RegisterShop(ctx context.Context, userID string, input 
 	}
 
 	// Create shop config
-	profile.ShopConfig = &entity.ShopConfig{
+	profile.ShopConfig = &model.ShopConfig{
 		ShopID:             uuid.New().String(),
-		ShopName:           input.ShopName,
-		ShopSlug:           generateSlug(input.ShopName),
-		Description:        input.Description,
-		LogoURL:            input.LogoURL,
-		BusinessType:       entity.BusinessTypeIndividual,
-		VerificationStatus: entity.VerificationStatusPending,
+		ShopName:           req.ShopName,
+		ShopSlug:           generateSlug(req.ShopName),
+		Description:        req.Description,
+		LogoURL:            req.LogoURL,
+		BusinessType:       model.BusinessTypeIndividual,
+		VerificationStatus: model.VerificationStatusPending,
 		JoinedAt:           time.Now(),
 	}
 
@@ -332,7 +333,7 @@ func (s *ProfileService) RegisterShop(ctx context.Context, userID string, input 
 	return profile, nil
 }
 
-func (s *ProfileService) UpdateShop(ctx context.Context, userID string, input *UpdateShopInput) (*entity.Profile, error) {
+func (s *profileService) UpdateShop(ctx context.Context, userID string, req *model.UpdateShopRequest) (*model.Profile, error) {
 	profile, err := s.profileRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
@@ -346,23 +347,23 @@ func (s *ProfileService) UpdateShop(ctx context.Context, userID string, input *U
 	}
 
 	// Check shop name uniqueness if changing
-	if input.ShopName != "" && input.ShopName != profile.ShopConfig.ShopName {
-		exists, err := s.profileRepo.ExistsByShopName(ctx, input.ShopName, userID)
+	if req.ShopName != "" && req.ShopName != profile.ShopConfig.ShopName {
+		exists, err := s.profileRepo.ExistsByShopName(ctx, req.ShopName, userID)
 		if err != nil {
 			return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to check shop name", 500)
 		}
 		if exists {
 			return nil, errors.ErrShopNameExists
 		}
-		profile.ShopConfig.ShopName = input.ShopName
-		profile.ShopConfig.ShopSlug = generateSlug(input.ShopName)
+		profile.ShopConfig.ShopName = req.ShopName
+		profile.ShopConfig.ShopSlug = generateSlug(req.ShopName)
 	}
 
-	if input.Description != "" {
-		profile.ShopConfig.Description = input.Description
+	if req.Description != "" {
+		profile.ShopConfig.Description = req.Description
 	}
-	if input.LogoURL != "" {
-		profile.ShopConfig.LogoURL = input.LogoURL
+	if req.LogoURL != "" {
+		profile.ShopConfig.LogoURL = req.LogoURL
 	}
 
 	profile.UpdatedAt = time.Now()
@@ -376,12 +377,12 @@ func (s *ProfileService) UpdateShop(ctx context.Context, userID string, input *U
 
 // Internal API operations
 
-func (s *ProfileService) GetUserInfo(ctx context.Context, userID string) (*UserInfoResponse, error) {
+func (s *profileService) GetUserInfo(ctx context.Context, userID string) (*model.UserInfoResponse, error) {
 	profile, err := s.profileRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			// Return default info
-			return &UserInfoResponse{
+			return &model.UserInfoResponse{
 				UserID:      userID,
 				DisplayName: "User-" + userID[len(userID)-4:],
 			}, nil
@@ -389,12 +390,7 @@ func (s *ProfileService) GetUserInfo(ctx context.Context, userID string) (*UserI
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to fetch profile", 500)
 	}
 
-	return &UserInfoResponse{
-		UserID:      profile.UserID,
-		DisplayName: profile.DisplayName,
-		AvatarURL:   profile.AvatarURL,
-		Email:       profile.Email,
-	}, nil
+	return profile.ToUserInfoResponse(), nil
 }
 
 // Helper functions
@@ -405,49 +401,4 @@ func generateSlug(name string) string {
 	slug = reg.ReplaceAllString(slug, "-")
 	slug = strings.Trim(slug, "-")
 	return slug
-}
-
-// Input/Output types
-
-type CreateAddressInput struct {
-	ContactName  string             `json:"contactName" validate:"required,max=100"`
-	Phone        string             `json:"phone" validate:"required,max=20"`
-	ProvinceCode string             `json:"provinceCode" validate:"required"`
-	DistrictCode string             `json:"districtCode" validate:"required"`
-	WardCode     string             `json:"wardCode" validate:"required"`
-	StreetLine   string             `json:"streetLine" validate:"required"`
-	FullAddress  string             `json:"fullAddress,omitempty"`
-	IsDefault    bool               `json:"isDefault,omitempty"`
-	Type         entity.AddressType `json:"type,omitempty"`
-}
-
-type UpdateAddressInput struct {
-	ContactName  string             `json:"contactName,omitempty"`
-	Phone        string             `json:"phone,omitempty"`
-	ProvinceCode string             `json:"provinceCode,omitempty"`
-	DistrictCode string             `json:"districtCode,omitempty"`
-	WardCode     string             `json:"wardCode,omitempty"`
-	StreetLine   string             `json:"streetLine,omitempty"`
-	FullAddress  string             `json:"fullAddress,omitempty"`
-	IsDefault    bool               `json:"isDefault,omitempty"`
-	Type         entity.AddressType `json:"type,omitempty"`
-}
-
-type RegisterShopInput struct {
-	ShopName    string `json:"shopName" validate:"required"`
-	Description string `json:"description,omitempty"`
-	LogoURL     string `json:"logoUrl,omitempty" validate:"omitempty,url"`
-}
-
-type UpdateShopInput struct {
-	ShopName    string `json:"shopName,omitempty"`
-	Description string `json:"description,omitempty"`
-	LogoURL     string `json:"logoUrl,omitempty" validate:"omitempty,url"`
-}
-
-type UserInfoResponse struct {
-	UserID      string `json:"userId"`
-	DisplayName string `json:"displayName"`
-	AvatarURL   string `json:"avatarUrl,omitempty"`
-	Email       string `json:"email,omitempty"`
 }

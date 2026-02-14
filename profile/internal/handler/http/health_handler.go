@@ -1,4 +1,4 @@
-package handler
+package http
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"microservices/profile/internal/infrastructure/database"
+	"microservices/profile/internal/repository/mongodb"
 	"microservices/profile/pkg/response"
 )
 
@@ -17,10 +17,10 @@ type HealthStatus struct {
 }
 
 type HealthHandler struct {
-	mongodb *database.MongoDB
+	mongodb *mongodb.MongoDB
 }
 
-func NewHealthHandler(mongodb *database.MongoDB) *HealthHandler {
+func NewHealthHandler(mongodb *mongodb.MongoDB) *HealthHandler {
 	return &HealthHandler{
 		mongodb: mongodb,
 	}

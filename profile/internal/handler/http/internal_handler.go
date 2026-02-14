@@ -1,20 +1,20 @@
-package handler
+package http
 
 import (
 	"github.com/gofiber/fiber/v2"
 
 	"microservices/profile/internal/config"
-	"microservices/profile/internal/domain/service"
+	"microservices/profile/internal/service"
 	"microservices/profile/pkg/errors"
 	"microservices/profile/pkg/response"
 )
 
 type InternalHandler struct {
 	cfg            *config.Config
-	profileService *service.ProfileService
+	profileService service.ProfileService
 }
 
-func NewInternalHandler(cfg *config.Config, profileService *service.ProfileService) *InternalHandler {
+func NewInternalHandler(cfg *config.Config, profileService service.ProfileService) *InternalHandler {
 	return &InternalHandler{
 		cfg:            cfg,
 		profileService: profileService,

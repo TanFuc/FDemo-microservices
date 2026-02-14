@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"microservices/profile/internal/config"
-	"microservices/profile/internal/domain/service"
+	"microservices/profile/internal/service"
 	"microservices/profile/pkg/logger"
 )
 
@@ -28,14 +28,14 @@ type UserRegisteredEvent struct {
 
 type UserRegisteredListener struct {
 	cfg            *config.Config
-	profileService *service.ProfileService
+	profileService service.ProfileService
 	conn           *nats.Conn
 	js             jetstream.JetStream
 	consumer       jetstream.Consumer
 	stopCh         chan struct{}
 }
 
-func NewUserRegisteredListener(cfg *config.Config, profileService *service.ProfileService) *UserRegisteredListener {
+func NewUserRegisteredListener(cfg *config.Config, profileService service.ProfileService) *UserRegisteredListener {
 	return &UserRegisteredListener{
 		cfg:            cfg,
 		profileService: profileService,
