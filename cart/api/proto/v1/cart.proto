@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package cart.v1;
+
+option go_package = "microservices/cart/pkg/pb/v1;cartv1";
+
+service CartService {
+  // GetCart retrieves the user's cart
+  rpc GetCart(GetCartRequest) returns (GetCartResponse);
+
+  // AddToCart adds an item to the cart
+  rpc AddToCart(AddToCartRequest) returns (AddToCartResponse);
+
+  // RemoveItem removes an item from the cart
+  rpc RemoveItem(RemoveItemRequest) returns (RemoveItemResponse);
+
+  // UpdateQuantity updates the quantity of an item
+  rpc UpdateQuantity(UpdateQuantityRequest) returns (UpdateQuantityResponse);
+
+  // ClearCart removes all items from the cart
+  rpc ClearCart(ClearCartRequest) returns (ClearCartResponse);
+
+  // GetCartSummary retrieves cart summary with total price
+  rpc GetCartSummary(GetCartSummaryRequest) returns (GetCartSummaryResponse);
+}
+
+message CartItem {
+  string sku_id = 1;
+  string name = 2;
+  double price = 3;
+  int32 quantity = 4;
+  string thumbnail = 5;
+  bool selected = 6;
+  int64 added_at = 7;
+}
+
+message GetCartRequest {
+  string user_id = 1;
+}
+
+message GetCartResponse {
+  string user_id = 1;
+  repeated CartItem items = 2;
+  int32 total_items = 3;
+}
+
+message AddToCartRequest {
+  string user_id = 1;
+  string sku_id = 2;
+  string name = 3;
+  double price = 4;
+  int32 quantity = 5;
+  string thumbnail = 6;
+  bool selected = 7;
+}
+
+message AddToCartResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RemoveItemRequest {
+  string user_id = 1;
+  string sku_id = 2;
+}
+
+message RemoveItemResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UpdateQuantityRequest {
+  string user_id = 1;
+  string sku_id = 2;
+  int32 quantity = 3;
+}
+
+message UpdateQuantityResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ClearCartRequest {
+  string user_id = 1;
+}
+
+message ClearCartResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetCartSummaryRequest {
+  string user_id = 1;
+  bool selected_only = 2;
+}
+
+message GetCartSummaryResponse {
+  string user_id = 1;
+  repeated CartItem items = 2;
+  int32 total_items = 3;
+  double total_price = 4;
+}
