@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package campaign.v1;
+
+option go_package = "microservices/campaign/pkg/pb/v1;campaignv1";
+
+service CampaignService {
+  // GetCampaign retrieves a campaign by ID
+  rpc GetCampaign(GetCampaignRequest) returns (GetCampaignResponse);
+
+  // ListActiveCampaigns retrieves all active campaigns
+  rpc ListActiveCampaigns(ListActiveCampaignsRequest) returns (ListActiveCampaignsResponse);
+
+  // GetVoucherByCode retrieves a voucher by code
+  rpc GetVoucherByCode(GetVoucherByCodeRequest) returns (GetVoucherByCodeResponse);
+
+  // ClaimVoucher claims a voucher for a user
+  rpc ClaimVoucher(ClaimVoucherRequest) returns (ClaimVoucherResponse);
+
+  // CalculateCart calculates cart discount with voucher
+  rpc CalculateCart(CalculateCartRequest) returns (CalculateCartResponse);
+}
+
+message Campaign {
+  string id = 1;
+  string name = 2;
+  string start_time = 3;
+  string end_time = 4;
+  string status = 5;
+  bool is_active = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message Voucher {
+  string id = 1;
+  string code = 2;
+  string campaign_id = 3;
+  int32 total_count = 4;
+  int32 used_count = 5;
+  int32 remaining_stock = 6;
+  string type = 7;
+  string value = 8;
+  string status = 9;
+  bool is_available = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message GetCampaignRequest {
+  string id = 1;
+}
+
+message GetCampaignResponse {
+  Campaign campaign = 1;
+}
+
+message ListActiveCampaignsRequest {}
+
+message ListActiveCampaignsResponse {
+  repeated Campaign campaigns = 1;
+}
+
+message GetVoucherByCodeRequest {
+  string code = 1;
+}
+
+message GetVoucherByCodeResponse {
+  Voucher voucher = 1;
+}
+
+message ClaimVoucherRequest {
+  string user_id = 1;
+  string code = 2;
+}
+
+message ClaimVoucherResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message CartItem {
+  string sku = 1;
+  string name = 2;
+  string price = 3;
+  int32 quantity = 4;
+  string category = 5;
+}
+
+message CalculateCartRequest {
+  repeated CartItem items = 1;
+  string voucher_code = 2;
+}
+
+message CalculateCartResponse {
+  string original_total = 1;
+  string discount_amount = 2;
+  string final_price = 3;
+  bool voucher_applied = 4;
+  string voucher_code = 5;
+  string error_message = 6;
+}
