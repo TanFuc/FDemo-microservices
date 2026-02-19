@@ -1,0 +1,321 @@
+syntax = "proto3";
+
+package catalog.v1;
+
+option go_package = "microservices/catalog/pkg/pb;pb";
+
+import "google/protobuf/timestamp.proto";
+
+// CatalogService provides product, category, and brand management
+service CatalogService {
+  // Product operations
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc GetProductBySlug(GetProductBySlugRequest) returns (GetProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse);
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+
+  // Category operations
+  rpc GetCategory(GetCategoryRequest) returns (GetCategoryResponse);
+  rpc GetCategoryBySlug(GetCategoryBySlugRequest) returns (GetCategoryResponse);
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
+  rpc ListCategories(ListCategoriesRequest) returns (ListCategoriesResponse);
+
+  // Brand operations
+  rpc GetBrand(GetBrandRequest) returns (GetBrandResponse);
+  rpc GetBrandBySlug(GetBrandBySlugRequest) returns (GetBrandResponse);
+  rpc CreateBrand(CreateBrandRequest) returns (CreateBrandResponse);
+  rpc UpdateBrand(UpdateBrandRequest) returns (UpdateBrandResponse);
+  rpc DeleteBrand(DeleteBrandRequest) returns (DeleteBrandResponse);
+  rpc ListBrands(ListBrandsRequest) returns (ListBrandsResponse);
+}
+
+// Common messages
+message Pagination {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message PaginationInfo {
+  int32 page = 1;
+  int32 limit = 2;
+  int64 total = 3;
+  int32 total_pages = 4;
+}
+
+// Product messages
+message Product {
+  string id = 1;
+  string shop_id = 2;
+  string shop_name = 3;
+  string name = 4;
+  string slug = 5;
+  string description = 6;
+  string short_description = 7;
+  string category_id = 8;
+  string category_path = 9;
+  string brand_id = 10;
+  string brand_name = 11;
+  string thumbnail = 12;
+  repeated ProductImage images = 13;
+  string base_price = 14;
+  string compare_at_price = 15;
+  string min_price = 16;
+  string max_price = 17;
+  string currency = 18;
+  repeated Variation variations = 19;
+  int32 total_stock = 20;
+  string status = 21;
+  string visibility = 22;
+  string created_at = 23;
+  string updated_at = 24;
+}
+
+message ProductImage {
+  string url = 1;
+  string alt = 2;
+  int32 position = 3;
+  bool is_primary = 4;
+}
+
+message Variation {
+  string sku = 1;
+  map<string, string> attributes = 2;
+  string price = 3;
+  int32 stock = 4;
+  int32 available = 5;
+  bool is_active = 6;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message GetProductBySlugRequest {
+  string slug = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message CreateProductRequest {
+  string shop_id = 1;
+  string shop_name = 2;
+  string name = 3;
+  string description = 4;
+  string short_description = 5;
+  string category_id = 6;
+  string brand_id = 7;
+  string thumbnail = 8;
+  repeated ProductImage images = 9;
+  string base_price = 10;
+  string currency = 11;
+  repeated Variation variations = 12;
+  string status = 13;
+  string visibility = 14;
+  string created_by = 15;
+}
+
+message CreateProductResponse {
+  Product product = 1;
+}
+
+message UpdateProductRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string short_description = 4;
+  string category_id = 5;
+  string brand_id = 6;
+  string thumbnail = 7;
+  repeated ProductImage images = 8;
+  string base_price = 9;
+  repeated Variation variations = 10;
+  string status = 11;
+  string visibility = 12;
+  string updated_by = 13;
+}
+
+message UpdateProductResponse {
+  Product product = 1;
+}
+
+message DeleteProductRequest {
+  string id = 1;
+}
+
+message DeleteProductResponse {
+  bool success = 1;
+}
+
+message ListProductsRequest {
+  Pagination pagination = 1;
+  string category_id = 2;
+  string brand_id = 3;
+  string status = 4;
+  string shop_id = 5;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  PaginationInfo pagination = 2;
+}
+
+// Category messages
+message Category {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string parent_id = 5;
+  string path = 6;
+  int32 level = 7;
+  int32 position = 8;
+  string image_url = 9;
+  string icon_url = 10;
+  string status = 11;
+  int64 product_count = 12;
+  string created_at = 13;
+  string updated_at = 14;
+}
+
+message GetCategoryRequest {
+  string id = 1;
+}
+
+message GetCategoryBySlugRequest {
+  string slug = 1;
+}
+
+message GetCategoryResponse {
+  Category category = 1;
+}
+
+message CreateCategoryRequest {
+  string name = 1;
+  string description = 2;
+  string parent_id = 3;
+  string image_url = 4;
+  string icon_url = 5;
+}
+
+message CreateCategoryResponse {
+  Category category = 1;
+}
+
+message UpdateCategoryRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string parent_id = 4;
+  string image_url = 5;
+  string icon_url = 6;
+  string status = 7;
+}
+
+message UpdateCategoryResponse {
+  Category category = 1;
+}
+
+message DeleteCategoryRequest {
+  string id = 1;
+}
+
+message DeleteCategoryResponse {
+  bool success = 1;
+}
+
+message ListCategoriesRequest {
+  Pagination pagination = 1;
+  string parent_id = 2;
+  string status = 3;
+}
+
+message ListCategoriesResponse {
+  repeated Category categories = 1;
+  PaginationInfo pagination = 2;
+}
+
+// Brand messages
+message Brand {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string logo_url = 5;
+  string banner_url = 6;
+  string website = 7;
+  string country = 8;
+  string status = 9;
+  bool is_verified = 10;
+  bool is_featured = 11;
+  int64 product_count = 12;
+  string created_at = 13;
+  string updated_at = 14;
+}
+
+message GetBrandRequest {
+  string id = 1;
+}
+
+message GetBrandBySlugRequest {
+  string slug = 1;
+}
+
+message GetBrandResponse {
+  Brand brand = 1;
+}
+
+message CreateBrandRequest {
+  string name = 1;
+  string description = 2;
+  string logo_url = 3;
+  string banner_url = 4;
+  string website = 5;
+  string country = 6;
+}
+
+message CreateBrandResponse {
+  Brand brand = 1;
+}
+
+message UpdateBrandRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string logo_url = 4;
+  string banner_url = 5;
+  string website = 6;
+  string country = 7;
+  string status = 8;
+  bool is_verified = 9;
+  bool is_featured = 10;
+}
+
+message UpdateBrandResponse {
+  Brand brand = 1;
+}
+
+message DeleteBrandRequest {
+  string id = 1;
+}
+
+message DeleteBrandResponse {
+  bool success = 1;
+}
+
+message ListBrandsRequest {
+  Pagination pagination = 1;
+  string status = 2;
+  bool verified_only = 3;
+  bool featured_only = 4;
+}
+
+message ListBrandsResponse {
+  repeated Brand brands = 1;
+  PaginationInfo pagination = 2;
+}
