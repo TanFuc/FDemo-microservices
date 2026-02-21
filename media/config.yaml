@@ -1,0 +1,32 @@
+app:
+  name: media-service
+  env: development
+  port: "8080"
+  grpc_port: "50052"
+  auth_grpc_addr: localhost:50051
+  debug: true
+
+minio:
+  endpoint: localhost:9000
+  access_key_id: minioadmin
+  secret_access_key: minioadmin
+  use_ssl: false
+  bucket_name: ecommerce-media
+
+nats:
+  url: nats://localhost:4222
+  stream_name: MEDIA
+  subject: media.uploaded
+
+media:
+  upload_url_expiry: 15m
+  thumbnail_size: 200
+  medium_size: 800
+  allowed_mime_types:
+    - image/jpeg
+    - image/png
+    - image/gif
+    - image/webp
+    - video/mp4
+    - video/webm
+  temp_dir: /tmp

@@ -43,6 +43,28 @@ type ProcessedImage struct {
 	MediumKey    string
 }
 
+type MediaFileResponse struct {
+	ID          string    `json:"id"`
+	UserID      string    `json:"user_id"`
+	FileName    string    `json:"file_name"`
+	FileKey     string    `json:"file_key"`
+	MimeType    string    `json:"mime_type"`
+	FileSize    int64     `json:"file_size"`
+	PublicURL   string    `json:"public_url"`
+	ThumbnailURL string   `json:"thumbnail_url,omitempty"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type ListMediaResponse struct {
+	Items      []*MediaFileResponse `json:"items"`
+	Total      int64                `json:"total"`
+	Page       int                  `json:"page"`
+	Limit      int                  `json:"limit"`
+	TotalPages int                  `json:"total_pages"`
+}
+
 type StorageClient interface {
 	GeneratePresignedPutURL(ctx context.Context, objectName string, expiry time.Duration) (string, error)
 	GetPublicURL(objectName string) string
