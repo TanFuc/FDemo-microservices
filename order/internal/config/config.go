@@ -1,94 +1,158 @@
 package config
 
 import (
-	"os"
-	"strconv"
+	"fmt"
+	"strings"
+
+	"github.com/spf13/viper"
 )
 
 // Config holds all configuration for the service
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	NATS     NATSConfig
-	Inventory InventoryConfig
+	App       AppConfig       `mapstructure:"app"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	NATS      NATSConfig      `mapstructure:"nats"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	Inventory InventoryConfig `mapstructure:"inventory"`
 }
 
-// ServerConfig holds HTTP server configuration
-type ServerConfig struct {
-	Port string
-	Host string
+// AppConfig holds application configuration
+type AppConfig struct {
+	Name         string `mapstructure:"name"`
+	Env          string `mapstructure:"env"`
+	Port         string `mapstructure:"port"`
+	Host         string `mapstructure:"host"`
+	AuthGRPCAddr string `mapstructure:"auth_grpc_addr"`
 }
 
 // DatabaseConfig holds PostgreSQL configuration
 type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DBName   string `mapstructure:"dbname"`
+	SSLMode  string `mapstructure:"sslmode"`
 }
 
 // NATSConfig holds NATS JetStream configuration
 type NATSConfig struct {
-	URL       string
-	StreamName string
+	URL        string `mapstructure:"url"`
+	StreamName string `mapstructure:"stream_name"`
+}
+
+// RedisConfig holds Redis configuration
+type RedisConfig struct {
+	URL      string `mapstructure:"url"`
+	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 // InventoryConfig holds Inventory gRPC service configuration
 type InventoryConfig struct {
-	GRPCAddress string
-	Timeout     int // in seconds
+	GRPCAddress string `mapstructure:"grpc_address"`
+	Timeout     int    `mapstructure:"timeout"`
 }
 
-// Load loads configuration from environment variables with defaults
-func Load() *Config {
-	return &Config{
-		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8080"),
-			Host: getEnv("SERVER_HOST", "0.0.0.0"),
-		},
-		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "5432"),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", "postgres"),
-			DBName:   getEnv("DB_NAME", "order_service"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
-		},
-		NATS: NATSConfig{
-			URL:        getEnv("NATS_URL", "nats://localhost:4222"),
-			StreamName: getEnv("NATS_STREAM_NAME", "ORDERS"),
-		},
-		Inventory: InventoryConfig{
-			GRPCAddress: getEnv("INVENTORY_GRPC_ADDRESS", "localhost:50051"),
-			Timeout:     getEnvInt("INVENTORY_TIMEOUT", 5),
-		},
+// Load loads configuration from file and environment variables
+func Load() (*Config, error) {
+	v := viper.New()
+
+	// Set config file
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(".")
+	v.AddConfigPath("./config")
+	v.AddConfigPath("../")
+
+	// Set defaults
+	setDefaults(v)
+
+	// Read config file
+	if err := v.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			return nil, fmt.Errorf("error reading config file: %w", err)
+		}
+		// Config file not found, using defaults and env vars
 	}
+
+	// Enable environment variable override
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Bind environment variables
+	bindEnvVars(v)
+
+	var cfg Config
+	if err := v.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("error unmarshaling config: %w", err)
+	}
+
+	return &cfg, nil
+}
+
+func setDefaults(v *viper.Viper) {
+	// App defaults
+	v.SetDefault("app.name", "order-service")
+	v.SetDefault("app.env", "development")
+	v.SetDefault("app.port", "8082")
+	v.SetDefault("app.host", "0.0.0.0")
+	v.SetDefault("app.auth_grpc_addr", "localhost:50051")
+
+	// Database defaults
+	v.SetDefault("database.host", "localhost")
+	v.SetDefault("database.port", "5432")
+	v.SetDefault("database.user", "postgres")
+	v.SetDefault("database.password", "postgres")
+	v.SetDefault("database.dbname", "order_service")
+	v.SetDefault("database.sslmode", "disable")
+
+	// NATS defaults
+	v.SetDefault("nats.url", "nats://localhost:4222")
+	v.SetDefault("nats.stream_name", "ORDERS")
+
+	// Redis defaults
+	v.SetDefault("redis.url", "localhost:6379")
+	v.SetDefault("redis.password", "")
+	v.SetDefault("redis.db", 0)
+
+	// Inventory defaults
+	v.SetDefault("inventory.grpc_address", "localhost:50052")
+	v.SetDefault("inventory.timeout", 5)
+}
+
+func bindEnvVars(v *viper.Viper) {
+	// App
+	v.BindEnv("app.name", "APP_NAME")
+	v.BindEnv("app.env", "APP_ENV")
+	v.BindEnv("app.port", "APP_PORT", "SERVER_PORT")
+	v.BindEnv("app.host", "APP_HOST", "SERVER_HOST")
+	v.BindEnv("app.auth_grpc_addr", "AUTH_GRPC_ADDR")
+
+	// Database
+	v.BindEnv("database.host", "DB_HOST")
+	v.BindEnv("database.port", "DB_PORT")
+	v.BindEnv("database.user", "DB_USER")
+	v.BindEnv("database.password", "DB_PASSWORD")
+	v.BindEnv("database.dbname", "DB_NAME")
+	v.BindEnv("database.sslmode", "DB_SSLMODE")
+
+	// NATS
+	v.BindEnv("nats.url", "NATS_URL")
+	v.BindEnv("nats.stream_name", "NATS_STREAM_NAME")
+
+	// Redis
+	v.BindEnv("redis.url", "REDIS_URL")
+	v.BindEnv("redis.password", "REDIS_PASSWORD")
+	v.BindEnv("redis.db", "REDIS_DB")
+
+	// Inventory
+	v.BindEnv("inventory.grpc_address", "INVENTORY_GRPC_ADDRESS")
+	v.BindEnv("inventory.timeout", "INVENTORY_TIMEOUT")
 }
 
 // DSN returns the PostgreSQL connection string
 func (c *DatabaseConfig) DSN() string {
-	return "host=" + c.Host +
-		" port=" + c.Port +
-		" user=" + c.User +
-		" password=" + c.Password +
-		" dbname=" + c.DBName +
-		" sslmode=" + c.SSLMode
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-func getEnvInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intValue, err := strconv.Atoi(value); err == nil {
-			return intValue
-		}
-	}
-	return defaultValue
+	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode)
 }

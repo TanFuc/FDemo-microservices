@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"microservices/pkg/authclient"
 	"microservices/review/internal/core/domain"
 	"microservices/review/internal/core/dto"
 	"microservices/review/internal/core/service"
@@ -10,14 +11,16 @@ import (
 )
 
 type ReviewHandler struct {
-	reviewService *service.ReviewService
-	validate      *validator.Validate
+	reviewService  *service.ReviewService
+	validate       *validator.Validate
+	authMiddleware *authclient.FiberMiddleware
 }
 
-func NewReviewHandler(reviewService *service.ReviewService) *ReviewHandler {
+func NewReviewHandler(reviewService *service.ReviewService, authMiddleware *authclient.FiberMiddleware) *ReviewHandler {
 	return &ReviewHandler{
-		reviewService: reviewService,
-		validate:      validator.New(),
+		reviewService:  reviewService,
+		validate:       validator.New(),
+		authMiddleware: authMiddleware,
 	}
 }
 
@@ -274,17 +277,29 @@ func (h *ReviewHandler) RegisterRoutes(app *fiber.App) {
 
 	// Review endpoints
 	reviews := api.Group("/reviews")
-	reviews.Post("/", h.CreateReview)
 	reviews.Get("/:reviewId", h.GetReviewByID)
-	reviews.Post("/:reviewId/reply", h.ReplyReview)
-	reviews.Patch("/:reviewId/status", h.UpdateReviewStatus)
 
-	// Product endpoints
+	// Protected review endpoints (require auth)
+	if h.authMiddleware != nil {
+		protectedReviews := reviews.Group("", h.authMiddleware.RequireAuth())
+		protectedReviews.Post("/", h.CreateReview)
+		protectedReviews.Post("/:reviewId/reply", h.ReplyReview)
+		protectedReviews.Patch("/:reviewId/status", h.UpdateReviewStatus)
+	} else {
+		reviews.Post("/", h.CreateReview)
+		reviews.Post("/:reviewId/reply", h.ReplyReview)
+		reviews.Patch("/:reviewId/status", h.UpdateReviewStatus)
+	}
+
+	// Product endpoints (public)
 	products := api.Group("/products")
 	products.Get("/:productId/reviews", h.GetProductReviews)
 	products.Get("/:productId/rating", h.GetRatingSummary)
 
-	// User endpoints
+	// User endpoints (protected)
 	users := api.Group("/users")
+	if h.authMiddleware != nil {
+		users.Use(h.authMiddleware.RequireAuth())
+	}
 	users.Get("/:userId/reviews", h.GetUserReviews)
 }

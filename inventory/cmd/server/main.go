@@ -2,11 +2,13 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"microservices/inventory/internal/config"
 	"microservices/inventory/internal/handler"
 	"microservices/inventory/internal/infrastructure"
 	"microservices/inventory/internal/usecase"
+	"microservices/pkg/authclient"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -54,6 +56,27 @@ func main() {
 		config.GetReservationTTL(),
 	)
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware
+	var authMiddleware *authclient.FiberMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewFiberMiddleware(authClient)
+	}
+
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -71,7 +94,7 @@ func main() {
 		})
 	})
 
-	inventoryHandler := handler.NewInventoryHandler(inventoryUseCase)
+	inventoryHandler := handler.NewInventoryHandler(inventoryUseCase, authMiddleware)
 	inventoryHandler.RegisterRoutes(app)
 
 	log.Printf("Starting server on port %s", cfg.Server.Port)

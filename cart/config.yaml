@@ -1,0 +1,22 @@
+app:
+  name: cart-service
+  env: development
+  port: "8082"
+  grpc_port: "50053"
+  debug: true
+
+redis:
+  host: localhost
+  port: "6379"
+  password: ""
+  db: 0
+  pool_size: 10
+
+mongo:
+  uri: mongodb://localhost:27017
+  database: cart_db
+  timeout: 10
+
+auth:
+  grpc_addr: localhost:50051
+  timeout: 3s

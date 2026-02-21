@@ -33,3 +33,5 @@ coverage/
 # Misc
 *.tgz
 .eslintcache
+
+/generated/prisma

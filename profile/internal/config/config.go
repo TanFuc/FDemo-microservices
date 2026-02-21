@@ -15,12 +15,12 @@ type Config struct {
 }
 
 type AppConfig struct {
-	Name              string
-	Env               string
-	Port              string
-	APIPrefix         string
-	CORSOrigins       []string
-	Debug             bool
+	Name               string
+	Env                string
+	Port               string
+	APIPrefix          string
+	CORSOrigins        []string
+	Debug              bool
 	InternalServiceKey string
 }
 
@@ -37,17 +37,19 @@ type NATSConfig struct {
 }
 
 func Load() (*Config, error) {
-	viper.SetConfigName(".env")
-	viper.SetConfigType("env")
+	// Support both YAML config and env file
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("..")
-	viper.AutomaticEnv()
+	viper.AddConfigPath("./config")
+
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
 
 	// Set defaults
 	setDefaults()
 
-	// Read config file (optional)
+	// Try to read config file (optional)
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("error reading config file: %w", err)
@@ -56,23 +58,23 @@ func Load() (*Config, error) {
 
 	config := &Config{
 		App: AppConfig{
-			Name:              viper.GetString("APP_NAME"),
-			Env:               viper.GetString("NODE_ENV"),
-			Port:              viper.GetString("PORT"),
-			APIPrefix:         viper.GetString("API_PREFIX"),
-			CORSOrigins:       strings.Split(viper.GetString("CORS_ORIGIN"), ","),
-			Debug:             viper.GetBool("DEBUG"),
-			InternalServiceKey: viper.GetString("INTERNAL_SERVICE_KEY"),
+			Name:               viper.GetString("app.name"),
+			Env:                viper.GetString("app.env"),
+			Port:               viper.GetString("app.port"),
+			APIPrefix:          viper.GetString("app.api_prefix"),
+			CORSOrigins:        viper.GetStringSlice("app.cors_origins"),
+			Debug:              viper.GetBool("app.debug"),
+			InternalServiceKey: viper.GetString("app.internal_service_key"),
 		},
 		MongoDB: MongoDBConfig{
-			URI:            viper.GetString("MONGODB_URI"),
-			Database:       viper.GetString("MONGODB_DATABASE"),
-			ConnectTimeout: viper.GetDuration("MONGODB_CONNECT_TIMEOUT"),
-			MaxPoolSize:    viper.GetUint64("MONGODB_MAX_POOL_SIZE"),
-			MinPoolSize:    viper.GetUint64("MONGODB_MIN_POOL_SIZE"),
+			URI:            viper.GetString("mongodb.uri"),
+			Database:       viper.GetString("mongodb.database"),
+			ConnectTimeout: viper.GetDuration("mongodb.connect_timeout"),
+			MaxPoolSize:    viper.GetUint64("mongodb.max_pool_size"),
+			MinPoolSize:    viper.GetUint64("mongodb.min_pool_size"),
 		},
 		NATS: NATSConfig{
-			URL: viper.GetString("NATS_URL"),
+			URL: viper.GetString("nats.url"),
 		},
 	}
 
@@ -84,25 +86,29 @@ func Load() (*Config, error) {
 }
 
 func setDefaults() {
-	viper.SetDefault("APP_NAME", "tafu-profile")
-	viper.SetDefault("NODE_ENV", "development")
-	viper.SetDefault("PORT", "3002")
-	viper.SetDefault("API_PREFIX", "api/v1")
-	viper.SetDefault("CORS_ORIGIN", "*")
-	viper.SetDefault("DEBUG", false)
+	// App defaults
+	viper.SetDefault("app.name", "profile-service")
+	viper.SetDefault("app.env", "development")
+	viper.SetDefault("app.port", "3002")
+	viper.SetDefault("app.api_prefix", "api/v1")
+	viper.SetDefault("app.cors_origins", []string{"*"})
+	viper.SetDefault("app.debug", true)
+	viper.SetDefault("app.internal_service_key", "")
 
-	viper.SetDefault("MONGODB_URI", "mongodb://localhost:27017")
-	viper.SetDefault("MONGODB_DATABASE", "tafu_profile")
-	viper.SetDefault("MONGODB_CONNECT_TIMEOUT", "10s")
-	viper.SetDefault("MONGODB_MAX_POOL_SIZE", 100)
-	viper.SetDefault("MONGODB_MIN_POOL_SIZE", 10)
+	// MongoDB defaults
+	viper.SetDefault("mongodb.uri", "mongodb://localhost:27017")
+	viper.SetDefault("mongodb.database", "profile_service")
+	viper.SetDefault("mongodb.connect_timeout", "10s")
+	viper.SetDefault("mongodb.max_pool_size", 100)
+	viper.SetDefault("mongodb.min_pool_size", 10)
 
-	viper.SetDefault("NATS_URL", "nats://localhost:4222")
+	// NATS defaults
+	viper.SetDefault("nats.url", "nats://localhost:4222")
 }
 
 func (c *Config) Validate() error {
 	if c.MongoDB.URI == "" {
-		return fmt.Errorf("MONGODB_URI is required")
+		return fmt.Errorf("mongodb.uri is required")
 	}
 	return nil
 }

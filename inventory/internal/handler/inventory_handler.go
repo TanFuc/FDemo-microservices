@@ -5,16 +5,21 @@ import (
 
 	"microservices/inventory/internal/domain"
 	"microservices/inventory/internal/usecase"
+	"microservices/pkg/authclient"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 type InventoryHandler struct {
-	useCase usecase.InventoryUseCase
+	useCase        usecase.InventoryUseCase
+	authMiddleware *authclient.FiberMiddleware
 }
 
-func NewInventoryHandler(useCase usecase.InventoryUseCase) *InventoryHandler {
-	return &InventoryHandler{useCase: useCase}
+func NewInventoryHandler(useCase usecase.InventoryUseCase, authMiddleware *authclient.FiberMiddleware) *InventoryHandler {
+	return &InventoryHandler{
+		useCase:        useCase,
+		authMiddleware: authMiddleware,
+	}
 }
 
 type ReserveRequest struct {
@@ -45,6 +50,11 @@ type SuccessResponse struct {
 
 func (h *InventoryHandler) RegisterRoutes(app *fiber.App) {
 	api := app.Group("/api/v1")
+
+	// Apply auth middleware if available
+	if h.authMiddleware != nil {
+		api.Use(h.authMiddleware.RequireAuth())
+	}
 
 	api.Post("/inventory", h.CreateInventory)
 	api.Get("/inventory/:sku_id", h.GetInventory)

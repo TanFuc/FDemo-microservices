@@ -3,20 +3,30 @@ package api
 import (
 	"net/http"
 	"strings"
+
+	"microservices/pkg/authclient"
 )
 
-func NewRouter(h *Handler) http.Handler {
+func NewRouter(h *Handler, authMiddleware *authclient.HTTPMiddleware) http.Handler {
 	mux := http.NewServeMux()
 
-	// Health check
+	// Health check (no auth)
 	mux.HandleFunc("/health", h.HealthCheck)
 
-	// Ingestion endpoint
-	mux.HandleFunc("/analytics/collect", h.CollectEvent)
+	// Apply auth middleware to protected routes if available
+	if authMiddleware != nil {
+		// Ingestion endpoint
+		mux.HandleFunc("/analytics/collect", authMiddleware.RequireAuth(h.CollectEvent))
 
-	// Analytics read endpoints
-	mux.HandleFunc("/analytics/products/", h.GetProductViews)
-	mux.HandleFunc("/analytics/conversion", h.GetConversionRate)
+		// Analytics read endpoints
+		mux.HandleFunc("/analytics/products/", authMiddleware.RequireAuth(h.GetProductViews))
+		mux.HandleFunc("/analytics/conversion", authMiddleware.RequireAuth(h.GetConversionRate))
+	} else {
+		// No auth - use handlers directly
+		mux.HandleFunc("/analytics/collect", h.CollectEvent)
+		mux.HandleFunc("/analytics/products/", h.GetProductViews)
+		mux.HandleFunc("/analytics/conversion", h.GetConversionRate)
+	}
 
 	// Wrap with middleware
 	return corsMiddleware(loggingMiddleware(mux))

@@ -16,6 +16,7 @@ import (
 	"microservices/media/internal/infrastructure/storage"
 	"microservices/media/internal/usecase"
 	"microservices/media/internal/worker"
+	"microservices/pkg/authclient"
 )
 
 func main() {
@@ -57,9 +58,30 @@ func main() {
 	}
 	log.Println("Image processor worker started")
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware for Chi
+	var authMiddleware *authclient.ChiMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewChiMiddleware(authClient)
+	}
+
 	// Initialize HTTP handler and router
 	mediaHandler := handler.NewMediaHandler(mediaUseCase)
-	router := handler.NewRouter(mediaHandler)
+	router := handler.NewRouter(mediaHandler, authMiddleware)
 
 	// Create HTTP server
 	server := &http.Server{

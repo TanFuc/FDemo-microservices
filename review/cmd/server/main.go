@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"microservices/pkg/authclient"
 	grpcclient "microservices/review/internal/adapter/grpc"
 	"microservices/review/internal/adapter/mongodb"
 	rediscache "microservices/review/internal/adapter/redis"
@@ -75,8 +76,29 @@ func main() {
 	// Initialize service
 	reviewService := service.NewReviewService(reviewRepo, productRatingRepo, cacheRepo, orderClient)
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware
+	var authMiddleware *authclient.FiberMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewFiberMiddleware(authClient)
+	}
+
 	// Initialize handler
-	reviewHandler := handler.NewReviewHandler(reviewService)
+	reviewHandler := handler.NewReviewHandler(reviewService, authMiddleware)
 
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{

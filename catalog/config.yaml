@@ -1,0 +1,26 @@
+app:
+  name: catalog-service
+  env: development
+  port: "8082"
+  grpc_port: "50052"
+  debug: true
+  read_timeout: 10s
+  write_timeout: 10s
+
+mongodb:
+  uri: mongodb://localhost:27017
+  database: catalog
+  timeout: 10s
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+
+nats:
+  url: nats://localhost:4222
+  stream_name: CATALOG
+
+auth:
+  grpc_addr: localhost:50051
+  timeout: 3s

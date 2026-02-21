@@ -4,19 +4,28 @@ go 1.22
 
 require (
 	github.com/aymerick/raymond v2.0.2+incompatible
-	github.com/joho/godotenv v1.5.1
+	github.com/gofiber/contrib/websocket v1.3.0
+	github.com/gofiber/fiber/v2 v2.52.0
+	github.com/google/uuid v1.5.0
 	github.com/nats-io/nats.go v1.31.0
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/redis/go-redis/v9 v9.7.0
+	github.com/spf13/viper v1.18.2
 	go.mongodb.org/mongo-driver v1.13.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	microservices/pkg/authorization v0.0.0
+	microservices/pkg/authclient v0.0.0
 	microservices/pkg/cache v0.0.0
+	microservices/pkg/logger v0.0.0
+	microservices/pkg/response v0.0.0
 )
 
 replace (
 	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/authclient => ../pkg/authclient
 	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/response => ../pkg/response
 )
 
 require (

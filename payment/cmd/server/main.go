@@ -20,6 +20,7 @@ import (
 	"microservices/payment/internal/port"
 	"microservices/payment/internal/usecase"
 	"microservices/payment/pkg/config"
+	"microservices/pkg/authclient"
 )
 
 func main() {
@@ -85,8 +86,29 @@ func main() {
 	// Create use case
 	paymentUC := usecase.NewPaymentUseCase(repo, natsPublisher, gateways, logger)
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		logger.Warn("failed to connect to Auth service, authorization will fail", "error", err)
+	} else {
+		logger.Info("connected to Auth gRPC Service", "address", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware for Chi
+	var authMiddleware *authclient.ChiMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewChiMiddleware(authClient)
+	}
+
 	// Create HTTP handlers
-	paymentHandler := handler.NewPaymentHandler(paymentUC, logger)
+	paymentHandler := handler.NewPaymentHandler(paymentUC, logger, authMiddleware)
 	webhookHandler := handler.NewWebhookHandler(paymentUC, logger)
 
 	// Setup router

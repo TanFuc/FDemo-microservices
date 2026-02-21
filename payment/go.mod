@@ -4,17 +4,27 @@ go 1.22
 
 require (
 	github.com/go-chi/chi/v5 v5.1.0
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/nats-io/nats.go v1.38.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.4.0
+	github.com/spf13/viper v1.18.2
 	github.com/stripe/stripe-go/v76 v76.25.0
+	microservices/pkg/authclient v0.0.0
+	microservices/pkg/authorization v0.0.0
+	microservices/pkg/cache v0.0.0
+	microservices/pkg/logger v0.0.0
+	microservices/pkg/response v0.0.0
 )
 
 replace (
+	microservices/pkg/authclient => ../pkg/authclient
 	microservices/pkg/authorization => ../pkg/authorization
 	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/response => ../pkg/response
 )
 
 require (

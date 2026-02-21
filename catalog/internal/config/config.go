@@ -1,21 +1,26 @@
 package config
 
 import (
-	"os"
-	"strconv"
+	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server   ServerConfig
-	MongoDB  MongoDBConfig
-	Redis    RedisConfig
-	NATS     NATSConfig
+	App     AppConfig
+	MongoDB MongoDBConfig
+	Redis   RedisConfig
+	NATS    NATSConfig
+	Auth    AuthConfig
 }
 
-type ServerConfig struct {
-	Host         string
-	Port         int
+type AppConfig struct {
+	Name         string
+	Env          string
+	Port         string
+	GRPCPort     string
+	Debug        bool
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 }
@@ -37,52 +42,84 @@ type NATSConfig struct {
 	StreamName string
 }
 
-func Load() *Config {
-	return &Config{
-		Server: ServerConfig{
-			Host:         getEnv("SERVER_HOST", "0.0.0.0"),
-			Port:         getEnvInt("SERVER_PORT", 3000),
-			ReadTimeout:  getEnvDuration("SERVER_READ_TIMEOUT", 10*time.Second),
-			WriteTimeout: getEnvDuration("SERVER_WRITE_TIMEOUT", 10*time.Second),
+type AuthConfig struct {
+	GRPCAddr string
+	Timeout  time.Duration
+}
+
+func Load() (*Config, error) {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	// Set defaults
+	setDefaults()
+
+	// Try to read config file (optional)
+	_ = viper.ReadInConfig()
+
+	cfg := &Config{
+		App: AppConfig{
+			Name:         viper.GetString("app.name"),
+			Env:          viper.GetString("app.env"),
+			Port:         viper.GetString("app.port"),
+			GRPCPort:     viper.GetString("app.grpc_port"),
+			Debug:        viper.GetBool("app.debug"),
+			ReadTimeout:  viper.GetDuration("app.read_timeout"),
+			WriteTimeout: viper.GetDuration("app.write_timeout"),
 		},
 		MongoDB: MongoDBConfig{
-			URI:      getEnv("MONGO_URI", "mongodb://localhost:27017"),
-			Database: getEnv("MONGO_DATABASE", "catalog"),
-			Timeout:  getEnvDuration("MONGO_TIMEOUT", 10*time.Second),
+			URI:      viper.GetString("mongodb.uri"),
+			Database: viper.GetString("mongodb.database"),
+			Timeout:  viper.GetDuration("mongodb.timeout"),
 		},
 		Redis: RedisConfig{
-			Addr:     getEnv("REDIS_ADDR", "localhost:6379"),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvInt("REDIS_DB", 0),
+			Addr:     viper.GetString("redis.addr"),
+			Password: viper.GetString("redis.password"),
+			DB:       viper.GetInt("redis.db"),
 		},
 		NATS: NATSConfig{
-			URL:        getEnv("NATS_URL", "nats://localhost:4222"),
-			StreamName: getEnv("NATS_STREAM_NAME", "CATALOG"),
+			URL:        viper.GetString("nats.url"),
+			StreamName: viper.GetString("nats.stream_name"),
+		},
+		Auth: AuthConfig{
+			GRPCAddr: viper.GetString("auth.grpc_addr"),
+			Timeout:  viper.GetDuration("auth.timeout"),
 		},
 	}
+
+	return cfg, nil
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
+func setDefaults() {
+	// App defaults
+	viper.SetDefault("app.name", "catalog-service")
+	viper.SetDefault("app.env", "development")
+	viper.SetDefault("app.port", "8082")
+	viper.SetDefault("app.grpc_port", "50052")
+	viper.SetDefault("app.debug", true)
+	viper.SetDefault("app.read_timeout", "10s")
+	viper.SetDefault("app.write_timeout", "10s")
 
-func getEnvInt(key string, defaultValue int) int {
-	if value := os.Getenv(key); value != "" {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		}
-	}
-	return defaultValue
-}
+	// MongoDB defaults
+	viper.SetDefault("mongodb.uri", "mongodb://localhost:27017")
+	viper.SetDefault("mongodb.database", "catalog")
+	viper.SetDefault("mongodb.timeout", "10s")
 
-func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
-	if value := os.Getenv(key); value != "" {
-		if duration, err := time.ParseDuration(value); err == nil {
-			return duration
-		}
-	}
-	return defaultValue
+	// Redis defaults
+	viper.SetDefault("redis.addr", "localhost:6379")
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
+
+	// NATS defaults
+	viper.SetDefault("nats.url", "nats://localhost:4222")
+	viper.SetDefault("nats.stream_name", "CATALOG")
+
+	// Auth defaults
+	viper.SetDefault("auth.grpc_addr", "localhost:50051")
+	viper.SetDefault("auth.timeout", "3s")
 }

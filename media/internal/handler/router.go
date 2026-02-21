@@ -5,9 +5,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"microservices/pkg/authclient"
 )
 
-func NewRouter(mediaHandler *MediaHandler) http.Handler {
+func NewRouter(mediaHandler *MediaHandler, authMiddleware *authclient.ChiMiddleware) http.Handler {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -20,6 +21,11 @@ func NewRouter(mediaHandler *MediaHandler) http.Handler {
 	r.Get("/health", mediaHandler.HealthCheck)
 
 	r.Route("/media", func(r chi.Router) {
+		// Apply auth middleware if available
+		if authMiddleware != nil {
+			r.Use(authMiddleware.RequireAuth)
+		}
+
 		r.Post("/upload-url", mediaHandler.GetUploadURL)
 		r.Post("/confirm", mediaHandler.ConfirmUpload)
 	})

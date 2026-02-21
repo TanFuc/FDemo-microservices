@@ -1,21 +1,34 @@
 package config
 
 import (
-	"os"
-	"strconv"
+	"strings"
+	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
-	NATS     NATSConfig
-	RabbitMQ RabbitMQConfig
-	MongoDB  MongoDBConfig
-	SMTP     SMTPConfig
+	App       AppConfig
+	NATS      NATSConfig
+	RabbitMQ  RabbitMQConfig
+	MongoDB   MongoDBConfig
+	SMTP      SMTPConfig
+	WebSocket WebSocketConfig
+}
+
+type AppConfig struct {
+	Name         string
+	Env          string
+	Port         string
+	GRPCPort     string
+	AuthGRPCAddr string
+	Debug        bool
 }
 
 type NATSConfig struct {
-	URL string
+	URL        string
+	StreamName string
+	Subject    string
 }
 
 type RabbitMQConfig struct {
@@ -35,36 +48,110 @@ type SMTPConfig struct {
 	From string
 }
 
-func Load() (*Config, error) {
-	// Load .env file if exists
-	_ = godotenv.Load()
-
-	smtpPort, _ := strconv.Atoi(getEnv("SMTP_PORT", "587"))
-
-	return &Config{
-		NATS: NATSConfig{
-			URL: getEnv("NATS_URL", "nats://localhost:4222"),
-		},
-		RabbitMQ: RabbitMQConfig{
-			URL: getEnv("AMQP_URL", "amqp://guest:guest@localhost:5672/"),
-		},
-		MongoDB: MongoDBConfig{
-			URI:      getEnv("MONGODB_URI", "mongodb://localhost:27017"),
-			Database: getEnv("MONGODB_DATABASE", "notification_service"),
-		},
-		SMTP: SMTPConfig{
-			Host: getEnv("SMTP_HOST", "smtp.gmail.com"),
-			Port: smtpPort,
-			User: getEnv("SMTP_USER", ""),
-			Pass: getEnv("SMTP_PASS", ""),
-			From: getEnv("SMTP_FROM", ""),
-		},
-	}, nil
+type WebSocketConfig struct {
+	Enabled         bool
+	MaxConnections  int
+	PingInterval    time.Duration
+	PongWait        time.Duration
+	WriteWait       time.Duration
+	MaxMessageSize  int64
+	ReadBufferSize  int
+	WriteBufferSize int
 }
 
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
+func Load() (*Config, error) {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	viper.AutomaticEnv()
+
+	// Set defaults
+	setDefaults()
+
+	// Try to read config file (optional)
+	_ = viper.ReadInConfig()
+
+	cfg := &Config{
+		App: AppConfig{
+			Name:         viper.GetString("app.name"),
+			Env:          viper.GetString("app.env"),
+			Port:         viper.GetString("app.port"),
+			GRPCPort:     viper.GetString("app.grpc_port"),
+			AuthGRPCAddr: viper.GetString("app.auth_grpc_addr"),
+			Debug:        viper.GetBool("app.debug"),
+		},
+		NATS: NATSConfig{
+			URL:        viper.GetString("nats.url"),
+			StreamName: viper.GetString("nats.stream_name"),
+			Subject:    viper.GetString("nats.subject"),
+		},
+		RabbitMQ: RabbitMQConfig{
+			URL: viper.GetString("rabbitmq.url"),
+		},
+		MongoDB: MongoDBConfig{
+			URI:      viper.GetString("mongodb.uri"),
+			Database: viper.GetString("mongodb.database"),
+		},
+		SMTP: SMTPConfig{
+			Host: viper.GetString("smtp.host"),
+			Port: viper.GetInt("smtp.port"),
+			User: viper.GetString("smtp.user"),
+			Pass: viper.GetString("smtp.pass"),
+			From: viper.GetString("smtp.from"),
+		},
+		WebSocket: WebSocketConfig{
+			Enabled:         viper.GetBool("websocket.enabled"),
+			MaxConnections:  viper.GetInt("websocket.max_connections"),
+			PingInterval:    viper.GetDuration("websocket.ping_interval"),
+			PongWait:        viper.GetDuration("websocket.pong_wait"),
+			WriteWait:       viper.GetDuration("websocket.write_wait"),
+			MaxMessageSize:  viper.GetInt64("websocket.max_message_size"),
+			ReadBufferSize:  viper.GetInt("websocket.read_buffer_size"),
+			WriteBufferSize: viper.GetInt("websocket.write_buffer_size"),
+		},
 	}
-	return defaultValue
+
+	return cfg, nil
+}
+
+func setDefaults() {
+	// App defaults
+	viper.SetDefault("app.name", "notification-service")
+	viper.SetDefault("app.env", "development")
+	viper.SetDefault("app.port", "8083")
+	viper.SetDefault("app.grpc_port", "50053")
+	viper.SetDefault("app.auth_grpc_addr", "localhost:50051")
+	viper.SetDefault("app.debug", true)
+
+	// NATS defaults
+	viper.SetDefault("nats.url", "nats://localhost:4222")
+	viper.SetDefault("nats.stream_name", "NOTIFICATIONS")
+	viper.SetDefault("nats.subject", "notification.>")
+
+	// RabbitMQ defaults
+	viper.SetDefault("rabbitmq.url", "amqp://guest:guest@localhost:5672/")
+
+	// MongoDB defaults
+	viper.SetDefault("mongodb.uri", "mongodb://localhost:27017")
+	viper.SetDefault("mongodb.database", "notification_service")
+
+	// SMTP defaults
+	viper.SetDefault("smtp.host", "smtp.gmail.com")
+	viper.SetDefault("smtp.port", 587)
+	viper.SetDefault("smtp.user", "")
+	viper.SetDefault("smtp.pass", "")
+	viper.SetDefault("smtp.from", "")
+
+	// WebSocket defaults
+	viper.SetDefault("websocket.enabled", true)
+	viper.SetDefault("websocket.max_connections", 10000)
+	viper.SetDefault("websocket.ping_interval", "30s")
+	viper.SetDefault("websocket.pong_wait", "60s")
+	viper.SetDefault("websocket.write_wait", "10s")
+	viper.SetDefault("websocket.max_message_size", 512*1024) // 512KB
+	viper.SetDefault("websocket.read_buffer_size", 1024)
+	viper.SetDefault("websocket.write_buffer_size", 1024)
 }

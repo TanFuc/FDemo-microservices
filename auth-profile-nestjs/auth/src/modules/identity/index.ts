@@ -38,14 +38,7 @@ export {
 export { RegisterDto, LoginDto, RefreshTokenDto, LogoutDto } from './dto';
 
 // Entities
-export {
-  User,
-  Role,
-  Permission,
-  RolePermission,
-  UserRole,
-  RefreshToken,
-} from './entities';
+export { User, Role, Permission, RolePermission, UserRole, RefreshToken } from './entities';
 
 // Constants
 export {

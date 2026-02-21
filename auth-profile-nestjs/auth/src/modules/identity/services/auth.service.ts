@@ -13,7 +13,7 @@ import {
   DeviceInfo,
   UserResponse,
 } from '../interfaces';
-import { ERROR_MESSAGES, SUCCESS_MESSAGES } from '../constants';
+import { ERROR_MESSAGES } from '../constants';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 import { RedisCacheService } from './redis-cache.service';
@@ -64,10 +64,7 @@ export class AuthService {
   async login(dto: LoginDto, deviceInfo: DeviceInfo): Promise<LoginResponse> {
     try {
       // Validate credentials
-      const user = await this.userService.validateCredentials(
-        dto.email,
-        dto.password,
-      );
+      const user = await this.userService.validateCredentials(dto.email, dto.password);
 
       if (!user) {
         throw new UnauthorizedException(ERROR_MESSAGES.INVALID_CREDENTIALS);
@@ -78,11 +75,7 @@ export class AuthService {
       await this.redisCacheService.cacheUserPermissions(user.id, permissions);
 
       // Generate token pair
-      const tokens = await this.tokenService.generateTokenPair(
-        user.id,
-        user.email,
-        deviceInfo,
-      );
+      const tokens = await this.tokenService.generateTokenPair(user.id, user.email, deviceInfo);
 
       // Get user response
       const userResponse = await this.userService.toUserResponse(user);
@@ -97,10 +90,7 @@ export class AuthService {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      this.logger.error(
-        'Login failed',
-        error instanceof Error ? error.stack : String(error),
-      );
+      this.logger.error('Login failed', error instanceof Error ? error.stack : String(error));
       throw new InternalServerErrorException(ERROR_MESSAGES.LOGIN_FAILED);
     }
   }
@@ -108,15 +98,9 @@ export class AuthService {
   /**
    * Refresh access and refresh tokens
    */
-  async refreshTokens(
-    dto: RefreshTokenDto,
-    deviceInfo: DeviceInfo,
-  ): Promise<AuthTokens> {
+  async refreshTokens(dto: RefreshTokenDto, deviceInfo: DeviceInfo): Promise<AuthTokens> {
     try {
-      const result = await this.tokenService.rotateRefreshToken(
-        dto.refreshToken,
-        deviceInfo,
-      );
+      const result = await this.tokenService.rotateRefreshToken(dto.refreshToken, deviceInfo);
 
       this.logger.debug(`Tokens refreshed for user: ${result.userId}`);
 
@@ -210,6 +194,36 @@ export class AuthService {
         error instanceof Error ? error.stack : String(error),
       );
       throw new InternalServerErrorException(ERROR_MESSAGES.LOGOUT_FAILED);
+    }
+  }
+
+  /**
+   * Authorize user action on resource
+   * Used by gRPC
+   */
+  async authorize(userId: string, resource: string, action: string): Promise<{ allowed: boolean; reason?: string }> {
+    try {
+      const permissionSlug = `${resource}:${action}`;
+      
+      // Check cache for specific permission result if needed?
+      // Since userService.hasPermission already uses cached permission list, 
+      // which is efficient enough (one redis call per request mostly).
+      // But we can cache the specific result too if the list is huge.
+      // For now, let's rely on userService's permission list cache.
+      
+      const hasPermission = await this.userService.hasPermission(userId, permissionSlug);
+      
+      if (hasPermission) {
+        return { allowed: true };
+      }
+
+      return { allowed: false, reason: 'Permission denied' };
+    } catch (error) {
+      this.logger.error(
+        `Authorization failed for user ${userId} on ${resource}:${action}`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      return { allowed: false, reason: 'Internal error' };
     }
   }
 

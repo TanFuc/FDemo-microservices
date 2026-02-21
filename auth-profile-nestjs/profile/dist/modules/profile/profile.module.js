@@ -8,23 +8,30 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProfileModule = void 0;
 const common_1 = require("@nestjs/common");
-const mongoose_1 = require("@nestjs/mongoose");
-const profile_controller_1 = require("./profile.controller");
-const profile_service_1 = require("./profile.service");
-const profile_schema_1 = require("./schemas/profile.schema");
-const address_schema_1 = require("./schemas/address.schema");
+const microservices_1 = require("@nestjs/microservices");
+const path_1 = require("path");
+const profile_controller_1 = require("./controllers/profile.controller");
+const internal_controller_1 = require("./controllers/internal.controller");
+const profile_service_1 = require("./services/profile.service");
 let ProfileModule = class ProfileModule {
 };
 exports.ProfileModule = ProfileModule;
 exports.ProfileModule = ProfileModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([
-                { name: profile_schema_1.Profile.name, schema: profile_schema_1.ProfileSchema },
-                { name: address_schema_1.Address.name, schema: address_schema_1.AddressSchema },
+            microservices_1.ClientsModule.register([
+                {
+                    name: 'AUTH_PACKAGE',
+                    transport: microservices_1.Transport.GRPC,
+                    options: {
+                        package: 'auth',
+                        protoPath: (0, path_1.join)(__dirname, '../../protos/auth.proto'),
+                        url: process.env.AUTH_GRPC_URL || '0.0.0.0:50051',
+                    },
+                },
             ]),
         ],
-        controllers: [profile_controller_1.ProfileController],
+        controllers: [profile_controller_1.ProfileController, internal_controller_1.InternalController],
         providers: [profile_service_1.ProfileService],
         exports: [profile_service_1.ProfileService],
     })

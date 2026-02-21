@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"microservices/order/internal/domain"
 	"microservices/order/internal/usecase"
+	"microservices/pkg/authclient"
 )
 
 // OrderHandler handles HTTP requests for orders
@@ -19,6 +20,7 @@ type OrderHandler struct {
 	markAsPaidUC       *usecase.MarkAsPaidUseCase
 	markAsShippedUC    *usecase.MarkAsShippedUseCase
 	markAsCompletedUC  *usecase.MarkAsCompletedUseCase
+	authMiddleware     *authclient.FiberMiddleware
 }
 
 // NewOrderHandler creates a new OrderHandler
@@ -30,6 +32,7 @@ func NewOrderHandler(
 	markAsPaidUC *usecase.MarkAsPaidUseCase,
 	markAsShippedUC *usecase.MarkAsShippedUseCase,
 	markAsCompletedUC *usecase.MarkAsCompletedUseCase,
+	authMiddleware *authclient.FiberMiddleware,
 ) *OrderHandler {
 	return &OrderHandler{
 		createOrderUC:      createOrderUC,
@@ -39,21 +42,10 @@ func NewOrderHandler(
 		markAsPaidUC:       markAsPaidUC,
 		markAsShippedUC:    markAsShippedUC,
 		markAsCompletedUC:  markAsCompletedUC,
+		authMiddleware:     authMiddleware,
 	}
 }
 
-// RegisterRoutes registers all order routes
-func (h *OrderHandler) RegisterRoutes(app *fiber.App) {
-	orders := app.Group("/api/v1/orders")
-
-	orders.Post("/", h.CreateOrder)
-	orders.Get("/:id", h.GetOrder)
-	orders.Post("/:id/cancel", h.CancelOrder)
-	orders.Post("/:id/pay", h.MarkAsPaid)
-	orders.Post("/:id/ship", h.MarkAsShipped)
-	orders.Post("/:id/complete", h.MarkAsCompleted)
-	orders.Get("/user/:userId", h.ListOrders)
-}
 
 // CreateOrder handles POST /api/v1/orders
 func (h *OrderHandler) CreateOrder(c *fiber.Ctx) error {

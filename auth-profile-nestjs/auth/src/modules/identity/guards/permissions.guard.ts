@@ -41,10 +41,7 @@ export class PermissionsGuard implements CanActivate {
     }
 
     // Check permissions (with caching)
-    const hasPermission = await this.userService.hasAnyPermission(
-      user.id,
-      requiredPermissions,
-    );
+    const hasPermission = await this.userService.hasAnyPermission(user.id, requiredPermissions);
 
     if (!hasPermission) {
       this.logger.warn(

@@ -23,6 +23,7 @@ import (
 	"microservices/order/internal/usecase"
 
 	// Shared packages
+	"microservices/pkg/authclient"
 	"microservices/pkg/cache"
 	"microservices/pkg/cache/redis"
 )
@@ -107,6 +108,27 @@ func main() {
 	markAsShippedUC := usecase.NewMarkAsShippedUseCase(orderRepo, eventPublisher)
 	markAsCompletedUC := usecase.NewMarkAsCompletedUseCase(orderRepo, eventPublisher)
 
+	// Initialize Auth gRPC Client
+	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if authGRPCAddr == "" {
+		authGRPCAddr = "localhost:50051"
+	}
+	authClient, err := authclient.NewClient(&authclient.Config{
+		GRPCAddr: authGRPCAddr,
+	})
+	if err != nil {
+		log.Printf("Warning: Failed to connect to Auth service: %v (authorization will fail)", err)
+	} else {
+		log.Printf("Connected to Auth gRPC Service at %s", authGRPCAddr)
+		defer authClient.Close()
+	}
+
+	// Create auth middleware
+	var authMiddleware *authclient.FiberMiddleware
+	if authClient != nil {
+		authMiddleware = authclient.NewFiberMiddleware(authClient)
+	}
+
 	// Initialize Fiber app
 	app := fiber.New(fiber.Config{
 		ErrorHandler: customErrorHandler,
@@ -127,6 +149,7 @@ func main() {
 		markAsPaidUC,
 		markAsShippedUC,
 		markAsCompletedUC,
+		authMiddleware,
 	)
 
 	// Register routes

@@ -8,14 +8,7 @@ import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { redisStore } from 'cache-manager-redis-yet';
 
 // Entities
-import {
-  User,
-  Role,
-  Permission,
-  RolePermission,
-  UserRole,
-  RefreshToken,
-} from './entities';
+import { User, Role, Permission, RolePermission, UserRole, RefreshToken } from './entities';
 
 // Services
 import {
@@ -39,7 +32,8 @@ import { JwtAuthGuard, PermissionsGuard } from './guards';
 import { HttpExceptionFilter } from './filters';
 
 // Controller
-import { AuthController } from './auth.controller';
+import { AuthController } from './controllers/auth.controller';
+import { AuthGrpcController } from './controllers/auth.grpc.controller';
 
 // Config
 import { identityConfig } from './config';
@@ -51,14 +45,7 @@ import { identityConfig } from './config';
     ConfigModule.forFeature(identityConfig),
 
     // TypeORM entities
-    TypeOrmModule.forFeature([
-      User,
-      Role,
-      Permission,
-      RolePermission,
-      UserRole,
-      RefreshToken,
-    ]),
+    TypeOrmModule.forFeature([User, Role, Permission, RolePermission, UserRole, RefreshToken]),
 
     // Passport configuration
     PassportModule.register({ defaultStrategy: 'jwt' }),
@@ -91,7 +78,7 @@ import { identityConfig } from './config';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuthGrpcController],
   providers: [
     // Services
     AuthService,

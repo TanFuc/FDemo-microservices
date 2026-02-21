@@ -1,0 +1,30 @@
+app:
+  name: payment-service
+  env: development
+  port: "8083"
+  host: "0.0.0.0"
+  auth_grpc_addr: "localhost:50051"
+
+database:
+  url: "postgres://payment:payment_secret@localhost:5432/payment_db?sslmode=disable"
+
+nats:
+  url: "nats://localhost:4222"
+
+stripe:
+  secret_key: ""
+  webhook_secret: ""
+
+momo:
+  partner_code: ""
+  access_key: ""
+  secret_key: ""
+  endpoint: "https://test-payment.momo.vn/v2/gateway/api"
+
+webhook:
+  base_url: "http://localhost:8083/api/v1/webhooks"
+
+job:
+  reconciliation_schedule: "0 */10 * * * *"
+  reconciliation_timeout: "5m"
+  reconciliation_older_than: "10m"

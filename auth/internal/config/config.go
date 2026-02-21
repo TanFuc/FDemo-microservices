@@ -14,12 +14,14 @@ type Config struct {
 	Redis    RedisConfig
 	JWT      JWTConfig
 	NATS     NATSConfig
+	Cookie   CookieConfig
 }
 
 type AppConfig struct {
 	Name        string
 	Env         string
 	Port        string
+	GRPCPort    string
 	APIPrefix   string
 	CORSOrigins []string
 	Debug       bool
@@ -57,11 +59,18 @@ type NATSConfig struct {
 	URL string
 }
 
+type CookieConfig struct {
+	Domain   string
+	Secure   bool
+	SameSite string
+}
+
 func Load() (*Config, error) {
 	viper.SetConfigName(".env")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("..")
+	viper.AddConfigPath("../..")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -80,6 +89,7 @@ func Load() (*Config, error) {
 			Name:        viper.GetString("APP_NAME"),
 			Env:         viper.GetString("NODE_ENV"),
 			Port:        viper.GetString("PORT"),
+			GRPCPort:    viper.GetString("GRPC_PORT"),
 			APIPrefix:   viper.GetString("API_PREFIX"),
 			CORSOrigins: strings.Split(viper.GetString("CORS_ORIGIN"), ","),
 			Debug:       viper.GetBool("DEBUG"),
@@ -112,6 +122,11 @@ func Load() (*Config, error) {
 		NATS: NATSConfig{
 			URL: viper.GetString("NATS_URL"),
 		},
+		Cookie: CookieConfig{
+			Domain:   viper.GetString("COOKIE_DOMAIN"),
+			Secure:   viper.GetBool("COOKIE_SECURE"),
+			SameSite: viper.GetString("COOKIE_SAMESITE"),
+		},
 	}
 
 	if err := config.Validate(); err != nil {
@@ -125,6 +140,7 @@ func setDefaults() {
 	viper.SetDefault("APP_NAME", "tafu-auth")
 	viper.SetDefault("NODE_ENV", "development")
 	viper.SetDefault("PORT", "3001")
+	viper.SetDefault("GRPC_PORT", "50051")
 	viper.SetDefault("API_PREFIX", "api/v1")
 	viper.SetDefault("CORS_ORIGIN", "*")
 	viper.SetDefault("DEBUG", false)
@@ -143,6 +159,10 @@ func setDefaults() {
 
 	viper.SetDefault("JWT_ACCESS_EXPIRY", "15m")
 	viper.SetDefault("JWT_REFRESH_EXPIRY", "7d")
+
+	viper.SetDefault("COOKIE_DOMAIN", "")
+	viper.SetDefault("COOKIE_SECURE", false)
+	viper.SetDefault("COOKIE_SAMESITE", "Lax")
 
 	viper.SetDefault("NATS_URL", "nats://localhost:4222")
 }

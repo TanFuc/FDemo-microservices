@@ -15,11 +15,6 @@ func NewHealthHandler(db *database.Database) *HealthHandler {
 	return &HealthHandler{db: db}
 }
 
-// RegisterRoutes registers health check routes
-func (h *HealthHandler) RegisterRoutes(app *fiber.App) {
-	app.Get("/health", h.Health)
-	app.Get("/ready", h.Ready)
-}
 
 // Health handles GET /health - liveness probe
 func (h *HealthHandler) Health(c *fiber.Ctx) error {

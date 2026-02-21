@@ -44,10 +44,7 @@ export class UserService {
       }
 
       // Hash password
-      const passwordHash = await bcrypt.hash(
-        dto.password,
-        TOKEN_CONFIG.BCRYPT_SALT_ROUNDS,
-      );
+      const passwordHash = await bcrypt.hash(dto.password, TOKEN_CONFIG.BCRYPT_SALT_ROUNDS);
 
       // Create user entity
       const user = this.userRepository.create({
@@ -258,10 +255,7 @@ export class UserService {
   /**
    * Update user profile
    */
-  async updateProfile(
-    userId: string,
-    updates: { fullName?: string },
-  ): Promise<User> {
+  async updateProfile(userId: string, updates: { fullName?: string }): Promise<User> {
     const user = await this.findById(userId);
 
     if (!user) {
