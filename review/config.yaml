@@ -1,0 +1,18 @@
+app:
+  name: review-service
+  env: development
+  port: "8085"
+  host: "0.0.0.0"
+  auth_grpc_addr: "localhost:50051"
+
+mongodb:
+  uri: "mongodb://localhost:27017"
+  database: "tafu_review"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+grpc:
+  order_service_addr: "localhost:50052"
