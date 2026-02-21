@@ -14,6 +14,7 @@ import (
 	httphandler "microservices/search/internal/handler/http"
 	"microservices/search/internal/infrastructure/cache"
 	"microservices/search/internal/infrastructure/elastic"
+	"microservices/search/internal/infrastructure/nats"
 	"microservices/search/internal/router"
 	"microservices/search/internal/usecase"
 	"microservices/pkg/logger"
@@ -24,6 +25,7 @@ type App struct {
 	httpRouter    *router.Router
 	elasticClient *elastic.Client
 	redisClient   *cache.RedisClient
+	natsConsumer  *nats.Consumer
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
@@ -72,11 +74,31 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize HTTP router
 	httpRouter := router.NewRouter(cfg, searchHandler, healthHandler)
 
+	// Initialize NATS consumer for event-driven indexing
+	var natsConsumer *nats.Consumer
+	natsConsumer, err = nats.NewConsumer(cfg.NATS.URL, elasticClient, slogger)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to create NATS consumer, event indexing disabled")
+	} else {
+		// Ensure stream exists
+		if err := natsConsumer.EnsureStream(ctx); err != nil {
+			logger.Warn().Err(err).Msg("Failed to ensure NATS stream")
+		} else {
+			// Start consuming events in background
+			if err := natsConsumer.Start(ctx); err != nil {
+				logger.Warn().Err(err).Msg("Failed to start NATS consumer")
+			} else {
+				logger.Info().Msg("NATS consumer started for event indexing")
+			}
+		}
+	}
+
 	return &App{
 		cfg:           cfg,
 		httpRouter:    httpRouter,
 		elasticClient: elasticClient,
 		redisClient:   redisClient,
+		natsConsumer:  natsConsumer,
 		ctx:           ctx,
 		cancel:        cancel,
 	}, nil
@@ -124,6 +146,11 @@ func (a *App) Run() error {
 }
 
 func (a *App) cleanup() {
+	if a.natsConsumer != nil {
+		if err := a.natsConsumer.Stop(); err != nil {
+			logger.Error().Err(err).Msg("Error stopping NATS consumer")
+		}
+	}
 	if a.redisClient != nil {
 		a.redisClient.Close()
 	}
