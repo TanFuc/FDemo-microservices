@@ -46,23 +46,6 @@ func NewOrderHandler(
 	}
 }
 
-// RegisterRoutes registers all order routes
-func (h *OrderHandler) RegisterRoutes(app *fiber.App) {
-	orders := app.Group("/api/v1/orders")
-
-	// Apply auth middleware if available
-	if h.authMiddleware != nil {
-		orders.Use(h.authMiddleware.RequireAuth())
-	}
-
-	orders.Post("/", h.CreateOrder)
-	orders.Get("/:id", h.GetOrder)
-	orders.Post("/:id/cancel", h.CancelOrder)
-	orders.Post("/:id/pay", h.MarkAsPaid)
-	orders.Post("/:id/ship", h.MarkAsShipped)
-	orders.Post("/:id/complete", h.MarkAsCompleted)
-	orders.Get("/user/:userId", h.ListOrders)
-}
 
 // CreateOrder handles POST /api/v1/orders
 func (h *OrderHandler) CreateOrder(c *fiber.Ctx) error {

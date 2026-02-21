@@ -4,18 +4,25 @@ go 1.22
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/go-chi/chi/v5 v5.0.12
+	github.com/gofiber/fiber/v2 v2.52.0
 	github.com/google/uuid v1.6.0
 	github.com/minio/minio-go/v7 v7.0.70
 	github.com/nats-io/nats.go v1.34.0
 	github.com/redis/go-redis/v9 v9.7.0
+	github.com/spf13/viper v1.18.2
 	microservices/pkg/authorization v0.0.0
+	microservices/pkg/authclient v0.0.0
 	microservices/pkg/cache v0.0.0
+	microservices/pkg/logger v0.0.0
+	microservices/pkg/response v0.0.0
 )
 
 replace (
 	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/authclient => ../pkg/authclient
 	microservices/pkg/cache => ../pkg/cache
+	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/response => ../pkg/response
 )
 
 require (

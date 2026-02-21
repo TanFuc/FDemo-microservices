@@ -3,21 +3,27 @@ module microservices/logistic
 go 1.22
 
 require (
-	github.com/gin-gonic/gin v1.9.1
+	github.com/gofiber/fiber/v2 v2.52.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.5.5
-	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nats-io/nats.go v1.34.0
 	github.com/redis/go-redis/v9 v9.5.1
+	github.com/spf13/viper v1.18.2
 	microservices/pkg/authorization v0.0.0
+	microservices/pkg/authclient v0.0.0
 	microservices/pkg/cache v0.0.0
 	microservices/pkg/customfields v0.0.0
+	microservices/pkg/logger v0.0.0
+	microservices/pkg/response v0.0.0
 )
 
 replace (
 	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/authclient => ../pkg/authclient
 	microservices/pkg/cache => ../pkg/cache
 	microservices/pkg/customfields => ../pkg/customfields
+	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/response => ../pkg/response
 )
 
 require (

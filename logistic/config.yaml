@@ -1,0 +1,28 @@
+app:
+  name: logistic-service
+  env: development
+  port: "8084"
+  grpc_port: "50054"
+  auth_grpc_addr: localhost:50051
+  debug: true
+
+database:
+  url: postgres://postgres:postgres@localhost:5432/logistic_service?sslmode=disable
+  max_idle_conns: 10
+  max_open_conns: 100
+
+redis:
+  url: redis://localhost:6379
+
+nats:
+  url: nats://localhost:4222
+  stream_name: LOGISTICS
+
+ghn:
+  api_url: https://dev-online-gateway.ghn.vn
+  token: ""
+  shop_id: ""
+
+ghtk:
+  api_url: https://services.giaohangtietkiem.vn
+  token: ""

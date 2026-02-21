@@ -21,6 +21,7 @@ type AppConfig struct {
 	Name        string
 	Env         string
 	Port        string
+	GRPCPort    string
 	APIPrefix   string
 	CORSOrigins []string
 	Debug       bool
@@ -88,6 +89,7 @@ func Load() (*Config, error) {
 			Name:        viper.GetString("APP_NAME"),
 			Env:         viper.GetString("NODE_ENV"),
 			Port:        viper.GetString("PORT"),
+			GRPCPort:    viper.GetString("GRPC_PORT"),
 			APIPrefix:   viper.GetString("API_PREFIX"),
 			CORSOrigins: strings.Split(viper.GetString("CORS_ORIGIN"), ","),
 			Debug:       viper.GetBool("DEBUG"),
@@ -138,6 +140,7 @@ func setDefaults() {
 	viper.SetDefault("APP_NAME", "tafu-auth")
 	viper.SetDefault("NODE_ENV", "development")
 	viper.SetDefault("PORT", "3001")
+	viper.SetDefault("GRPC_PORT", "50051")
 	viper.SetDefault("API_PREFIX", "api/v1")
 	viper.SetDefault("CORS_ORIGIN", "*")
 	viper.SetDefault("DEBUG", false)

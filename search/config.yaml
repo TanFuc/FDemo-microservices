@@ -1,0 +1,20 @@
+app:
+  name: search-service
+  env: development
+  port: "8086"
+  host: "0.0.0.0"
+  auth_grpc_addr: "localhost:50051"
+
+elasticsearch:
+  addresses:
+    - "http://localhost:9200"
+  username: ""
+  password: ""
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+nats:
+  url: "nats://localhost:4222"

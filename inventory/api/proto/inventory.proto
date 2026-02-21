@@ -1,0 +1,172 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+option go_package = "microservices/inventory/pkg/pb;pb";
+
+import "google/protobuf/timestamp.proto";
+
+// InventoryService provides inventory management operations
+service InventoryService {
+  // Inventory CRUD operations
+  rpc CreateInventory(CreateInventoryRequest) returns (CreateInventoryResponse);
+  rpc GetInventory(GetInventoryRequest) returns (GetInventoryResponse);
+  rpc UpdateInventory(UpdateInventoryRequest) returns (UpdateInventoryResponse);
+  rpc DeleteInventory(DeleteInventoryRequest) returns (DeleteInventoryResponse);
+  rpc ListInventory(ListInventoryRequest) returns (ListInventoryResponse);
+
+  // Stock management operations
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ConfirmStock(ConfirmStockRequest) returns (ConfirmStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+
+  // Cache synchronization
+  rpc SyncInventory(SyncInventoryRequest) returns (SyncInventoryResponse);
+
+  // Reservation queries
+  rpc GetReservation(GetReservationRequest) returns (GetReservationResponse);
+  rpc ListReservations(ListReservationsRequest) returns (ListReservationsResponse);
+}
+
+// Inventory item message
+message InventoryItem {
+  string sku_id = 1;
+  int32 total_stock = 2;
+  int32 reserved_stock = 3;
+  int32 available_stock = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// Reservation item for reserve requests
+message ReservationItem {
+  string sku_id = 1;
+  int32 quantity = 2;
+}
+
+// Stock reservation message
+message StockReservation {
+  string id = 1;
+  string order_id = 2;
+  string sku_id = 3;
+  int32 quantity = 4;
+  string status = 5;
+  google.protobuf.Timestamp expires_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// CreateInventory
+message CreateInventoryRequest {
+  string sku_id = 1;
+  int32 total_stock = 2;
+}
+
+message CreateInventoryResponse {
+  InventoryItem inventory = 1;
+}
+
+// GetInventory
+message GetInventoryRequest {
+  string sku_id = 1;
+}
+
+message GetInventoryResponse {
+  InventoryItem inventory = 1;
+}
+
+// UpdateInventory
+message UpdateInventoryRequest {
+  string sku_id = 1;
+  int32 total_stock = 2;
+}
+
+message UpdateInventoryResponse {
+  InventoryItem inventory = 1;
+}
+
+// DeleteInventory
+message DeleteInventoryRequest {
+  string sku_id = 1;
+}
+
+message DeleteInventoryResponse {
+  bool success = 1;
+}
+
+// ListInventory
+message ListInventoryRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message ListInventoryResponse {
+  repeated InventoryItem items = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+// ReserveStock
+message ReserveStockRequest {
+  string order_id = 1;
+  repeated ReservationItem items = 2;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string message = 2;
+  repeated StockReservation reservations = 3;
+}
+
+// ConfirmStock
+message ConfirmStockRequest {
+  string order_id = 1;
+}
+
+message ConfirmStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ReleaseStock
+message ReleaseStockRequest {
+  string order_id = 1;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// SyncInventory
+message SyncInventoryRequest {
+  string sku_id = 1;
+}
+
+message SyncInventoryResponse {
+  bool success = 1;
+  InventoryItem inventory = 2;
+}
+
+// GetReservation
+message GetReservationRequest {
+  string order_id = 1;
+}
+
+message GetReservationResponse {
+  repeated StockReservation reservations = 1;
+}
+
+// ListReservations
+message ListReservationsRequest {
+  string status = 1;
+  int32 page = 2;
+  int32 limit = 3;
+}
+
+message ListReservationsResponse {
+  repeated StockReservation reservations = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}

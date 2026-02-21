@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"microservices/catalog/internal/domain"
+	"microservices/catalog/internal/model"
 	"microservices/catalog/internal/repository"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -38,6 +38,12 @@ func NewProductRepository(db *mongo.Database) (*ProductRepository, error) {
 			Keys: bson.D{{Key: "brandId", Value: 1}},
 		},
 		{
+			Keys: bson.D{{Key: "shopId", Value: 1}},
+		},
+		{
+			Keys: bson.D{{Key: "status", Value: 1}},
+		},
+		{
 			Keys: bson.D{{Key: "metadata.$**", Value: 1}},
 		},
 	}
@@ -50,7 +56,7 @@ func NewProductRepository(db *mongo.Database) (*ProductRepository, error) {
 	return &ProductRepository{collection: collection}, nil
 }
 
-func (r *ProductRepository) Create(ctx context.Context, product *domain.Product) error {
+func (r *ProductRepository) Create(ctx context.Context, product *model.Product) error {
 	product.EnsureDefaults()
 	result, err := r.collection.InsertOne(ctx, product)
 	if err != nil {
@@ -60,8 +66,8 @@ func (r *ProductRepository) Create(ctx context.Context, product *domain.Product)
 	return nil
 }
 
-func (r *ProductRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*domain.Product, error) {
-	var product domain.Product
+func (r *ProductRepository) GetByID(ctx context.Context, id primitive.ObjectID) (*model.Product, error) {
+	var product model.Product
 	err := r.collection.FindOne(ctx, bson.M{"_id": id}).Decode(&product)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -72,8 +78,8 @@ func (r *ProductRepository) GetByID(ctx context.Context, id primitive.ObjectID) 
 	return &product, nil
 }
 
-func (r *ProductRepository) GetBySlug(ctx context.Context, slug string) (*domain.Product, error) {
-	var product domain.Product
+func (r *ProductRepository) GetBySlug(ctx context.Context, slug string) (*model.Product, error) {
+	var product model.Product
 	err := r.collection.FindOne(ctx, bson.M{"slug": slug}).Decode(&product)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -84,41 +90,58 @@ func (r *ProductRepository) GetBySlug(ctx context.Context, slug string) (*domain
 	return &product, nil
 }
 
-func (r *ProductRepository) GetAll(ctx context.Context, filter repository.ProductFilter) ([]*domain.Product, error) {
+func (r *ProductRepository) List(ctx context.Context, filter *model.ProductFilter) ([]model.Product, int64, error) {
 	query := bson.M{}
 
-	if filter.CategoryID != nil {
-		query["categoryId"] = filter.CategoryID
+	if filter.CategoryID != "" {
+		catID, err := primitive.ObjectIDFromHex(filter.CategoryID)
+		if err == nil {
+			query["categoryId"] = catID
+		}
 	}
-	if filter.BrandID != nil {
-		query["brandId"] = filter.BrandID
+	if filter.BrandID != "" {
+		brandID, err := primitive.ObjectIDFromHex(filter.BrandID)
+		if err == nil {
+			query["brandId"] = brandID
+		}
 	}
 	if filter.Status != "" {
 		query["status"] = filter.Status
 	}
-
-	opts := options.Find()
-	if filter.Limit > 0 {
-		opts.SetLimit(filter.Limit)
+	if filter.ShopID != "" {
+		query["shopId"] = filter.ShopID
 	}
-	if filter.Offset > 0 {
-		opts.SetSkip(filter.Offset)
+
+	// Count total
+	total, err := r.collection.CountDocuments(ctx, query)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Find with pagination
+	opts := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}})
+	if filter.Limit > 0 {
+		opts.SetLimit(int64(filter.Limit))
+	}
+	if filter.Page > 0 && filter.Limit > 0 {
+		offset := (filter.Page - 1) * filter.Limit
+		opts.SetSkip(int64(offset))
 	}
 
 	cursor, err := r.collection.Find(ctx, query, opts)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer cursor.Close(ctx)
 
-	var products []*domain.Product
+	var products []model.Product
 	if err := cursor.All(ctx, &products); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return products, nil
+	return products, total, nil
 }
 
-func (r *ProductRepository) Update(ctx context.Context, product *domain.Product) error {
+func (r *ProductRepository) Update(ctx context.Context, product *model.Product) error {
 	product.EnsureDefaults()
 	_, err := r.collection.ReplaceOne(ctx, bson.M{"_id": product.ID}, product)
 	return err
@@ -137,4 +160,14 @@ func (r *ProductRepository) UpdateMetadata(ctx context.Context, id primitive.Obj
 func (r *ProductRepository) Delete(ctx context.Context, id primitive.ObjectID) error {
 	_, err := r.collection.DeleteOne(ctx, bson.M{"_id": id})
 	return err
+}
+
+func (r *ProductRepository) ExistsByID(ctx context.Context, id primitive.ObjectID) (bool, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{"_id": id})
+	return count > 0, err
+}
+
+func (r *ProductRepository) ExistsBySlug(ctx context.Context, slug string) (bool, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{"slug": slug})
+	return count > 0, err
 }

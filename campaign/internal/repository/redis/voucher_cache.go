@@ -6,7 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"microservices/campaign/internal/domain"
+
+	"microservices/campaign/internal/model"
 )
 
 const (
@@ -43,10 +44,12 @@ redis.call('SADD', users_key, user_id)
 return {ok = "SUCCESS"}
 `)
 
+// VoucherCacheRepository implements the voucher cache repository interface.
 type VoucherCacheRepository struct {
 	client *redis.Client
 }
 
+// NewVoucherCacheRepository creates a new voucher cache repository.
 func NewVoucherCacheRepository(client *redis.Client) *VoucherCacheRepository {
 	return &VoucherCacheRepository{
 		client: client,
@@ -61,22 +64,23 @@ func (r *VoucherCacheRepository) usersKey(code string) string {
 	return fmt.Sprintf(usersKeyPrefix, code)
 }
 
+// InitializeStock initializes voucher stock in cache.
 func (r *VoucherCacheRepository) InitializeStock(ctx context.Context, code string, stock int) error {
 	return r.client.Set(ctx, r.stockKey(code), stock, 0).Err()
 }
 
+// AtomicClaim attempts to claim a voucher atomically using Lua script.
 func (r *VoucherCacheRepository) AtomicClaim(ctx context.Context, code string, userID uuid.UUID) error {
 	keys := []string{r.stockKey(code), r.usersKey(code)}
 	args := []interface{}{userID.String()}
 
 	result, err := claimScript.Run(ctx, r.client, keys, args...).Result()
 	if err != nil {
-		// Check if it's a Lua table with error
 		if err.Error() == "ALREADY_CLAIMED" {
-			return domain.ErrVoucherAlreadyClaimed
+			return model.ErrVoucherAlreadyClaimed
 		}
 		if err.Error() == "OUT_OF_STOCK" {
-			return domain.ErrVoucherOutOfStock
+			return model.ErrVoucherOutOfStock
 		}
 		return fmt.Errorf("redis claim script error: %w", err)
 	}
@@ -87,9 +91,9 @@ func (r *VoucherCacheRepository) AtomicClaim(ctx context.Context, code string, u
 			errStr := fmt.Sprintf("%v", errVal)
 			switch errStr {
 			case "ALREADY_CLAIMED":
-				return domain.ErrVoucherAlreadyClaimed
+				return model.ErrVoucherAlreadyClaimed
 			case "OUT_OF_STOCK":
-				return domain.ErrVoucherOutOfStock
+				return model.ErrVoucherOutOfStock
 			default:
 				return fmt.Errorf("claim error: %s", errStr)
 			}
@@ -99,6 +103,7 @@ func (r *VoucherCacheRepository) AtomicClaim(ctx context.Context, code string, u
 	return nil
 }
 
+// GetStock returns current stock from cache.
 func (r *VoucherCacheRepository) GetStock(ctx context.Context, code string) (int, error) {
 	val, err := r.client.Get(ctx, r.stockKey(code)).Int()
 	if err == redis.Nil {
@@ -110,6 +115,7 @@ func (r *VoucherCacheRepository) GetStock(ctx context.Context, code string) (int
 	return val, nil
 }
 
+// HasUserClaimed checks if user has already claimed.
 func (r *VoucherCacheRepository) HasUserClaimed(ctx context.Context, code string, userID uuid.UUID) (bool, error) {
 	result, err := r.client.SIsMember(ctx, r.usersKey(code), userID.String()).Result()
 	if err != nil {
@@ -118,6 +124,7 @@ func (r *VoucherCacheRepository) HasUserClaimed(ctx context.Context, code string
 	return result, nil
 }
 
+// InvalidateVoucher removes voucher data from cache.
 func (r *VoucherCacheRepository) InvalidateVoucher(ctx context.Context, code string) error {
 	pipe := r.client.Pipeline()
 	pipe.Del(ctx, r.stockKey(code))
@@ -125,6 +132,3 @@ func (r *VoucherCacheRepository) InvalidateVoucher(ctx context.Context, code str
 	_, err := pipe.Exec(ctx)
 	return err
 }
-
-// Ensure interface compliance
-var _ domain.VoucherCacheRepository = (*VoucherCacheRepository)(nil)

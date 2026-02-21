@@ -1,0 +1,26 @@
+app:
+  name: inventory-service
+  env: development
+  port: "8083"
+  grpc_port: "50053"
+  debug: true
+  read_timeout: 10s
+  write_timeout: 10s
+  reservation_ttl: 15m
+
+postgres:
+  host: localhost
+  port: 5432
+  user: postgres
+  password: postgres
+  database: inventory
+  ssl_mode: disable
+
+redis:
+  addr: localhost:6379
+  password: ""
+  db: 0
+
+auth:
+  grpc_addr: localhost:50051
+  timeout: 3s

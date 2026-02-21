@@ -7,13 +7,17 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/nats-io/nats.go v1.37.0
 	github.com/shopspring/decimal v1.4.0
+	github.com/spf13/viper v1.18.2
 	google.golang.org/grpc v1.68.1
 	google.golang.org/protobuf v1.35.1
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.12
 	microservices/pkg/authorization v0.0.0
+	microservices/pkg/authclient v0.0.0
 	microservices/pkg/cache v0.0.0
 	microservices/pkg/customfields v0.0.0
+	microservices/pkg/logger v0.0.0
+	microservices/pkg/response v0.0.0
 )
 
 require (
@@ -47,6 +51,9 @@ require (
 
 replace (
 	microservices/pkg/authorization => ../pkg/authorization
+	microservices/pkg/authclient => ../pkg/authclient
 	microservices/pkg/cache => ../pkg/cache
 	microservices/pkg/customfields => ../pkg/customfields
+	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/response => ../pkg/response
 )
