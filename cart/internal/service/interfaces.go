@@ -28,4 +28,16 @@ type CartService interface {
 
 	// GetCartSummary retrieves cart summary with total price.
 	GetCartSummary(ctx context.Context, userID string, selectedOnly bool) (*model.CartSummary, error)
+
+	// ApplyVoucher validates and applies a voucher to the cart.
+	ApplyVoucher(ctx context.Context, userID, voucherCode string) (*model.ApplyVoucherResponse, error)
+
+	// RemoveVoucher clears the applied voucher from the cart.
+	RemoveVoucher(ctx context.Context, userID string) error
+
+	// GetCartSummaryWithDiscount returns cart summary including applied discount.
+	GetCartSummaryWithDiscount(ctx context.Context, userID string, selectedOnly bool) (*model.CartSummary, error)
+
+	// Checkout confirms the cart and creates a draft order in Order Service.
+	Checkout(ctx context.Context, userID string, req *model.CheckoutRequest) (*model.CheckoutResponse, error)
 }

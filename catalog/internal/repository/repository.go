@@ -62,5 +62,6 @@ type CacheRepository interface {
 type EventPublisher interface {
 	PublishProductCreated(ctx context.Context, product *domain.Product) error
 	PublishProductUpdated(ctx context.Context, product *domain.Product) error
+	PublishProductDeleted(ctx context.Context, productID string) error
 	Close() error
 }

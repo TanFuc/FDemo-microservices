@@ -20,6 +20,14 @@ type Cart struct {
 	UserID    string     `bson:"_id" json:"userId"`
 	Items     []CartItem `bson:"items" json:"items"`
 	UpdatedAt time.Time  `bson:"updatedAt" json:"updatedAt"`
+
+	// Applied voucher state (optional)
+	AppliedVoucherCode   string  `bson:"appliedVoucherCode,omitempty" json:"appliedVoucherCode,omitempty"`
+	DiscountAmount       float64 `bson:"discountAmount,omitempty" json:"discountAmount,omitempty"`
+	DiscountType         string  `bson:"discountType,omitempty" json:"discountType,omitempty"`         // "PERCENTAGE" or "FIXED_AMOUNT"
+	VoucherDiscountValue float64 `bson:"voucherDiscountValue,omitempty" json:"voucherDiscountValue,omitempty"` // actual deducted amount
+	VoucherID            string  `bson:"voucherId,omitempty" json:"voucherId,omitempty"`
+	CampaignID           string  `bson:"campaignId,omitempty" json:"campaignId,omitempty"`
 }
 
 // MaxCartItems is the maximum number of SKUs allowed in a cart to prevent Redis memory abuse.

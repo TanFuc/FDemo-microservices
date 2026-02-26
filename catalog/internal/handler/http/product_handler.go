@@ -270,6 +270,81 @@ func (h *ProductHandler) ListProducts(c *fiber.Ctx) error {
 	return response.Success(c, result)
 }
 
+// GetProductSeller returns seller information for a product (internal endpoint)
+// @Summary Get product seller info
+// @Tags internal
+// @Produce json
+// @Param productId path string true "Product ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} response.Response
+// @Router /internal/products/{productId}/seller [get]
+func (h *ProductHandler) GetProductSeller(c *fiber.Ctx) error {
+	productID := c.Params("productId")
+
+	product, err := h.productService.GetProduct(c.Context(), productID)
+	if err != nil {
+		if errors.Is(err, impl.ErrProductNotFound) {
+			return response.NotFound(c, "Product not found")
+		}
+		if errors.Is(err, impl.ErrInvalidID) {
+			return response.BadRequest(c, "Invalid product ID")
+		}
+		return response.InternalError(c, "Failed to get product")
+	}
+
+	// Return seller info from product
+	sellerInfo := fiber.Map{
+		"productId":   productID,
+		"productName": product.Name,
+		"shopId":      product.ShopID,
+		"sellerId":    product.ShopID, // ShopID is typically the seller's user ID
+		"shopName":    product.ShopName,
+	}
+
+	return c.JSON(sellerInfo)
+}
+
+// UpdateProductRating updates the product rating (internal endpoint for rating sync)
+// @Summary Update product rating
+// @Tags internal
+// @Accept json
+// @Produce json
+// @Param productId path string true "Product ID"
+// @Param request body map[string]interface{} true "Rating data"
+// @Success 200 {object} response.Response
+// @Failure 404 {object} response.Response
+// @Router /internal/products/{productId}/rating [put]
+func (h *ProductHandler) UpdateProductRating(c *fiber.Ctx) error {
+	productID := c.Params("productId")
+
+	var req struct {
+		AverageRating float64 `json:"averageRating"`
+		TotalReviews  int     `json:"totalReviews"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	// Update the product's rating fields
+	metadata := map[string]interface{}{
+		"rating":      req.AverageRating,
+		"reviewCount": req.TotalReviews,
+	}
+
+	_, err := h.productService.UpdateProductMetadata(c.Context(), productID, metadata)
+	if err != nil {
+		if errors.Is(err, impl.ErrProductNotFound) {
+			return response.NotFound(c, "Product not found")
+		}
+		if errors.Is(err, impl.ErrInvalidID) {
+			return response.BadRequest(c, "Invalid product ID")
+		}
+		return response.InternalError(c, "Failed to update product rating")
+	}
+
+	return response.SuccessWithMessage(c, nil, "Product rating updated successfully")
+}
+
 func formatValidationErrors(err error) []string {
 	var errors []string
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {

@@ -61,6 +61,12 @@ func (r *Router) Setup() *fiber.App {
 		})
 	})
 
+	// Internal API routes (for service-to-service communication)
+	internal := r.app.Group("/internal")
+	internalProducts := internal.Group("/products")
+	internalProducts.Get("/:productId/seller", r.productHandler.GetProductSeller)
+	internalProducts.Put("/:productId/rating", r.productHandler.UpdateProductRating)
+
 	// API routes
 	api := r.app.Group("/api/v1")
 

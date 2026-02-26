@@ -33,8 +33,14 @@ func (r *CartRepository) UpsertCart(ctx context.Context, cart *model.Cart) error
 	filter := bson.M{"_id": cart.UserID}
 	update := bson.M{
 		"$set": bson.M{
-			"items":     cart.Items,
-			"updatedAt": time.Now(),
+			"items":                cart.Items,
+			"updatedAt":            time.Now(),
+			"appliedVoucherCode":   cart.AppliedVoucherCode,
+			"discountAmount":       cart.DiscountAmount,
+			"discountType":         cart.DiscountType,
+			"voucherDiscountValue": cart.VoucherDiscountValue,
+			"voucherId":            cart.VoucherID,
+			"campaignId":           cart.CampaignID,
 		},
 	}
 	opts := options.Update().SetUpsert(true)

@@ -10,6 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"microservices/cart/internal/adapter"
 	"microservices/cart/internal/config"
 	grpchandler "microservices/cart/internal/handler/grpc"
 	httphandler "microservices/cart/internal/handler/http"
@@ -59,8 +60,36 @@ func New(cfg *config.Config) (*App, error) {
 	mongoDB := mongorepo.GetDatabase(mongoClient, cfg.Mongo.Database)
 	mongoRepo := mongorepo.NewCartRepository(mongoDB)
 
+	// Initialize Campaign Client
+	var campaignClient adapter.CampaignClient
+	if cfg.Campaign.HTTPURL != "" {
+		campaignClient = adapter.NewHTTPCampaignClient(adapter.CampaignClientConfig{
+			BaseURL:    cfg.Campaign.HTTPURL,
+			Timeout:    cfg.Campaign.Timeout,
+			ServiceKey: cfg.Campaign.ServiceKey,
+		})
+		logger.Info().Str("url", cfg.Campaign.HTTPURL).Msg("Campaign client initialized")
+	} else {
+		campaignClient = &adapter.NoCampaignClient{}
+		logger.Warn().Msg("Campaign service URL not configured, voucher features disabled")
+	}
+
+	// Initialize Order Client
+	var orderClient adapter.OrderClient
+	if cfg.Order.HTTPURL != "" {
+		orderClient = adapter.NewHTTPOrderClient(adapter.OrderClientConfig{
+			BaseURL:    cfg.Order.HTTPURL,
+			Timeout:    cfg.Order.Timeout,
+			ServiceKey: cfg.Order.ServiceKey,
+		})
+		logger.Info().Str("url", cfg.Order.HTTPURL).Msg("Order client initialized")
+	} else {
+		orderClient = &adapter.NoOrderClient{}
+		logger.Warn().Msg("Order service URL not configured, checkout feature disabled")
+	}
+
 	// Initialize service
-	cartService := impl.NewCartService(redisRepo, mongoRepo)
+	cartService := impl.NewCartService(redisRepo, mongoRepo, campaignClient, orderClient)
 
 	// Initialize Auth gRPC Client
 	var authMiddleware *middleware.AuthMiddleware

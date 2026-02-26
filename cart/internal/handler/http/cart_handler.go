@@ -177,6 +177,87 @@ func (h *CartHandler) GetCartSummary(c *fiber.Ctx) error {
 	return response.Success(c, summary)
 }
 
+// ApplyVoucher applies a voucher to the user's cart.
+// POST /api/v1/cart/:userId/voucher
+func (h *CartHandler) ApplyVoucher(c *fiber.Ctx) error {
+	userID := c.Params("userId")
+	if userID == "" {
+		return response.BadRequest(c, "userId is required")
+	}
+
+	var req model.ApplyVoucherRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if err := h.validate.Struct(&req); err != nil {
+		return response.ValidationError(c, formatValidationErrors(err))
+	}
+
+	result, err := h.cartService.ApplyVoucher(c.Context(), userID, req.VoucherCode)
+	if err != nil {
+		if errors.Is(err, impl.ErrCartEmpty) {
+			return response.BadRequest(c, err.Error())
+		}
+		if errors.Is(err, impl.ErrNoItemsSelected) {
+			return response.BadRequest(c, err.Error())
+		}
+		// Return the result which contains error details
+		if result != nil {
+			return response.Success(c, result)
+		}
+		return response.InternalError(c, "Failed to apply voucher")
+	}
+
+	return response.Success(c, result)
+}
+
+// RemoveVoucher removes the applied voucher from the cart.
+// DELETE /api/v1/cart/:userId/voucher
+func (h *CartHandler) RemoveVoucher(c *fiber.Ctx) error {
+	userID := c.Params("userId")
+	if userID == "" {
+		return response.BadRequest(c, "userId is required")
+	}
+
+	if err := h.cartService.RemoveVoucher(c.Context(), userID); err != nil {
+		return response.InternalError(c, "Failed to remove voucher")
+	}
+
+	return response.SuccessWithMessage(c, nil, "Voucher removed")
+}
+
+// Checkout creates a draft order from the cart.
+// POST /api/v1/cart/:userId/checkout
+func (h *CartHandler) Checkout(c *fiber.Ctx) error {
+	userID := c.Params("userId")
+	if userID == "" {
+		return response.BadRequest(c, "userId is required")
+	}
+
+	var req model.CheckoutRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if err := h.validate.Struct(&req); err != nil {
+		return response.ValidationError(c, formatValidationErrors(err))
+	}
+
+	result, err := h.cartService.Checkout(c.Context(), userID, &req)
+	if err != nil {
+		if errors.Is(err, impl.ErrNoItemsSelected) {
+			return response.BadRequest(c, err.Error())
+		}
+		if errors.Is(err, impl.ErrCheckoutFailed) {
+			return response.InternalError(c, err.Error())
+		}
+		return response.InternalError(c, "Checkout failed")
+	}
+
+	return response.Success(c, result)
+}
+
 // HealthCheck returns the health status of the service.
 // GET /health
 func (h *CartHandler) HealthCheck(c *fiber.Ctx) error {

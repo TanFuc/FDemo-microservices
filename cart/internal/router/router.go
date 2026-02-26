@@ -82,6 +82,13 @@ func (r *Router) Setup() *fiber.App {
 	cartUser.Put("/items/:skuId/quantity", r.cartHandler.UpdateQuantity)
 	cartUser.Put("/items/:skuId/selection", r.cartHandler.UpdateSelection)
 
+	// Voucher operations
+	cartUser.Post("/voucher", r.cartHandler.ApplyVoucher)
+	cartUser.Delete("/voucher", r.cartHandler.RemoveVoucher)
+
+	// Checkout
+	cartUser.Post("/checkout", r.cartHandler.Checkout)
+
 	return r.app
 }
 

@@ -8,10 +8,24 @@ import (
 )
 
 type Config struct {
-	App   AppConfig
-	Redis RedisConfig
-	Mongo MongoConfig
-	Auth  AuthConfig
+	App      AppConfig
+	Redis    RedisConfig
+	Mongo    MongoConfig
+	Auth     AuthConfig
+	Campaign CampaignServiceConfig
+	Order    OrderServiceConfig
+}
+
+type CampaignServiceConfig struct {
+	HTTPURL    string
+	Timeout    time.Duration
+	ServiceKey string
+}
+
+type OrderServiceConfig struct {
+	HTTPURL    string
+	Timeout    time.Duration
+	ServiceKey string
 }
 
 type AppConfig struct {
@@ -82,6 +96,16 @@ func Load() (*Config, error) {
 			GRPCAddr: viper.GetString("auth.grpc_addr"),
 			Timeout:  viper.GetDuration("auth.timeout"),
 		},
+		Campaign: CampaignServiceConfig{
+			HTTPURL:    viper.GetString("campaign_service.http_url"),
+			Timeout:    viper.GetDuration("campaign_service.timeout"),
+			ServiceKey: viper.GetString("campaign_service.service_key"),
+		},
+		Order: OrderServiceConfig{
+			HTTPURL:    viper.GetString("order_service.http_url"),
+			Timeout:    viper.GetDuration("order_service.timeout"),
+			ServiceKey: viper.GetString("order_service.service_key"),
+		},
 	}
 
 	return cfg, nil
@@ -106,4 +130,12 @@ func setDefaults() {
 
 	viper.SetDefault("auth.grpc_addr", "localhost:50051")
 	viper.SetDefault("auth.timeout", "3s")
+
+	viper.SetDefault("campaign_service.http_url", "http://localhost:8083")
+	viper.SetDefault("campaign_service.timeout", "5s")
+	viper.SetDefault("campaign_service.service_key", "")
+
+	viper.SetDefault("order_service.http_url", "http://localhost:8084")
+	viper.SetDefault("order_service.timeout", "10s")
+	viper.SetDefault("order_service.service_key", "")
 }
