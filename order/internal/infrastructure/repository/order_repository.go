@@ -15,6 +15,9 @@ import (
 	"microservices/pkg/cache"
 )
 
+// DraftTTL is the time-to-live for draft orders before cleanup
+const DraftTTL = 24 * time.Hour
+
 const (
 	orderCacheTTL     = 5 * time.Minute
 	orderListCacheTTL = 10 * time.Minute
@@ -190,6 +193,125 @@ func (r *OrderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status
 	}
 
 	return nil
+}
+
+// GetDraftsByUserID retrieves all draft orders for a user with pagination
+func (r *OrderRepository) GetDraftsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*domain.Order, error) {
+	db := r.db.GetDB(ctx)
+
+	if limit <= 0 {
+		limit = 10
+	}
+
+	var orders []*domain.Order
+	err := db.Preload("Items").
+		Where("user_id = ? AND status = ?", userID, domain.StatusDraft).
+		Order("created_at DESC").
+		Limit(limit).
+		Offset(offset).
+		Find(&orders).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+// GetByIDAndUserID retrieves an order by ID while verifying ownership
+func (r *OrderRepository) GetByIDAndUserID(ctx context.Context, orderID, userID uuid.UUID) (*domain.Order, error) {
+	db := r.db.GetDB(ctx)
+
+	var order domain.Order
+	err := db.Preload("Items").
+		Where("id = ? AND user_id = ?", orderID, userID).
+		First(&order).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrOrderNotFound
+		}
+		return nil, err
+	}
+
+	return &order, nil
+}
+
+// DeleteExpiredDrafts soft-deletes expired DRAFT orders in batches.
+func (r *OrderRepository) DeleteExpiredDrafts(ctx context.Context, cutoff time.Time, limit int) (int, error) {
+	db := r.db.GetDB(ctx)
+
+	// Fetch IDs first to handle cache invalidation
+	var orderIDs []uuid.UUID
+	err := db.Model(&domain.Order{}).
+		Select("id").
+		Where("status = ? AND created_at < ? AND deleted_at IS NULL", domain.StatusDraft, cutoff).
+		Limit(limit).
+		Pluck("id", &orderIDs).Error
+	if err != nil {
+		return 0, fmt.Errorf("failed to query expired drafts: %w", err)
+	}
+
+	if len(orderIDs) == 0 {
+		return 0, nil
+	}
+
+	// Soft-delete in a transaction
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// Delete child items first
+		if err := tx.Where("order_id IN ?", orderIDs).
+			Delete(&domain.OrderItem{}).Error; err != nil {
+			return fmt.Errorf("failed to delete order items: %w", err)
+		}
+		// Delete parent orders
+		if err := tx.Where("id IN ?", orderIDs).
+			Delete(&domain.Order{}).Error; err != nil {
+			return fmt.Errorf("failed to delete orders: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	// Invalidate Redis cache for deleted orders
+	if r.cache != nil {
+		for _, id := range orderIDs {
+			_ = r.cache.Delete(ctx, orderCacheKey(id))
+		}
+	}
+
+	return len(orderIDs), nil
+}
+
+// SoftDeleteDraft soft-deletes a single draft order and its items.
+func (r *OrderRepository) SoftDeleteDraft(ctx context.Context, orderID uuid.UUID) error {
+	db := r.db.GetDB(ctx)
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("order_id = ?", orderID).Delete(&domain.OrderItem{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ? AND status = ?", orderID, domain.StatusDraft).Delete(&domain.Order{}).Error
+	})
+	if err != nil {
+		return err
+	}
+
+	if r.cache != nil {
+		_ = r.cache.Delete(ctx, orderCacheKey(orderID))
+	}
+	return nil
+}
+
+// GetDraftCountByUserID counts active draft orders for a user.
+func (r *OrderRepository) GetDraftCountByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	db := r.db.GetDB(ctx)
+	var count int64
+	err := db.Model(&domain.Order{}).
+		Where("user_id = ? AND status = ?", userID, domain.StatusDraft).
+		Count(&count).Error
+	return count, err
 }
 
 // Ensure OrderRepository implements domain.OrderRepository

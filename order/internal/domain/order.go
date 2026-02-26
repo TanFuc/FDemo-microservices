@@ -13,7 +13,8 @@ import (
 type OrderStatus string
 
 const (
-	StatusPending         OrderStatus = "PENDING"          // Created, waiting for payment
+	StatusDraft           OrderStatus = "DRAFT"            // Draft order from cart checkout (no stock reserved)
+	StatusPending         OrderStatus = "PENDING"          // Confirmed, waiting for payment (stock reserved)
 	StatusPaid            OrderStatus = "PAID"             // Payment success
 	StatusConfirmed       OrderStatus = "CONFIRMED"        // Seller confirmed
 	StatusProcessing      OrderStatus = "PROCESSING"       // Being prepared
@@ -199,6 +200,30 @@ func NewOrder(userID uuid.UUID, paymentMethod string, shippingAddr ShippingAddre
 	}
 }
 
+// NewDraftOrder creates a draft order from cart checkout
+func NewDraftOrder(userID uuid.UUID, paymentMethod string, shippingAddr ShippingAddress) *Order {
+	addrJSON, _ := json.Marshal(shippingAddr)
+	return &Order{
+		ID:              uuid.New(),
+		UserID:          userID,
+		OrderNumber:     generateOrderNumber(),
+		OrderType:       OrderTypeNormal,
+		Status:          StatusDraft,
+		PaymentStatus:   PaymentPending,
+		PaymentMethod:   paymentMethod,
+		ShippingAddress: addrJSON,
+		SubTotal:        decimal.Zero,
+		ShippingFee:     decimal.Zero,
+		DiscountAmount:  decimal.Zero,
+		VoucherDiscount: decimal.Zero,
+		FinalAmount:     decimal.Zero,
+		Currency:        "VND",
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		Version:         1,
+	}
+}
+
 // generateOrderNumber generates a unique order number
 func generateOrderNumber() string {
 	return time.Now().Format("20060102") + "-" + uuid.New().String()[:8]
@@ -231,11 +256,30 @@ func (o *Order) CalculateTotals() {
 // CanCancel checks if the order can be cancelled
 func (o *Order) CanCancel() bool {
 	cancelableStatuses := map[OrderStatus]bool{
+		StatusDraft:     true,
 		StatusPending:   true,
 		StatusPaid:      true,
 		StatusConfirmed: true,
 	}
 	return cancelableStatuses[o.Status]
+}
+
+// ConfirmDraft confirms a draft order, transitioning it to PENDING status
+func (o *Order) ConfirmDraft() error {
+	if o.Status != StatusDraft {
+		return ErrInvalidOrderStatusTransition
+	}
+	now := time.Now()
+	o.Status = StatusPending
+	o.ConfirmedAt = &now
+	o.UpdatedAt = now
+	o.Version++
+	return nil
+}
+
+// IsDraft returns true if the order is in draft status
+func (o *Order) IsDraft() bool {
+	return o.Status == StatusDraft
 }
 
 // Cancel cancels the order

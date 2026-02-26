@@ -46,4 +46,8 @@ var (
 	ErrInventoryServiceUnavailable = errors.New("inventory service unavailable")
 	ErrEventPublishFailed          = errors.New("failed to publish event")
 	ErrPaymentServiceUnavailable   = errors.New("payment service unavailable")
+
+	// Draft-order specific errors
+	ErrInvalidFinalAmount = errors.New("final amount does not match calculated total")
+	ErrDraftOrderExpired  = errors.New("draft order has expired")
 )

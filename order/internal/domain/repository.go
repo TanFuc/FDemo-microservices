@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -22,6 +23,22 @@ type OrderRepository interface {
 
 	// UpdateStatus updates only the order status
 	UpdateStatus(ctx context.Context, id uuid.UUID, status OrderStatus) error
+
+	// GetDraftsByUserID retrieves all draft orders for a user
+	GetDraftsByUserID(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*Order, error)
+
+	// GetByIDAndUserID retrieves an order by ID while verifying ownership
+	GetByIDAndUserID(ctx context.Context, orderID, userID uuid.UUID) (*Order, error)
+
+	// DeleteExpiredDrafts soft-deletes DRAFT orders created before the cutoff time.
+	// Processes in batches. Returns the number of records deleted in this batch.
+	DeleteExpiredDrafts(ctx context.Context, cutoff time.Time, limit int) (int, error)
+
+	// SoftDeleteDraft soft-deletes a single DRAFT order by ID.
+	SoftDeleteDraft(ctx context.Context, orderID uuid.UUID) error
+
+	// GetDraftCountByUserID returns the total count of active draft orders for a user.
+	GetDraftCountByUserID(ctx context.Context, userID uuid.UUID) (int64, error)
 }
 
 // UnitOfWork provides transaction support

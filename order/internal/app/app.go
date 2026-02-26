@@ -18,6 +18,7 @@ import (
 	"microservices/order/internal/infrastructure/repository"
 	"microservices/order/internal/router"
 	"microservices/order/internal/usecase"
+	"microservices/order/internal/worker"
 	"microservices/pkg/authclient"
 	"microservices/pkg/cache"
 	"microservices/pkg/cache/redis"
@@ -25,16 +26,17 @@ import (
 )
 
 type App struct {
-	cfg             *config.Config
-	httpRouter      *router.Router
-	db              *database.Database
-	cacheClient     cache.Cache
-	inventoryClient *inventorygrpc.InventoryClient
-	natsPublisher   *messaging.NATSPublisher
-	paymentListener *messaging.PaymentEventListener
-	authClient      *authclient.Client
-	ctx             context.Context
-	cancel          context.CancelFunc
+	cfg                *config.Config
+	httpRouter         *router.Router
+	db                 *database.Database
+	cacheClient        cache.Cache
+	inventoryClient    *inventorygrpc.InventoryClient
+	natsPublisher      *messaging.NATSPublisher
+	paymentListener    *messaging.PaymentEventListener
+	authClient         *authclient.Client
+	draftCleanupWorker *worker.DraftCleanupWorker
+	ctx                context.Context
+	cancel             context.CancelFunc
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -123,6 +125,11 @@ func New(cfg *config.Config) (*App, error) {
 	markAsCompletedUC := usecase.NewMarkAsCompletedUseCase(orderRepo, eventPublisher)
 	processReturnUC := usecase.NewProcessReturnUseCase(orderRepo, returnRepo, stockRestorer)
 
+	// Draft order use cases (cart checkout flow)
+	createDraftOrderUC := usecase.NewCreateDraftOrderUseCase(orderRepo)
+	confirmDraftOrderUC := usecase.NewConfirmDraftOrderUseCase(orderRepo, stockReserver, eventPublisher)
+	deleteDraftOrderUC := usecase.NewDeleteDraftOrderUseCase(orderRepo)
+
 	// Initialize Auth gRPC Client
 	var authClient *authclient.Client
 	authClient, err = authclient.NewClient(&authclient.Config{
@@ -150,6 +157,9 @@ func New(cfg *config.Config) (*App, error) {
 		markAsPaidUC,
 		markAsShippedUC,
 		markAsCompletedUC,
+		createDraftOrderUC,
+		confirmDraftOrderUC,
+		deleteDraftOrderUC,
 		authMiddleware,
 	)
 	returnHandler := httphandler.NewReturnHandler(processReturnUC, authMiddleware)
@@ -192,17 +202,29 @@ func New(cfg *config.Config) (*App, error) {
 		logger.Info().Msg("Payment event listener started")
 	}
 
+	// Draft cleanup worker — runs at 3:00 AM daily, deletes drafts older than 24h
+	draftCleanupWorker := worker.NewDraftCleanupWorker(
+		orderRepo,
+		slogger,
+		24*time.Hour,
+	)
+
+	// Start draft cleanup worker in background goroutine
+	go draftCleanupWorker.Start(ctx)
+	logger.Info().Msg("Draft cleanup worker started (scheduled at 03:00 AM daily)")
+
 	return &App{
-		cfg:             cfg,
-		httpRouter:      httpRouter,
-		db:              db,
-		cacheClient:     cacheClient,
-		inventoryClient: inventoryClient,
-		natsPublisher:   natsPublisher,
-		paymentListener: paymentListener,
-		authClient:      authClient,
-		ctx:             ctx,
-		cancel:          cancel,
+		cfg:                cfg,
+		httpRouter:         httpRouter,
+		db:                 db,
+		cacheClient:        cacheClient,
+		inventoryClient:    inventoryClient,
+		natsPublisher:      natsPublisher,
+		paymentListener:    paymentListener,
+		authClient:         authClient,
+		draftCleanupWorker: draftCleanupWorker,
+		ctx:                ctx,
+		cancel:             cancel,
 	}, nil
 }
 

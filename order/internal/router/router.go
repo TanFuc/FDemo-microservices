@@ -74,6 +74,13 @@ func (r *Router) Setup() *fiber.App {
 	orders.Post("/:id/complete", r.orderHandler.MarkAsCompleted)
 	orders.Get("/user/:userId", r.orderHandler.ListOrders)
 
+	// Draft order routes (from cart checkout)
+	orders.Post("/draft", r.orderHandler.CreateDraftOrder)
+	orders.Get("/draft/:id", r.orderHandler.GetDraftOrder)
+	orders.Post("/draft/:id/confirm", r.orderHandler.ConfirmDraftOrder)
+	orders.Delete("/draft/:id", r.orderHandler.DeleteDraftOrder)
+	orders.Get("/user/:userId/drafts", r.orderHandler.ListDraftOrders)
+
 	// Return request routes
 	returns := api.Group("/returns")
 	if r.authMiddleware != nil {

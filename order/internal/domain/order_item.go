@@ -58,8 +58,36 @@ func (OrderItem) TableName() string {
 	return "order_items"
 }
 
-// NewOrderItem creates a new order item with calculated subtotal
+// NewOrderItem creates a new order item with minimal required fields
+// This is the simplified version for cart checkout and order creation
 func NewOrderItem(
+	productID string,
+	skuID string,
+	productName string,
+	skuCode string,
+	thumbnail string,
+	quantity int,
+	unitPrice decimal.Decimal,
+) *OrderItem {
+	return &OrderItem{
+		ID:            uuid.New(),
+		ProductID:     productID,
+		SkuID:         skuID,
+		ProductName:   productName,
+		SkuCode:       skuCode,
+		Thumbnail:     thumbnail,
+		Quantity:      quantity,
+		OriginalPrice: unitPrice,
+		UnitPrice:     unitPrice,
+		SubTotal:      unitPrice.Mul(decimal.NewFromInt(int64(quantity))),
+		Status:        "ACTIVE",
+		CreatedAt:     time.Now(),
+		UpdatedAt:     time.Now(),
+	}
+}
+
+// NewOrderItemFull creates a new order item with all fields
+func NewOrderItemFull(
 	productID string,
 	skuID string,
 	productName string,

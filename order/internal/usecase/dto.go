@@ -181,3 +181,108 @@ type ListReturnsResponse struct {
 	Limit      int              `json:"limit"`
 	TotalPages int              `json:"total_pages"`
 }
+
+// ===================== Draft Order DTOs =====================
+
+// CreateDraftOrderRequest represents the input for creating a draft order from Cart checkout
+type CreateDraftOrderRequest struct {
+	UserID          uuid.UUID              `json:"userId" validate:"required"`
+	Items           []DraftOrderItemDTO    `json:"items" validate:"required,min=1,dive"`
+	ShippingAddress ShippingAddressDTO     `json:"shippingAddress" validate:"required"`
+	PaymentMethod   string                 `json:"paymentMethod" validate:"required,oneof=MOMO COD STRIPE VNPAY"`
+	CustomerNote    string                 `json:"customerNote"`
+	VoucherCode     string                 `json:"voucherCode"`
+	VoucherID       string                 `json:"voucherId"`
+	CampaignID      string                 `json:"campaignId"`
+	OriginalAmount  decimal.Decimal        `json:"originalAmount"`
+	DiscountAmount  decimal.Decimal        `json:"discountAmount"`
+	ShippingFee     decimal.Decimal        `json:"shippingFee"`
+	FinalAmount     decimal.Decimal        `json:"finalAmount"`
+}
+
+// DraftOrderItemDTO represents an item in the draft order request
+type DraftOrderItemDTO struct {
+	ProductID   string          `json:"productId"`
+	SkuID       string          `json:"skuId" validate:"required"`
+	ProductName string          `json:"productName" validate:"required"`
+	SkuCode     string          `json:"skuCode"`
+	Thumbnail   string          `json:"thumbnail"`
+	Quantity    int             `json:"quantity" validate:"required,min=1"`
+	UnitPrice   decimal.Decimal `json:"unitPrice" validate:"required"`
+}
+
+// DraftOrderResponse represents the output for a draft order
+type DraftOrderResponse struct {
+	ID              uuid.UUID                `json:"id"`
+	UserID          uuid.UUID                `json:"userId"`
+	OrderNumber     string                   `json:"orderNumber"`
+	Status          string                   `json:"status"` // "DRAFT"
+	Currency        string                   `json:"currency"`
+	OriginalAmount  decimal.Decimal          `json:"originalAmount"`
+	DiscountAmount  decimal.Decimal          `json:"discountAmount"`
+	ShippingFee     decimal.Decimal          `json:"shippingFee"`
+	FinalAmount     decimal.Decimal          `json:"finalAmount"`
+	VoucherCode     string                   `json:"voucherCode,omitempty"`
+	Items           []DraftOrderItemResponse `json:"items"`
+	ShippingAddress json.RawMessage          `json:"shippingAddress"`
+	PaymentMethod   string                   `json:"paymentMethod"`
+	CustomerNote    string                   `json:"customerNote,omitempty"`
+	PriceBreakdown  *PriceBreakdown          `json:"priceBreakdown,omitempty"`
+	CreatedAt       string                   `json:"createdAt"`
+	ExpiresAt       string                   `json:"expiresAt"` // createdAt + 24h
+}
+
+// DraftOrderItemResponse represents an item in the draft order response
+type DraftOrderItemResponse struct {
+	ID          uuid.UUID       `json:"id"`
+	SkuID       string          `json:"skuId"`
+	ProductName string          `json:"productName"`
+	Thumbnail   string          `json:"thumbnail"`
+	Quantity    int             `json:"quantity"`
+	UnitPrice   decimal.Decimal `json:"unitPrice"`
+	SubTotal    decimal.Decimal `json:"subTotal"`
+}
+
+// ConfirmDraftOrderRequest represents the input for confirming a draft order
+type ConfirmDraftOrderRequest struct {
+	OrderID uuid.UUID `json:"orderId" validate:"required"`
+	UserID  uuid.UUID `json:"userId" validate:"required"`
+}
+
+// ListDraftOrdersRequest represents the input for listing draft orders
+type ListDraftOrdersRequest struct {
+	UserID uuid.UUID `json:"userId" validate:"required"`
+	Limit  int       `json:"limit"`
+	Offset int       `json:"offset"`
+}
+
+// DraftOrderSummary is a trimmed response used in list views
+type DraftOrderSummary struct {
+	ID          uuid.UUID       `json:"id"`
+	OrderNumber string          `json:"orderNumber"`
+	Status      string          `json:"status"`
+	FinalAmount decimal.Decimal `json:"finalAmount"`
+	Currency    string          `json:"currency"`
+	ItemCount   int             `json:"itemCount"`
+	CreatedAt   string          `json:"createdAt"`
+	ExpiresAt   string          `json:"expiresAt"` // createdAt + 24h
+}
+
+// ListDraftOrdersResponse represents the output for listing draft orders
+type ListDraftOrdersResponse struct {
+	Drafts []DraftOrderSummary `json:"drafts"`
+	Total  int64               `json:"total"`
+	Limit  int                 `json:"limit"`
+	Offset int                 `json:"offset"`
+}
+
+// PriceBreakdown provides transparent pricing display for draft orders
+type PriceBreakdown struct {
+	SubTotal          decimal.Decimal `json:"subTotal"`          // Sum of item subtotals
+	ShippingFee       decimal.Decimal `json:"shippingFee"`       // Shipping cost
+	ShippingDiscount  decimal.Decimal `json:"shippingDiscount"`  // Free-ship discount if any
+	VoucherDiscount   decimal.Decimal `json:"voucherDiscount"`   // Voucher/campaign discount
+	PromotionDiscount decimal.Decimal `json:"promotionDiscount"` // Flash sale, etc.
+	FinalAmount       decimal.Decimal `json:"finalAmount"`       // Total payable (VND)
+	Currency          string          `json:"currency"`          // "VND"
+}

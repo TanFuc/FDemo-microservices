@@ -174,9 +174,9 @@ func (uc *CreateOrderUseCase) toOrderResponse(order *domain.Order) *OrderRespons
 	return &OrderResponse{
 		ID:              order.ID,
 		UserID:          order.UserID,
-		TotalAmount:     order.TotalAmount,
+		TotalAmount:     order.SubTotal,
 		ShippingFee:     order.ShippingFee,
-		DiscountAmount:  order.DiscountAmount,
+		DiscountAmount:  order.VoucherDiscount,
 		FinalAmount:     order.FinalAmount,
 		Status:          string(order.Status),
 		PaymentMethod:   order.PaymentMethod,

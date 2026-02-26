@@ -50,9 +50,9 @@ func (uc *GetOrderUseCase) toOrderResponse(order *domain.Order) *OrderResponse {
 	return &OrderResponse{
 		ID:              order.ID,
 		UserID:          order.UserID,
-		TotalAmount:     order.TotalAmount,
+		TotalAmount:     order.SubTotal,
 		ShippingFee:     order.ShippingFee,
-		DiscountAmount:  order.DiscountAmount,
+		DiscountAmount:  order.VoucherDiscount,
 		FinalAmount:     order.FinalAmount,
 		Status:          string(order.Status),
 		PaymentMethod:   order.PaymentMethod,
@@ -97,6 +97,28 @@ func (uc *ListOrdersUseCase) Execute(ctx context.Context, userID uuid.UUID, limi
 	return responses, nil
 }
 
+// ExecuteDrafts lists draft orders for a user
+func (uc *ListOrdersUseCase) ExecuteDrafts(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*OrderResponse, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	orders, err := uc.orderRepo.GetDraftsByUserID(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]*OrderResponse, len(orders))
+	for i, order := range orders {
+		responses[i] = uc.toOrderResponse(order)
+	}
+
+	return responses, nil
+}
+
 // toOrderResponse converts Order entity to OrderResponse
 func (uc *ListOrdersUseCase) toOrderResponse(order *domain.Order) *OrderResponse {
 	items := make([]OrderItemResponse, len(order.Items))
@@ -117,9 +139,9 @@ func (uc *ListOrdersUseCase) toOrderResponse(order *domain.Order) *OrderResponse
 	return &OrderResponse{
 		ID:              order.ID,
 		UserID:          order.UserID,
-		TotalAmount:     order.TotalAmount,
+		TotalAmount:     order.SubTotal,
 		ShippingFee:     order.ShippingFee,
-		DiscountAmount:  order.DiscountAmount,
+		DiscountAmount:  order.VoucherDiscount,
 		FinalAmount:     order.FinalAmount,
 		Status:          string(order.Status),
 		PaymentMethod:   order.PaymentMethod,
