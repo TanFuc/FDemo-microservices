@@ -90,14 +90,21 @@ func New(cfg *config.Config) (*App, error) {
 		logger.Info().Str("url", cfg.NATS.URL).Msg("Connected to NATS")
 	}
 
-	// Initialize repository with cache
+	// Initialize repositories with cache
 	orderRepo := repository.NewOrderRepository(db, cacheClient)
+	returnRepo := repository.NewReturnRepository(db.DB)
 
 	// Create mock implementations for development if services are unavailable
 	var stockReserver inventorygrpc.StockReserver = inventoryClient
 	if inventoryClient == nil {
 		stockReserver = &mockStockReserver{}
 		logger.Info().Msg("Using mock stock reserver")
+	}
+
+	var stockRestorer inventorygrpc.StockRestorer = inventoryClient
+	if inventoryClient == nil {
+		stockRestorer = &mockStockRestorer{}
+		logger.Info().Msg("Using mock stock restorer")
 	}
 
 	var eventPublisher messaging.EventPublisher = natsPublisher
@@ -114,6 +121,7 @@ func New(cfg *config.Config) (*App, error) {
 	markAsPaidUC := usecase.NewMarkAsPaidUseCase(orderRepo, eventPublisher)
 	markAsShippedUC := usecase.NewMarkAsShippedUseCase(orderRepo, eventPublisher)
 	markAsCompletedUC := usecase.NewMarkAsCompletedUseCase(orderRepo, eventPublisher)
+	processReturnUC := usecase.NewProcessReturnUseCase(orderRepo, returnRepo, stockRestorer)
 
 	// Initialize Auth gRPC Client
 	var authClient *authclient.Client
@@ -144,9 +152,10 @@ func New(cfg *config.Config) (*App, error) {
 		markAsCompletedUC,
 		authMiddleware,
 	)
+	returnHandler := httphandler.NewReturnHandler(processReturnUC, authMiddleware)
 
 	// Initialize HTTP router
-	httpRouter := router.NewRouter(cfg, orderHandler, healthHandler, authMiddleware)
+	httpRouter := router.NewRouter(cfg, orderHandler, returnHandler, healthHandler, authMiddleware)
 
 	// Initialize structured logger for payment listener
 	slogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -323,5 +332,18 @@ func (m *mockStockConfirmer) ConfirmStock(ctx context.Context, orderID string) e
 
 func (m *mockStockConfirmer) ReleaseStockByOrderID(ctx context.Context, orderID string) error {
 	logger.Debug().Str("orderId", orderID).Msg("[MOCK] Releasing stock by order")
+	return nil
+}
+
+// Mock stock restorer for development
+type mockStockRestorer struct{}
+
+func (m *mockStockRestorer) RestoreStock(ctx context.Context, skuID string, quantity int, referenceID, referenceType, note string) error {
+	logger.Debug().
+		Str("sku", skuID).
+		Int("qty", quantity).
+		Str("refId", referenceID).
+		Str("refType", referenceType).
+		Msg("[MOCK] Restoring stock")
 	return nil
 }

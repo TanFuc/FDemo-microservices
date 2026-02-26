@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package inventory;
+
+option go_package = "microservices/inventory/api/pb";
+
+service InventoryService {
+  // ReserveStock reserves stock for an order item
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+
+  // BulkReserveStock reserves stock for multiple items atomically
+  rpc BulkReserveStock(BulkReserveStockRequest) returns (BulkReserveStockResponse);
+
+  // ReleaseStock releases a single reservation by ID
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+
+  // ReleaseStockByOrderId releases all reservations for an order
+  rpc ReleaseStockByOrderId(ReleaseStockByOrderIdRequest) returns (ReleaseStockByOrderIdResponse);
+
+  // ConfirmStock confirms all reservations for an order (after successful payment)
+  rpc ConfirmStock(ConfirmStockRequest) returns (ConfirmStockResponse);
+
+  // CheckStock checks available stock for a SKU
+  rpc CheckStock(CheckStockRequest) returns (CheckStockResponse);
+
+  // RestoreStock adds stock back (used for returns/refunds)
+  rpc RestoreStock(RestoreStockRequest) returns (RestoreStockResponse);
+
+  // CreateInventory creates a new inventory item
+  rpc CreateInventory(CreateInventoryRequest) returns (CreateInventoryResponse);
+}
+
+message ReserveStockRequest {
+  string sku_id = 1;
+  int32 quantity = 2;
+  string order_id = 3;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string reservation_id = 2;
+  string error_message = 3;
+}
+
+message BulkReserveStockRequest {
+  string order_id = 1;
+  repeated ReserveItem items = 2;
+}
+
+message ReserveItem {
+  string sku_id = 1;
+  int32 quantity = 2;
+}
+
+message BulkReserveStockResponse {
+  bool success = 1;
+  repeated ReservationResult results = 2;
+  string error_message = 3;
+}
+
+message ReservationResult {
+  string sku_id = 1;
+  string reservation_id = 2;
+  bool success = 3;
+  string error_message = 4;
+}
+
+message ReleaseStockRequest {
+  string reservation_id = 1;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message ReleaseStockByOrderIdRequest {
+  string order_id = 1;
+}
+
+message ReleaseStockByOrderIdResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message ConfirmStockRequest {
+  string order_id = 1;
+}
+
+message ConfirmStockResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message CheckStockRequest {
+  string sku_id = 1;
+}
+
+message CheckStockResponse {
+  bool available = 1;
+  int32 quantity = 2;
+}
+
+message RestoreStockRequest {
+  string sku_id = 1;
+  int32 quantity = 2;
+  string reference_id = 3;    // return_request_id or refund_id
+  string reference_type = 4;  // RETURN, REFUND, MANUAL_ADJUSTMENT
+  string note = 5;
+}
+
+message RestoreStockResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message CreateInventoryRequest {
+  string sku_id = 1;
+  int32 initial_stock = 2;
+  string product_id = 3;
+}
+
+message CreateInventoryResponse {
+  bool success = 1;
+  string error_message = 2;
+}

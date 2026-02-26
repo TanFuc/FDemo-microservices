@@ -25,4 +25,9 @@ type CacheRepository interface {
 	GetRatingSummary(ctx context.Context, productID string) (*domain.RatingSummary, error)
 	SetRatingSummary(ctx context.Context, productID string, summary *domain.RatingSummary) error
 	InvalidateRatingSummary(ctx context.Context, productID string) error
+
+	// Idempotency methods for preventing duplicate reviews
+	CheckAndSetReviewIdempotency(ctx context.Context, orderID, userID, reviewID string) (bool, error)
+	GetExistingReviewID(ctx context.Context, orderID, userID string) (string, error)
+	ClearReviewIdempotency(ctx context.Context, orderID, userID string) error
 }

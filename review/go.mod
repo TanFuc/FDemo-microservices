@@ -6,6 +6,7 @@ require (
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/google/uuid v1.6.0
+	github.com/nats-io/nats.go v1.37.0
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/spf13/viper v1.18.2
 	go.mongodb.org/mongo-driver v1.17.1

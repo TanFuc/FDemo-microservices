@@ -7,9 +7,11 @@ import (
 	"microservices/review/internal/adapter"
 	"microservices/review/internal/adapter/grpc"
 	"microservices/review/internal/adapter/mongodb"
+	natspub "microservices/review/internal/adapter/nats"
 	rediscache "microservices/review/internal/adapter/redis"
 	"microservices/review/internal/core/domain"
 	"microservices/review/internal/core/dto"
+	"microservices/review/internal/core/port"
 	"microservices/review/internal/core/util"
 	"time"
 
@@ -22,6 +24,7 @@ var (
 	ErrDuplicateReview     = errors.New("you have already reviewed this product for this order")
 	ErrVerificationFailed  = errors.New("purchase verification failed")
 	ErrReviewNotFound      = errors.New("review not found")
+	ErrDuplicateRequest    = errors.New("duplicate review submission detected")
 )
 
 type ReviewService struct {
@@ -30,6 +33,7 @@ type ReviewService struct {
 	cacheRepo         *rediscache.CacheRepository
 	orderClient       grpc.OrderServiceClient
 	profileClient     adapter.ProfileClient
+	publisher         port.EventPublisher
 }
 
 func NewReviewService(
@@ -64,6 +68,23 @@ func NewReviewServiceWithProfile(
 	}
 }
 
+// NewReviewServiceWithPublisher creates a review service with event publisher
+func NewReviewServiceWithPublisher(
+	reviewRepo *mongodb.ReviewRepository,
+	productRatingRepo *mongodb.ProductRatingRepository,
+	cacheRepo *rediscache.CacheRepository,
+	orderClient grpc.OrderServiceClient,
+	publisher port.EventPublisher,
+) *ReviewService {
+	return &ReviewService{
+		reviewRepo:        reviewRepo,
+		productRatingRepo: productRatingRepo,
+		cacheRepo:         cacheRepo,
+		orderClient:       orderClient,
+		publisher:         publisher,
+	}
+}
+
 // CreateReview creates a new review after verifying purchase
 func (s *ReviewService) CreateReview(ctx context.Context, req *dto.CreateReviewRequest) (*domain.Review, error) {
 	// Validate rating
@@ -79,6 +100,26 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *dto.CreateReviewR
 
 	// Validate image URLs
 	validImages := util.ValidateImageURLs(req.Images)
+
+	// Step 0: Idempotency check - prevent duplicate submissions (e.g., double-click, network retries)
+	// Check if a review for this order+user combination is already being processed or was recently created
+	if s.cacheRepo != nil {
+		existingReviewID, err := s.cacheRepo.GetExistingReviewID(ctx, req.OrderID, req.UserID)
+		if err != nil {
+			log.Printf("WARN: idempotency check failed: %v", err)
+			// Continue without idempotency protection if Redis is down
+		} else if existingReviewID != "" {
+			// A review was already created for this order+user - return the existing review
+			existingReview, err := s.reviewRepo.GetByID(ctx, existingReviewID)
+			if err == nil {
+				log.Printf("INFO: idempotency hit - returning existing review %s for order %s", existingReviewID, req.OrderID)
+				return existingReview, nil
+			}
+			// If we can't find the review in DB but key exists in Redis, it might be a race condition
+			// Clear the key and proceed with creation
+			_ = s.cacheRepo.ClearReviewIdempotency(ctx, req.OrderID, req.UserID)
+		}
+	}
 
 	// Step 1: Verify purchase through Order Service
 	order, err := s.orderClient.GetOrderDetail(ctx, req.OrderID, req.UserID)
@@ -156,11 +197,80 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *dto.CreateReviewR
 		return nil, err
 	}
 
-	// Step 4: Update product ratings (async in production, sync here for simplicity)
-	if err := s.updateProductRating(ctx, req.ProductID, req.Rating); err != nil {
-		// Log error but don't fail the request - review was created successfully
-		// In production, this would be handled by a background job/queue
+	// Step 3b: Set idempotency key after successful creation
+	// This prevents duplicate submissions in a race condition window
+	if s.cacheRepo != nil {
+		if _, err := s.cacheRepo.CheckAndSetReviewIdempotency(ctx, req.OrderID, req.UserID, review.ID); err != nil {
+			log.Printf("WARN: failed to set idempotency key: %v", err)
+			// Continue - the review was created successfully, idempotency is a safeguard not a requirement
+		}
 	}
+
+	// Step 4: Publish review.created event asynchronously (do NOT block the HTTP response)
+	if s.publisher != nil {
+		go func() {
+			bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			content := review.Content
+			if len(content) > 500 {
+				content = content[:500] + "..."
+			}
+
+			evt := &natspub.ReviewCreatedEvent{
+				EventID:    uuid.New().String(),
+				ReviewID:   review.ID,
+				ProductID:  review.ProductID,
+				OrderID:    review.OrderID,
+				UserID:     review.UserID,
+				UserName:   review.UserName,
+				Rating:     review.Rating,
+				Content:    content,
+				Images:     review.Images,
+				IsEdited:   false,
+				OccurredAt: time.Now(),
+			}
+
+			if err := s.publisher.PublishReviewCreated(bgCtx, evt); err != nil {
+				log.Printf("ERROR: failed to publish review.created event: reviewId=%s err=%v", review.ID, err)
+			}
+		}()
+	}
+
+	// Step 5: Update product ratings asynchronously with retry
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+
+		var ratingErr error
+		for attempt := 1; attempt <= 3; attempt++ {
+			ratingErr = s.updateProductRating(bgCtx, req.ProductID, req.Rating)
+			if ratingErr == nil {
+				break
+			}
+			log.Printf("WARN: rating update attempt %d failed for product %s: %v", attempt, req.ProductID, ratingErr)
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+
+		if ratingErr != nil {
+			log.Printf("ERROR: rating update exhausted retries for product %s: %v", req.ProductID, ratingErr)
+			return
+		}
+
+		// Publish RatingUpdatedEvent for Catalog Service sync
+		if s.publisher != nil {
+			updatedRating, err := s.productRatingRepo.Get(bgCtx, req.ProductID)
+			if err == nil {
+				_ = s.publisher.PublishRatingUpdated(bgCtx, &natspub.RatingUpdatedEvent{
+					EventID:       uuid.New().String(),
+					ProductID:     req.ProductID,
+					AverageRating: updatedRating.AverageRating,
+					TotalReviews:  updatedRating.TotalReviews,
+					OccurredAt:    time.Now(),
+				})
+			}
+		}
+	}()
 
 	return review, nil
 }
@@ -256,7 +366,40 @@ func (s *ReviewService) ReplyReview(ctx context.Context, req *dto.ReplyReviewReq
 	if errors.Is(err, mongodb.ErrReviewNotFound) {
 		return ErrReviewNotFound
 	}
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Notify user that their review has a reply
+	if s.publisher != nil {
+		go func() {
+			bgCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			review, err := s.reviewRepo.GetByID(bgCtx, req.ReviewID)
+			if err != nil {
+				log.Printf("WARN: failed to fetch review for reply event: %v", err)
+				return
+			}
+
+			evt := &natspub.ReviewCreatedEvent{
+				EventID:    uuid.New().String(),
+				ReviewID:   review.ID,
+				ProductID:  review.ProductID,
+				UserID:     review.UserID,
+				UserName:   review.UserName,
+				Rating:     review.Rating,
+				EventType:  "review.updated",
+				OccurredAt: time.Now(),
+			}
+
+			if err := s.publisher.PublishReviewUpdated(bgCtx, evt); err != nil {
+				log.Printf("ERROR: failed to publish review.updated event: reviewId=%s err=%v", review.ID, err)
+			}
+		}()
+	}
+
+	return nil
 }
 
 // GetReviewByID returns a single review by ID

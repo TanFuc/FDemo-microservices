@@ -12,6 +12,7 @@ type Config struct {
 	MongoDB MongoDBConfig `mapstructure:"mongodb"`
 	Redis   RedisConfig   `mapstructure:"redis"`
 	GRPC    GRPCConfig    `mapstructure:"grpc"`
+	NATS    NATSConfig    `mapstructure:"nats"`
 }
 
 type AppConfig struct {
@@ -35,6 +36,10 @@ type RedisConfig struct {
 
 type GRPCConfig struct {
 	OrderServiceAddr string `mapstructure:"order_service_addr"`
+}
+
+type NATSConfig struct {
+	URL string `mapstructure:"url"`
 }
 
 // Load loads configuration from file and environment variables
@@ -93,6 +98,9 @@ func setDefaults(v *viper.Viper) {
 
 	// GRPC defaults
 	v.SetDefault("grpc.order_service_addr", "localhost:50052")
+
+	// NATS defaults
+	v.SetDefault("nats.url", "nats://localhost:4222")
 }
 
 func bindEnvVars(v *viper.Viper) {
@@ -114,4 +122,7 @@ func bindEnvVars(v *viper.Viper) {
 
 	// GRPC
 	v.BindEnv("grpc.order_service_addr", "ORDER_SERVICE_ADDR")
+
+	// NATS
+	v.BindEnv("nats.url", "NATS_URL")
 }

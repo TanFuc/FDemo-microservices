@@ -5,7 +5,10 @@ import (
 	"errors"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	orderpb "microservices/review/proto/order"
 )
 
 var (
@@ -37,8 +40,9 @@ type OrderServiceClient interface {
 }
 
 type orderServiceClient struct {
-	conn   *grpc.ClientConn
-	target string
+	conn       *grpc.ClientConn
+	grpcClient orderpb.OrderServiceClient
+	target     string
 }
 
 func NewOrderServiceClient(target string) (OrderServiceClient, error) {
@@ -48,28 +52,49 @@ func NewOrderServiceClient(target string) (OrderServiceClient, error) {
 	}
 
 	return &orderServiceClient{
-		conn:   conn,
-		target: target,
+		conn:       conn,
+		grpcClient: orderpb.NewOrderServiceClient(conn),
+		target:     target,
 	}, nil
 }
 
 func (c *orderServiceClient) GetOrderDetail(ctx context.Context, orderID, userID string) (*OrderDetail, error) {
-	// This is a placeholder implementation
-	// In production, this would call the actual gRPC service
-	// For now, we return an error indicating the service is not implemented
-	// The actual implementation would look like:
-	//
-	// client := pb.NewOrderServiceClient(c.conn)
-	// resp, err := client.GetOrderDetail(ctx, &pb.GetOrderDetailRequest{
-	//     OrderId: orderID,
-	//     UserId:  userID,
-	// })
-	// if err != nil {
-	//     return nil, ErrOrderServiceDown
-	// }
-	// ...
+	resp, err := c.grpcClient.GetOrderDetail(ctx, &orderpb.GetOrderDetailRequest{
+		OrderId: orderID,
+		UserId:  userID,
+	})
+	if err != nil {
+		st, ok := status.FromError(err)
+		if ok {
+			switch st.Code() {
+			case codes.NotFound:
+				return nil, ErrOrderNotFound
+			case codes.PermissionDenied, codes.Unauthenticated:
+				return nil, ErrUnauthorized
+			case codes.Unavailable:
+				return nil, ErrOrderServiceDown
+			}
+		}
+		return nil, ErrOrderServiceDown
+	}
 
-	return nil, ErrOrderServiceDown
+	items := make([]OrderItem, len(resp.Items))
+	for i, it := range resp.Items {
+		items[i] = OrderItem{
+			ProductID:   it.ProductId,
+			ProductName: it.ProductName,
+			Quantity:    it.Quantity,
+			Price:       it.Price,
+		}
+	}
+
+	return &OrderDetail{
+		OrderID:   resp.OrderId,
+		UserID:    resp.UserId,
+		Status:    resp.Status,
+		Items:     items,
+		CreatedAt: resp.CreatedAt,
+	}, nil
 }
 
 func (c *orderServiceClient) Close() error {

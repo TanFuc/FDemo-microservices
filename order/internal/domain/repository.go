@@ -35,3 +35,30 @@ type UnitOfWork interface {
 	// Rollback rolls back the current transaction
 	Rollback(ctx context.Context) error
 }
+
+// ReturnRepository defines the interface for return request persistence
+type ReturnRepository interface {
+	// Create creates a new return request
+	Create(ctx context.Context, r *ReturnRequest) error
+
+	// GetByID retrieves a return request by its ID
+	GetByID(ctx context.Context, id uuid.UUID) (*ReturnRequest, error)
+
+	// GetByOrderID retrieves all return requests for an order
+	GetByOrderID(ctx context.Context, orderID uuid.UUID) ([]*ReturnRequest, error)
+
+	// Update updates an existing return request
+	Update(ctx context.Context, r *ReturnRequest) error
+
+	// List retrieves return requests with filtering
+	List(ctx context.Context, filter ReturnFilter) ([]*ReturnRequest, int64, error)
+}
+
+// ReturnFilter for querying return requests
+type ReturnFilter struct {
+	UserID  uuid.UUID
+	OrderID uuid.UUID
+	Status  string
+	Page    int
+	Limit   int
+}

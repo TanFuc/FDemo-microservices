@@ -44,6 +44,7 @@ func (d *Database) AutoMigrate() error {
 	return d.DB.AutoMigrate(
 		&domain.Order{},
 		&domain.OrderItem{},
+		&domain.ReturnRequest{},
 	)
 }
 

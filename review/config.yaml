@@ -16,3 +16,6 @@ redis:
 
 grpc:
   order_service_addr: "localhost:50052"
+
+nats:
+  url: "nats://localhost:4222"

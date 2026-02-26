@@ -149,6 +149,32 @@ func (c *InventoryClient) ReleaseStockByOrderID(ctx context.Context, orderID str
 	return nil
 }
 
+// RestoreStock adds stock back to inventory (used for returns/refunds)
+func (c *InventoryClient) RestoreStock(ctx context.Context, skuID string, quantity int, referenceID, referenceType, note string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
+
+	resp, err := c.client.RestoreStock(ctx, &pb.RestoreStockRequest{
+		SkuId:         skuID,
+		Quantity:      int32(quantity),
+		ReferenceId:   referenceID,
+		ReferenceType: referenceType,
+		Note:          note,
+	})
+	if err != nil {
+		return fmt.Errorf("%w: %v", domain.ErrInventoryServiceUnavailable, err)
+	}
+
+	if !resp.Success {
+		if resp.ErrorMessage != "" {
+			return fmt.Errorf("stock restore failed: %s", resp.ErrorMessage)
+		}
+		return fmt.Errorf("stock restore failed for SKU %s", skuID)
+	}
+
+	return nil
+}
+
 // StockReserver interface for dependency injection
 type StockReserver interface {
 	ReserveStock(ctx context.Context, skuID string, quantity int, orderID string) (string, error)
@@ -161,8 +187,16 @@ type StockConfirmer interface {
 	ReleaseStockByOrderID(ctx context.Context, orderID string) error
 }
 
+// StockRestorer interface for returns/refunds
+type StockRestorer interface {
+	RestoreStock(ctx context.Context, skuID string, quantity int, referenceID, referenceType, note string) error
+}
+
 // Ensure InventoryClient implements StockReserver
 var _ StockReserver = (*InventoryClient)(nil)
 
 // Ensure InventoryClient implements StockConfirmer
 var _ StockConfirmer = (*InventoryClient)(nil)
+
+// Ensure InventoryClient implements StockRestorer
+var _ StockRestorer = (*InventoryClient)(nil)

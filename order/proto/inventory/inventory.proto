@@ -8,6 +8,9 @@ service InventoryService {
     // ReserveStock reserves stock for an order item
     rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
 
+    // BulkReserveStock reserves stock for multiple items atomically
+    rpc BulkReserveStock(BulkReserveStockRequest) returns (BulkReserveStockResponse);
+
     // ReleaseStock releases previously reserved stock
     rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
 
@@ -19,6 +22,9 @@ service InventoryService {
 
     // ReleaseStockByOrderId releases all reservations for an order (after failed payment)
     rpc ReleaseStockByOrderId(ReleaseStockByOrderIdRequest) returns (ReleaseStockByOrderIdResponse);
+
+    // RestoreStock adds stock back (used for returns/refunds)
+    rpc RestoreStock(RestoreStockRequest) returns (RestoreStockResponse);
 }
 
 message ReserveStockRequest {
@@ -31,6 +37,29 @@ message ReserveStockResponse {
     bool success = 1;
     string reservation_id = 2;
     string error_message = 3;
+}
+
+message BulkReserveStockRequest {
+    string order_id = 1;
+    repeated ReserveItem items = 2;
+}
+
+message ReserveItem {
+    string sku_id = 1;
+    int32 quantity = 2;
+}
+
+message BulkReserveStockResponse {
+    bool success = 1;
+    repeated ReservationResult results = 2;
+    string error_message = 3;
+}
+
+message ReservationResult {
+    string sku_id = 1;
+    string reservation_id = 2;
+    bool success = 3;
+    string error_message = 4;
 }
 
 message ReleaseStockRequest {
@@ -65,6 +94,19 @@ message ReleaseStockByOrderIdRequest {
 }
 
 message ReleaseStockByOrderIdResponse {
+    bool success = 1;
+    string error_message = 2;
+}
+
+message RestoreStockRequest {
+    string sku_id = 1;
+    int32 quantity = 2;
+    string reference_id = 3;    // return_request_id or refund_id
+    string reference_type = 4;  // RETURN, REFUND, MANUAL_ADJUSTMENT
+    string note = 5;
+}
+
+message RestoreStockResponse {
     bool success = 1;
     string error_message = 2;
 }

@@ -105,6 +105,10 @@ type ReturnRequest struct {
 	ApprovedBy    string `gorm:"type:varchar(100)"`
 	ApprovedByID  string `gorm:"type:varchar(100)"`
 
+	// Stock restore tracking
+	StockRestored   bool       `gorm:"type:boolean;default:false"`
+	StockRestoredAt *time.Time `gorm:"type:timestamptz"`
+
 	// Timestamps
 	RequestedAt   time.Time      `gorm:"type:timestamptz;not null"`
 	ApprovedAt    *time.Time     `gorm:"type:timestamptz"`

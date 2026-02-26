@@ -14,6 +14,7 @@ import (
 
 	grpcclient "microservices/review/internal/adapter/grpc"
 	"microservices/review/internal/adapter/mongodb"
+	natspub "microservices/review/internal/adapter/nats"
 	rediscache "microservices/review/internal/adapter/redis"
 	"microservices/review/internal/config"
 	"microservices/review/internal/core/service"
@@ -30,6 +31,7 @@ type App struct {
 	redisClient   *redis.Client
 	orderClient   grpcclient.OrderServiceClient
 	authClient    *authclient.Client
+	natsPublisher *natspub.Publisher
 	ctx           context.Context
 	cancel        context.CancelFunc
 }
@@ -67,6 +69,7 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize repositories
 	reviewRepo := mongodb.NewReviewRepository(mongoDB)
 	productRatingRepo := mongodb.NewProductRatingRepository(mongoDB)
+	outboxRepo := mongodb.NewOutboxRepository(mongoDB)
 	cacheRepo := rediscache.NewCacheRepository(redisClient)
 
 	// Initialize gRPC client for Order Service
@@ -78,8 +81,27 @@ func New(cfg *config.Config) (*App, error) {
 		logger.Info().Str("addr", cfg.GRPC.OrderServiceAddr).Msg("Connected to Order Service")
 	}
 
-	// Initialize service
-	reviewService := service.NewReviewService(reviewRepo, productRatingRepo, cacheRepo, orderClient)
+	// Initialize NATS Publisher
+	var natsPublisher *natspub.Publisher
+	if cfg.NATS.URL != "" {
+		logger.Info().Msg("Connecting to NATS...")
+		natsPublisher, err = natspub.NewPublisher(cfg.NATS.URL)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to connect to NATS, events will not be published")
+		} else {
+			logger.Info().Str("url", cfg.NATS.URL).Msg("Connected to NATS JetStream")
+		}
+	}
+
+	// Start Outbox Relay for reliable event delivery
+	if natsPublisher != nil {
+		outboxRelay := natspub.NewOutboxRelay(outboxRepo, natsPublisher)
+		go outboxRelay.Run(ctx)
+		logger.Info().Msg("Started Outbox Relay for reliable event delivery")
+	}
+
+	// Initialize service with publisher and outbox
+	reviewService := service.NewReviewServiceWithPublisher(reviewRepo, productRatingRepo, cacheRepo, orderClient, natsPublisher)
 
 	// Initialize Auth gRPC Client
 	var authClient *authclient.Client
@@ -112,6 +134,7 @@ func New(cfg *config.Config) (*App, error) {
 		redisClient:   redisClient,
 		orderClient:   orderClient,
 		authClient:    authClient,
+		natsPublisher: natsPublisher,
 		ctx:           ctx,
 		cancel:        cancel,
 	}, nil
@@ -162,6 +185,9 @@ func (a *App) cleanup() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	if a.natsPublisher != nil {
+		a.natsPublisher.Close()
+	}
 	if a.orderClient != nil {
 		a.orderClient.Close()
 	}

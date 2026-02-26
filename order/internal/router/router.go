@@ -15,6 +15,7 @@ type Router struct {
 	app            *fiber.App
 	cfg            *config.Config
 	orderHandler   *httphandler.OrderHandler
+	returnHandler  *httphandler.ReturnHandler
 	healthHandler  *httphandler.HealthHandler
 	authMiddleware *authclient.FiberMiddleware
 }
@@ -22,6 +23,7 @@ type Router struct {
 func NewRouter(
 	cfg *config.Config,
 	orderHandler *httphandler.OrderHandler,
+	returnHandler *httphandler.ReturnHandler,
 	healthHandler *httphandler.HealthHandler,
 	authMiddleware *authclient.FiberMiddleware,
 ) *Router {
@@ -33,6 +35,7 @@ func NewRouter(
 		app:            app,
 		cfg:            cfg,
 		orderHandler:   orderHandler,
+		returnHandler:  returnHandler,
 		healthHandler:  healthHandler,
 		authMiddleware: authMiddleware,
 	}
@@ -70,6 +73,22 @@ func (r *Router) Setup() *fiber.App {
 	orders.Post("/:id/ship", r.orderHandler.MarkAsShipped)
 	orders.Post("/:id/complete", r.orderHandler.MarkAsCompleted)
 	orders.Get("/user/:userId", r.orderHandler.ListOrders)
+
+	// Return request routes
+	returns := api.Group("/returns")
+	if r.authMiddleware != nil {
+		returns.Use(r.authMiddleware.RequireAuth())
+	}
+
+	returns.Post("/", r.returnHandler.CreateReturn)
+	returns.Get("/", r.returnHandler.ListReturns)
+	returns.Get("/:id", r.returnHandler.GetReturn)
+	returns.Post("/:id/approve", r.returnHandler.ApproveReturn)
+	returns.Post("/:id/reject", r.returnHandler.RejectReturn)
+	returns.Post("/:id/complete", r.returnHandler.CompleteReturn)
+
+	// Get returns for a specific order
+	orders.Get("/:id/returns", r.returnHandler.GetReturnsByOrder)
 
 	return r.app
 }

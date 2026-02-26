@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	pb "microservices/inventory/api/pb"
 	"microservices/inventory/internal/config"
 	grpchandler "microservices/inventory/internal/handler/grpc"
 	httphandler "microservices/inventory/internal/handler/http"
@@ -85,9 +86,9 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Register gRPC handlers
-	_ = grpchandler.NewInventoryHandler(inventoryService, reservationService)
-	// Note: Register with pb generated service when available
-	// pb.RegisterInventoryServiceServer(grpcServer.GetGRPCServer(), grpcHandler)
+	grpcHandler := grpchandler.NewInventoryGRPCServer(inventoryService, reservationService)
+	pb.RegisterInventoryServiceServer(grpcServer.GetGRPCServer(), grpcHandler)
+	logger.Infof("Registered InventoryServiceServer on gRPC port %s", cfg.App.GRPCPort)
 
 	return &App{
 		cfg:        cfg,

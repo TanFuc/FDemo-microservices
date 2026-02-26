@@ -117,7 +117,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("redis.db", 0)
 
 	// Inventory defaults
-	v.SetDefault("inventory.grpc_address", "localhost:50052")
+	v.SetDefault("inventory.grpc_address", "localhost:50053")
 	v.SetDefault("inventory.timeout", 5)
 }
 

@@ -21,10 +21,14 @@ var (
 	ErrRefundAlreadyProcessed = errors.New("refund already processed")
 
 	// Return errors
-	ErrReturnNotFound       = errors.New("return request not found")
-	ErrInvalidReturnStatus  = errors.New("invalid return status")
-	ErrReturnWindowExpired  = errors.New("return window has expired")
-	ErrItemNotReturnable    = errors.New("item is not returnable")
+	ErrReturnNotFound        = errors.New("return request not found")
+	ErrInvalidReturnStatus   = errors.New("invalid return status")
+	ErrReturnWindowExpired   = errors.New("return window has expired")
+	ErrItemNotReturnable     = errors.New("item is not returnable")
+	ErrOrderCannotBeReturned = errors.New("order cannot be returned in current status")
+
+	// Authorization errors
+	ErrUnauthorized = errors.New("unauthorized access")
 
 	// Stock errors
 	ErrOutOfStock             = errors.New("insufficient stock available")
