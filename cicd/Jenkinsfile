@@ -1,0 +1,430 @@
+// cicd/Jenkinsfile
+// =================================================================
+// TAFU Microservices — Universal CI/CD Pipeline
+//
+// This single Jenkinsfile handles ALL 15 services.
+// It is parameterized: Jenkins passes SERVICE_NAME when triggering.
+// Service-specific config is loaded from cicd/config/services.yaml.
+//
+// HOW IT WORKS:
+//   - Seed job creates one Jenkins pipeline job per service
+//   - Each job points to this file (cicd/Jenkinsfile)
+//   - Each job has a default parameter: SERVICE_NAME = <service>
+//   - Git webhook triggers the matching job when files change
+//   - This pipeline reads services.yaml to get service config
+// =================================================================
+
+pipeline {
+    agent { label 'go-builder' }
+
+    // ── Parameters: injected by each service's Jenkins job definition
+    parameters {
+        string(
+            name: 'SERVICE_NAME',
+            defaultValue: '',
+            description: 'Service to build (e.g. auth, catalog, order). Set by seed job.'
+        )
+        choice(
+            name: 'FORCE_DEPLOY_ENV',
+            choices: ['auto', 'staging', 'production', 'none'],
+            description: 'Force deploy to specific env. Use "auto" for branch-based deploy.'
+        )
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '15'))
+        timeout(time: 40, unit: 'MINUTES')
+        disableConcurrentBuilds()       // Prevent parallel builds for same service
+        skipDefaultCheckout(true)
+        ansiColor('xterm')
+    }
+
+    // ── All credentials from Jenkins Credentials Manager (never hardcoded)
+    environment {
+        // Harbor
+        HARBOR_URL      = credentials('harbor.registry.url')
+        HARBOR_PROJECT  = credentials('harbor.registry.project')
+        HARBOR_CREDS    = credentials('harbor.credentials')     // usr+pass binding
+
+        // Slack
+        SLACK_WEBHOOK   = credentials('slack.webhook.url')
+
+        // SSH — Production
+        PROD_SSH_HOST   = credentials('prod.ssh.host')
+        PROD_SSH_USER   = credentials('prod.ssh.user')
+        PROD_SSH_PORT   = credentials('prod.ssh.port')
+
+        // SSH — Staging
+        STG_SSH_HOST    = credentials('staging.ssh.host')
+        STG_SSH_USER    = credentials('staging.ssh.user')
+        STG_SSH_PORT    = credentials('staging.ssh.port')
+
+        // Computed at start — do not change these manually
+        CONFIG_FILE     = 'cicd/config/services.yaml'
+        SCRIPTS_DIR     = 'cicd/scripts'
+    }
+
+    stages {
+
+        // ──────────────────────────────────────────────────────────
+        stage('Initialize') {
+            steps {
+                checkout scm
+
+                script {
+                    // Validate SERVICE_NAME parameter
+                    if (!params.SERVICE_NAME?.trim()) {
+                        error("SERVICE_NAME parameter is required. Check seed job configuration.")
+                    }
+
+                    // Load service config from services.yaml
+                    def cfg = loadServiceConfig(params.SERVICE_NAME)
+
+                    // Expose as environment variables for all subsequent stages
+                    env.SVC_NAME        = cfg.name
+                    env.SVC_DIR         = cfg.dir
+                    env.SVC_IMAGE       = cfg.image
+                    env.SVC_MAIN_PATH   = cfg.main_path
+                    env.SVC_HTTP_PORT   = cfg.http_port
+                    env.SVC_HEALTH_PATH = cfg.health_path ?: '/health'
+                    env.SVC_GRPC_PORT   = cfg.grpc_port ?: ''
+
+                    // Compute image tag and full image path
+                    env.GIT_SHORT_SHA   = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.IMAGE_TAG       = computeImageTag(env.BRANCH_NAME, env.GIT_SHORT_SHA)
+                    env.FULL_IMAGE      = "${env.HARBOR_URL}/${env.HARBOR_PROJECT}/${env.SVC_IMAGE}"
+
+                    // Determine deploy environment
+                    env.DEPLOY_ENV      = computeDeployEnv(env.BRANCH_NAME, params.FORCE_DEPLOY_ENV)
+
+                    echo """
+╔══════════════════════════════════════════════════╗
+║  TAFU CI/CD Pipeline Started
+╠══════════════════════════════════════════════════╣
+║  Service   : ${env.SVC_NAME}
+║  Image     : ${env.FULL_IMAGE}:${env.IMAGE_TAG}
+║  Branch    : ${env.BRANCH_NAME}
+║  Commit    : ${env.GIT_SHORT_SHA}
+║  Deploy to : ${env.DEPLOY_ENV}
+╚══════════════════════════════════════════════════╝
+"""
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Lint') {
+            steps {
+                dir(env.SVC_DIR) {
+                    sh '''
+                        echo "── Checking go.mod is tidy ──"
+                        go mod tidy
+                        git diff --exit-code go.mod go.sum \
+                            || { echo "ERROR: run 'go mod tidy' and commit changes"; exit 1; }
+
+                        echo "── Running golangci-lint ──"
+                        golangci-lint run \
+                            --timeout=5m \
+                            --out-format=colored-line-number \
+                            ./...
+                    '''
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Test') {
+            steps {
+                dir(env.SVC_DIR) {
+                    sh '''
+                        echo "── Running unit tests with race detection ──"
+                        go test \
+                            -v \
+                            -race \
+                            -count=1 \
+                            -coverprofile=coverage.out \
+                            -covermode=atomic \
+                            ./...
+
+                        echo "── Coverage summary ──"
+                        go tool cover -func=coverage.out | grep -E "^total:"
+                    '''
+                }
+            }
+            post {
+                always {
+                    dir(env.SVC_DIR) {
+                        // Publish coverage (requires Coverage plugin)
+                        recordCoverage(
+                            tools: [[parser: 'COBERTURA', pattern: 'coverage.out']]
+                        )
+                    }
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Security Scan') {
+            steps {
+                dir(env.SVC_DIR) {
+                    sh '''
+                        echo "── Running gosec ──"
+                        gosec -exclude-dir=docs -fmt=text ./... || true
+
+                        echo "── Running govulncheck ──"
+                        govulncheck ./...
+                    '''
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Build Image') {
+            steps {
+                script {
+                    sh """
+                        echo "── Building Docker image ──"
+                        docker build \\
+                            --file ${env.SVC_DIR}/Dockerfile \\
+                            --tag  ${env.FULL_IMAGE}:${env.IMAGE_TAG} \\
+                            --build-arg GO_VERSION=1.22 \\
+                            --build-arg SERVICE_NAME=${env.SVC_NAME} \\
+                            --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') \\
+                            --build-arg GIT_COMMIT=${env.GIT_SHORT_SHA} \\
+                            --label "org.opencontainers.image.revision=${env.GIT_SHORT_SHA}" \\
+                            --label "org.opencontainers.image.source=${env.GIT_URL}" \\
+                            ${env.SVC_DIR}
+
+                        echo "Build complete: ${env.FULL_IMAGE}:${env.IMAGE_TAG}"
+                    """
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Push to Harbor') {
+            when {
+                anyOf { branch 'main'; branch 'develop' }
+            }
+            steps {
+                script {
+                    sh """
+                        echo "── Logging in to Harbor ──"
+                        echo "${env.HARBOR_CREDS_PSW}" | \\
+                            docker login ${env.HARBOR_URL} \\
+                                --username "${env.HARBOR_CREDS_USR}" \\
+                                --password-stdin
+
+                        echo "── Pushing ${env.IMAGE_TAG} tag ──"
+                        docker push ${env.FULL_IMAGE}:${env.IMAGE_TAG}
+                    """
+
+                    // Tag 'latest' only on main; tag 'staging' only on develop
+                    if (env.BRANCH_NAME == 'main') {
+                        sh """
+                            docker tag ${env.FULL_IMAGE}:${env.IMAGE_TAG} ${env.FULL_IMAGE}:latest
+                            docker push ${env.FULL_IMAGE}:latest
+                            echo "Pushed :latest"
+                        """
+                    } else if (env.BRANCH_NAME == 'develop') {
+                        sh """
+                            docker tag ${env.FULL_IMAGE}:${env.IMAGE_TAG} ${env.FULL_IMAGE}:staging
+                            docker push ${env.FULL_IMAGE}:staging
+                            echo "Pushed :staging"
+                        """
+                    }
+                }
+            }
+            post {
+                always {
+                    sh """
+                        docker logout ${env.HARBOR_URL} || true
+                        docker rmi ${env.FULL_IMAGE}:${env.IMAGE_TAG} || true
+                        echo "── Cleaned up local image cache ──"
+                    """
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Deploy → Staging') {
+            when {
+                expression {
+                    return (env.BRANCH_NAME == 'develop' && env.DEPLOY_ENV == 'staging') ||
+                           params.FORCE_DEPLOY_ENV == 'staging'
+                }
+            }
+            steps {
+                script {
+                    def deployImage = "${env.FULL_IMAGE}:staging"
+                    def swarmService = "tafu-stg_${env.SVC_NAME}"
+                    deployViaSSH(
+                        host:         env.STG_SSH_HOST,
+                        user:         env.STG_SSH_USER,
+                        port:         env.STG_SSH_PORT,
+                        sshCredsId:   'staging.ssh.key',
+                        image:        deployImage,
+                        service:      swarmService,
+                        updateDelay:  '5s',
+                        healthPath:   env.SVC_HEALTH_PATH
+                    )
+                }
+            }
+        }
+
+        // ──────────────────────────────────────────────────────────
+        stage('Deploy → Production') {
+            when {
+                expression {
+                    return (env.BRANCH_NAME == 'main' && env.DEPLOY_ENV == 'production') ||
+                           params.FORCE_DEPLOY_ENV == 'production'
+                }
+            }
+            steps {
+                script {
+                    def deployImage = "${env.FULL_IMAGE}:latest"
+                    def swarmService = "tafu_${env.SVC_NAME}"
+                    deployViaSSH(
+                        host:         env.PROD_SSH_HOST,
+                        user:         env.PROD_SSH_USER,
+                        port:         env.PROD_SSH_PORT,
+                        sshCredsId:   'prod.ssh.key',
+                        image:        deployImage,
+                        service:      swarmService,
+                        updateDelay:  '15s',
+                        healthPath:   env.SVC_HEALTH_PATH
+                    )
+                }
+            }
+        }
+    }
+
+    // ── Post-pipeline notifications ───────────────────────────────
+    post {
+        success {
+            script { slackSend(env.SVC_NAME, 'SUCCESS', env.IMAGE_TAG, env.BRANCH_NAME) }
+        }
+        failure {
+            script { slackSend(env.SVC_NAME, 'FAILURE', env.IMAGE_TAG, env.BRANCH_NAME) }
+        }
+        always {
+            cleanWs()  // Always clean workspace to avoid leftover artifacts
+        }
+    }
+}
+
+// =================================================================
+// Helper Functions
+// =================================================================
+
+/**
+ * Parse services.yaml and return config map for the given service name.
+ * Uses Python (available on Jenkins VM) to parse YAML reliably.
+ */
+def loadServiceConfig(String serviceName) {
+    def configJson = sh(
+        returnStdout: true,
+        script: """
+            python3 -c "
+import yaml, json, sys
+with open('cicd/config/services.yaml') as f:
+    data = yaml.safe_load(f)
+svc = data['services'].get('${serviceName}')
+if not svc:
+    print('ERROR: service \\'${serviceName}\\' not found in services.yaml', file=sys.stderr)
+    sys.exit(1)
+svc['name'] = '${serviceName}'
+print(json.dumps(svc))
+"
+        """
+    ).trim()
+
+    def cfg = readJSON(text: configJson)
+    return cfg
+}
+
+/**
+ * Compute the Docker image tag based on branch and commit SHA.
+ */
+def computeImageTag(String branch, String sha) {
+    switch (branch) {
+        case 'main':    return 'latest'
+        case 'develop': return 'staging'
+        default:
+            // feature/my-feature → feature-my-feature-a1b2c3d
+            def safeBranch = branch.replaceAll('[^a-zA-Z0-9]', '-').take(30)
+            return "${safeBranch}-${sha}"
+    }
+}
+
+/**
+ * Determine the target deploy environment.
+ */
+def computeDeployEnv(String branch, String forceEnv) {
+    if (forceEnv && forceEnv != 'auto') return forceEnv
+    if (branch == 'main')    return 'production'
+    if (branch == 'develop') return 'staging'
+    return 'none'
+}
+
+/**
+ * SSH into target server and run docker service update with rolling deploy.
+ * Auto-rollback on failure. Does NOT expose credentials in logs.
+ */
+def deployViaSSH(Map args) {
+    withCredentials([
+        sshUserPrivateKey(credentialsId: args.sshCredsId, keyFileVariable: 'SSH_KEY')
+    ]) {
+        sh """
+            ssh -i \$SSH_KEY \\
+                -o StrictHostKeyChecking=no \\
+                -o LogLevel=ERROR \\
+                -p ${args.port} \\
+                ${args.user}@${args.host} \\
+                'bash -s' << 'REMOTE_SCRIPT'
+set -euo pipefail
+
+SERVICE="${args.service}"
+IMAGE="${args.image}"
+DELAY="${args.updateDelay}"
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Deploy: \$SERVICE"
+echo "  Image : \$IMAGE"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Step 1: Pull image from Harbor
+docker pull "\$IMAGE"
+
+# Step 2: Rolling update with auto-rollback if health checks fail
+docker service update \\
+    --image "\$IMAGE" \\
+    --update-parallelism 1 \\
+    --update-delay "\$DELAY" \\
+    --update-failure-action rollback \\
+    --update-monitor 60s \\
+    --rollback-parallelism 1 \\
+    --rollback-delay 10s \\
+    "\$SERVICE"
+
+echo "Deploy complete: \$SERVICE"
+REMOTE_SCRIPT
+        """
+    }
+}
+
+/**
+ * Send Slack notification with deploy status.
+ */
+def slackSend(String service, String status, String tag, String branch) {
+    def icon  = status == 'SUCCESS' ? ':white_check_mark:' : ':x:'
+    def color = status == 'SUCCESS' ? 'good' : 'danger'
+    def msg   = "${icon} *${service}* | `${branch}` | tag: `${tag}` | <${BUILD_URL}|Build #${BUILD_NUMBER}>"
+
+    sh """
+        curl -s -X POST \\
+            -H 'Content-type: application/json' \\
+            --data '{"attachments":[{"color":"${color}","text":"${msg}"}]}' \\
+            \$SLACK_WEBHOOK || true
+    """
+}

@@ -1,0 +1,68 @@
+# cicd/docker/.dockerignore
+# Shared .dockerignore for all services
+
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Documentation
+*.md
+docs/
+README*
+
+# Test files
+*_test.go
+testdata/
+coverage.out
+*.test
+
+# Build artifacts
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go workspace
+go.work
+go.work.sum
+
+# CI/CD (not needed in container)
+cicd/
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+Makefile
+
+# Docker files (avoid recursive issues)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Local environment
+.env
+.env.*
+*.local
+config.local.yaml
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp

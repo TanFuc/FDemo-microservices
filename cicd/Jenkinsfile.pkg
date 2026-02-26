@@ -1,0 +1,124 @@
+// cicd/Jenkinsfile.pkg
+// =================================================================
+// TAFU Microservices — Shared Packages (pkg/) Validation Pipeline
+//
+// This pipeline validates the shared packages in pkg/ directory.
+// No Docker build or deploy steps — just lint, test, and security scan.
+// =================================================================
+
+pipeline {
+    agent { label 'go-builder' }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timeout(time: 20, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        skipDefaultCheckout(true)
+        ansiColor('xterm')
+    }
+
+    environment {
+        SLACK_WEBHOOK = credentials('slack.webhook.url')
+    }
+
+    stages {
+
+        stage('Initialize') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_SHORT_SHA = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    echo """
+╔══════════════════════════════════════════════════╗
+║  TAFU pkg/ Validation Pipeline
+╠══════════════════════════════════════════════════╣
+║  Branch    : ${env.BRANCH_NAME}
+║  Commit    : ${env.GIT_SHORT_SHA}
+╚══════════════════════════════════════════════════╝
+"""
+                }
+            }
+        }
+
+        stage('Lint pkg/') {
+            steps {
+                dir('pkg') {
+                    sh '''
+                        echo "── Checking go.mod is tidy ──"
+                        for mod in $(find . -name "go.mod" -type f); do
+                            dir=$(dirname "$mod")
+                            echo "Checking $dir"
+                            (cd "$dir" && go mod tidy && git diff --exit-code go.mod go.sum)
+                        done
+
+                        echo "── Running golangci-lint on pkg/ ──"
+                        golangci-lint run --timeout=5m ./...
+                    '''
+                }
+            }
+        }
+
+        stage('Test pkg/') {
+            steps {
+                dir('pkg') {
+                    sh '''
+                        echo "── Running unit tests with race detection ──"
+                        go test -v -race -count=1 -coverprofile=coverage.out ./...
+
+                        echo "── Coverage summary ──"
+                        go tool cover -func=coverage.out | grep -E "^total:" || true
+                    '''
+                }
+            }
+            post {
+                always {
+                    dir('pkg') {
+                        recordCoverage(
+                            tools: [[parser: 'COBERTURA', pattern: 'coverage.out']]
+                        )
+                    }
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                dir('pkg') {
+                    sh '''
+                        echo "── Running gosec ──"
+                        gosec -fmt=text ./... || true
+
+                        echo "── Running govulncheck ──"
+                        govulncheck ./...
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            script {
+                def msg = ":white_check_mark: *pkg/* validation | `${env.BRANCH_NAME}` | <${BUILD_URL}|Build #${BUILD_NUMBER}>"
+                sh """
+                    curl -s -X POST -H 'Content-type: application/json' \
+                        --data '{"attachments":[{"color":"good","text":"${msg}"}]}' \
+                        \$SLACK_WEBHOOK || true
+                """
+            }
+        }
+        failure {
+            script {
+                def msg = ":x: *pkg/* validation FAILED | `${env.BRANCH_NAME}` | <${BUILD_URL}|Build #${BUILD_NUMBER}>"
+                sh """
+                    curl -s -X POST -H 'Content-type: application/json' \
+                        --data '{"attachments":[{"color":"danger","text":"${msg}"}]}' \
+                        \$SLACK_WEBHOOK || true
+                """
+            }
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

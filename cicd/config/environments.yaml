@@ -1,0 +1,53 @@
+# cicd/config/environments.yaml
+# =================================================================
+# All environment-specific configuration in one place.
+# Domain, internal URLs, infrastructure endpoints declared here.
+# =================================================================
+
+environments:
+  production:
+    name: production
+    short: prod
+    branch: main
+    domain: "${PROD_DOMAIN}"            # Jenkins credential: prod.domain
+    swarm_stack: tafu
+    image_tag: latest
+    deploy_delay: "15s"
+    auto_deploy: true
+
+    # Internal Docker Swarm service discovery
+    service_dns: "{service_name}"       # e.g., http://auth:3001
+    network: tafu-network
+
+    infrastructure:
+      postgres:   { host: postgres,       port: 5432  }
+      mongodb:    { host: mongodb,        port: 27017 }
+      redis:      { host: redis,          port: 6379  }
+      elasticsearch: { host: elasticsearch, port: 9200 }
+      clickhouse: { host: clickhouse,     port: 9000  }
+      minio:      { host: minio,          port: 9000  }
+      nats:       { host: nats,           port: 4222  }
+      rabbitmq:   { host: rabbitmq,       port: 5672  }
+
+  staging:
+    name: staging
+    short: stg
+    branch: develop
+    domain: "${STAGING_DOMAIN}"         # Jenkins credential: staging.domain
+    swarm_stack: tafu-stg
+    image_tag: staging
+    deploy_delay: "5s"
+    auto_deploy: true
+
+    service_dns: "{service_name}-stg"
+    network: tafu-stg-network
+
+    infrastructure:
+      postgres:   { host: postgres-stg,        port: 5432  }
+      mongodb:    { host: mongodb-stg,          port: 27017 }
+      redis:      { host: redis-stg,            port: 6379  }
+      elasticsearch: { host: elasticsearch-stg, port: 9200 }
+      clickhouse: { host: clickhouse-stg,       port: 9000  }
+      minio:      { host: minio-stg,            port: 9000  }
+      nats:       { host: nats-stg,             port: 4222  }
+      rabbitmq:   { host: rabbitmq-stg,         port: 5672  }

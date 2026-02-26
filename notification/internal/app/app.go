@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 
+	"microservices/notification/internal/adapter"
 	"microservices/notification/internal/bridge"
 	"microservices/notification/internal/config"
 	httphandler "microservices/notification/internal/handler/http"
@@ -31,8 +33,10 @@ type App struct {
 	rabbitmq      *infrastructure.RabbitMQ
 	natsConn      *infrastructure.NATS
 	mongodb       *infrastructure.MongoDB
+	redisClient   *redis.Client
 	orderListener *bridge.OrderEventListener
 	emailConsumer *worker.EmailConsumer
+	reviewWorker  *worker.ReviewWorker
 	authClient    *authclient.Client
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -142,6 +146,40 @@ func New(cfg *config.Config) (*App, error) {
 	}
 	logger.Info().Msg("Email consumer started")
 
+	// Initialize Redis for idempotency
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
+	// Test Redis connection
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		logger.Warn().Err(err).Msg("Failed to connect to Redis, idempotency checks will be disabled")
+		redisClient = nil
+	} else {
+		logger.Info().Msg("Redis connected for idempotency")
+	}
+
+	// Initialize Catalog client
+	catalogClient := adapter.NewHTTPCatalogClient(cfg.Catalog.URL, cfg.Catalog.ServiceKey)
+
+	// Initialize notification service (needed for review worker)
+	notificationService := impl.NewNotificationService(wsManager)
+
+	// Initialize idempotency store
+	var idempotencyStore *worker.IdempotencyStore
+	if redisClient != nil {
+		idempotencyStore = worker.NewIdempotencyStore(redisClient)
+	}
+
+	// Initialize and start the review worker (NATS -> Notification)
+	reviewWorker := worker.NewReviewWorker(natsConn, notificationService, catalogClient, idempotencyStore)
+	if err := reviewWorker.Start(ctx); err != nil {
+		logger.Warn().Err(err).Msg("Failed to start ReviewWorker, review notifications will be disabled")
+	} else {
+		logger.Info().Msg("Review worker started")
+	}
+
 	// Initialize Auth gRPC Client
 	var authClient *authclient.Client
 	authGRPCAddr := os.Getenv("AUTH_GRPC_ADDR")
@@ -167,9 +205,6 @@ func New(cfg *config.Config) (*App, error) {
 		authMiddleware = authclient.NewFiberMiddleware(authClient)
 	}
 
-	// Initialize service
-	notificationService := impl.NewNotificationService(wsManager)
-
 	// Initialize HTTP handler
 	notificationHandler := httphandler.NewNotificationHandler(notificationService)
 
@@ -189,8 +224,10 @@ func New(cfg *config.Config) (*App, error) {
 		rabbitmq:      rabbitmq,
 		natsConn:      natsConn,
 		mongodb:       mongodb,
+		redisClient:   redisClient,
 		orderListener: orderListener,
 		emailConsumer: emailConsumer,
+		reviewWorker:  reviewWorker,
 		authClient:    authClient,
 		ctx:           ctx,
 		cancel:        cancel,
@@ -231,6 +268,11 @@ func (a *App) Run() error {
 	defer cancel()
 
 	// Stop workers
+	if a.reviewWorker != nil {
+		a.reviewWorker.Stop()
+		logger.Info().Msg("Review worker stopped")
+	}
+
 	if a.emailConsumer != nil {
 		a.emailConsumer.Stop()
 		logger.Info().Msg("Email consumer stopped")
@@ -260,6 +302,9 @@ func (a *App) Run() error {
 }
 
 func (a *App) cleanup() {
+	if a.redisClient != nil {
+		a.redisClient.Close()
+	}
 	if a.mongodb != nil {
 		a.mongodb.Close(context.Background())
 	}

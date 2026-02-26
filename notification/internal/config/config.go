@@ -12,8 +12,10 @@ type Config struct {
 	NATS      NATSConfig
 	RabbitMQ  RabbitMQConfig
 	MongoDB   MongoDBConfig
+	Redis     RedisConfig
 	SMTP      SMTPConfig
 	WebSocket WebSocketConfig
+	Catalog   CatalogConfig
 }
 
 type AppConfig struct {
@@ -38,6 +40,17 @@ type RabbitMQConfig struct {
 type MongoDBConfig struct {
 	URI      string
 	Database string
+}
+
+type RedisConfig struct {
+	Addr     string
+	Password string
+	DB       int
+}
+
+type CatalogConfig struct {
+	URL        string
+	ServiceKey string
 }
 
 type SMTPConfig struct {
@@ -95,6 +108,15 @@ func Load() (*Config, error) {
 			URI:      viper.GetString("mongodb.uri"),
 			Database: viper.GetString("mongodb.database"),
 		},
+		Redis: RedisConfig{
+			Addr:     viper.GetString("redis.addr"),
+			Password: viper.GetString("redis.password"),
+			DB:       viper.GetInt("redis.db"),
+		},
+		Catalog: CatalogConfig{
+			URL:        viper.GetString("catalog.url"),
+			ServiceKey: viper.GetString("catalog.service_key"),
+		},
 		SMTP: SMTPConfig{
 			Host: viper.GetString("smtp.host"),
 			Port: viper.GetInt("smtp.port"),
@@ -137,6 +159,15 @@ func setDefaults() {
 	// MongoDB defaults
 	viper.SetDefault("mongodb.uri", "mongodb://localhost:27017")
 	viper.SetDefault("mongodb.database", "notification_service")
+
+	// Redis defaults
+	viper.SetDefault("redis.addr", "localhost:6379")
+	viper.SetDefault("redis.password", "")
+	viper.SetDefault("redis.db", 0)
+
+	// Catalog Service defaults
+	viper.SetDefault("catalog.url", "http://localhost:8082")
+	viper.SetDefault("catalog.service_key", "internal-service-key")
 
 	// SMTP defaults
 	viper.SetDefault("smtp.host", "smtp.gmail.com")

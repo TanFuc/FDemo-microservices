@@ -1,0 +1,53 @@
+# cicd/docker/Dockerfile.base
+# Optimized Go multi-stage build template.
+# Copy to {service}/Dockerfile and adjust CMD/EXPOSE as needed.
+
+ARG GO_VERSION=1.22
+ARG ALPINE_VERSION=3.19
+
+# Stage 1: Cache dependencies (separate layer for better caching)
+FROM golang:${GO_VERSION}-alpine AS deps
+WORKDIR /app
+RUN apk add --no-cache git ca-certificates tzdata
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+# Stage 2: Build binary
+FROM deps AS builder
+ARG SERVICE_NAME=service
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build \
+    -trimpath \
+    -ldflags="-w -s \
+        -X main.version=${GIT_COMMIT} \
+        -X main.buildDate=${BUILD_DATE} \
+        -X main.serviceName=${SERVICE_NAME}" \
+    -o /app/server \
+    ./cmd/...
+
+# Stage 3: Minimal runtime image
+FROM alpine:${ALPINE_VERSION}
+RUN addgroup -S app && adduser -S app -G app
+RUN apk --no-cache add ca-certificates tzdata wget
+
+WORKDIR /app
+COPY --from=builder --chown=app:app /app/server ./server
+RUN chmod 500 ./server
+
+USER app
+
+ARG SERVICE_NAME=service
+ARG BUILD_DATE=unknown
+ARG GIT_COMMIT=unknown
+LABEL org.opencontainers.image.title="${SERVICE_NAME}" \
+      org.opencontainers.image.revision="${GIT_COMMIT}" \
+      org.opencontainers.image.created="${BUILD_DATE}"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD wget -q --spider http://localhost:3000/health || exit 1
+
+EXPOSE 3000 50051
+CMD ["./server"]

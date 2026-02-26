@@ -58,20 +58,8 @@ func NewNATS(url string) (*NATS, error) {
 
 // setupStreams creates the required JetStream streams
 func (n *NATS) setupStreams() error {
-	// Create or update ORDERS stream for order events
-	_, err := n.js.AddStream(&nats.StreamConfig{
-		Name:        "ORDERS",
-		Description: "Order events stream",
-		Subjects:    []string{"order.>"},
-		Retention:   nats.WorkQueuePolicy,
-		MaxAge:      24 * time.Hour,
-		Storage:     nats.FileStorage,
-		Replicas:    1,
-		Discard:     nats.DiscardOld,
-	})
-	if err != nil {
-		// Stream might already exist, try to update
-		_, err = n.js.UpdateStream(&nats.StreamConfig{
+	streams := []nats.StreamConfig{
+		{
 			Name:        "ORDERS",
 			Description: "Order events stream",
 			Subjects:    []string{"order.>"},
@@ -80,9 +68,37 @@ func (n *NATS) setupStreams() error {
 			Storage:     nats.FileStorage,
 			Replicas:    1,
 			Discard:     nats.DiscardOld,
-		})
+		},
+		{
+			Name:        "REVIEWS",
+			Description: "Review lifecycle events",
+			Subjects:    []string{"review.>"},
+			Retention:   nats.InterestPolicy,
+			MaxAge:      72 * time.Hour,
+			Storage:     nats.FileStorage,
+			Replicas:    1,
+			Discard:     nats.DiscardOld,
+		},
+		{
+			Name:        "RATINGS",
+			Description: "Product rating update events",
+			Subjects:    []string{"rating.>"},
+			Retention:   nats.InterestPolicy,
+			MaxAge:      24 * time.Hour,
+			Storage:     nats.FileStorage,
+			Replicas:    1,
+			Discard:     nats.DiscardOld,
+		},
+	}
+
+	for _, cfg := range streams {
+		_, err := n.js.AddStream(&cfg)
 		if err != nil {
-			return fmt.Errorf("failed to create/update ORDERS stream: %w", err)
+			// Stream might already exist, try to update
+			_, err = n.js.UpdateStream(&cfg)
+			if err != nil {
+				return fmt.Errorf("failed to create/update %s stream: %w", cfg.Name, err)
+			}
 		}
 	}
 

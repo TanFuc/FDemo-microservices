@@ -1,0 +1,292 @@
+# cicd/config/services.yaml
+# =================================================================
+# TAFU Microservices — Central Service Registry
+# This is the ONLY place to declare service metadata.
+# All Jenkins jobs read from this file at runtime.
+# =================================================================
+
+project:
+  name: tafu
+  go_version: "1.22"
+  alpine_version: "3.19"
+
+# Harbor registry — values come from Jenkins credentials at runtime
+harbor:
+  registry: "${HARBOR_URL}"         # Jenkins credential: harbor.registry.url
+  project: "${HARBOR_PROJECT}"      # Jenkins credential: harbor.registry.project
+  # Full image path = harbor.registry/harbor.project/service.image
+
+services:
+  api-gateway:
+    dir: api-gateway
+    image: tafu/api-gateway
+    http_port: 8080
+    grpc_port: ""
+    main_path: ./cmd/gateway
+    binary_name: api-gateway
+    health_path: /health
+    swarm_service:
+      production: tafu_api-gateway
+      staging: tafu-stg_api-gateway
+    deploy:
+      production_replicas: 3
+      staging_replicas: 1
+      cpu_limit: "0.5"
+      memory_limit: "256m"
+    watch_paths:
+      - api-gateway
+      - pkg
+
+  auth:
+    dir: auth
+    image: tafu/auth-service
+    http_port: 3001
+    grpc_port: "50051"
+    main_path: ./cmd/api
+    binary_name: tafu-auth
+    health_path: /health/live
+    swarm_service:
+      production: tafu_auth
+      staging: tafu-stg_auth
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+      cpu_limit: "0.5"
+      memory_limit: "512m"
+    watch_paths:
+      - auth
+      - pkg
+
+  profile:
+    dir: profile
+    image: tafu/profile-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: profile-service
+    health_path: /internal/health
+    swarm_service:
+      production: tafu_profile
+      staging: tafu-stg_profile
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - profile
+      - pkg
+
+  catalog:
+    dir: catalog
+    image: tafu/catalog-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: catalog-service
+    health_path: /health
+    swarm_service:
+      production: tafu_catalog
+      staging: tafu-stg_catalog
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - catalog
+      - pkg
+
+  cart:
+    dir: cart
+    image: tafu/cart-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: cart-service
+    health_path: /health
+    swarm_service:
+      production: tafu_cart
+      staging: tafu-stg_cart
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - cart
+      - pkg
+
+  order:
+    dir: order
+    image: tafu/order-service
+    http_port: 3000
+    grpc_port: "50051"
+    main_path: ./cmd/server
+    binary_name: order-service
+    health_path: /health
+    swarm_service:
+      production: tafu_order
+      staging: tafu-stg_order
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - order
+      - pkg
+
+  inventory:
+    dir: inventory
+    image: tafu/inventory-service
+    http_port: 3000
+    grpc_port: "50051"
+    main_path: ./cmd/main
+    binary_name: inventory-service
+    health_path: /health
+    swarm_service:
+      production: tafu_inventory
+      staging: tafu-stg_inventory
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - inventory
+      - pkg
+
+  payment:
+    dir: payment
+    image: tafu/payment-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: payment-service
+    health_path: /health
+    swarm_service:
+      production: tafu_payment
+      staging: tafu-stg_payment
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - payment
+      - pkg
+
+  logistic:
+    dir: logistic
+    image: tafu/logistics-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: logistics-service
+    health_path: /health
+    swarm_service:
+      production: tafu_logistic
+      staging: tafu-stg_logistic
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - logistic
+      - pkg
+
+  notification:
+    dir: notification
+    image: tafu/notification-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: notification-service
+    health_path: /health
+    swarm_service:
+      production: tafu_notification
+      staging: tafu-stg_notification
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - notification
+      - pkg
+
+  media:
+    dir: media
+    image: tafu/media-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: media-service
+    health_path: /health
+    swarm_service:
+      production: tafu_media
+      staging: tafu-stg_media
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - media
+      - pkg
+
+  search:
+    dir: search
+    image: tafu/search-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: search-service
+    health_path: /health
+    swarm_service:
+      production: tafu_search
+      staging: tafu-stg_search
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - search
+      - pkg
+
+  campaign:
+    dir: campaign
+    image: tafu/campaign-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: campaign-service
+    health_path: /health
+    swarm_service:
+      production: tafu_campaign
+      staging: tafu-stg_campaign
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - campaign
+      - pkg
+
+  review:
+    dir: review
+    image: tafu/review-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: review-service
+    health_path: /health
+    swarm_service:
+      production: tafu_review
+      staging: tafu-stg_review
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - review
+      - pkg
+
+  analytic:
+    dir: analytic
+    image: tafu/analytics-service
+    http_port: 3000
+    grpc_port: ""
+    main_path: ./cmd/main
+    binary_name: analytics-service
+    health_path: /health
+    swarm_service:
+      production: tafu_analytic
+      staging: tafu-stg_analytic
+    deploy:
+      production_replicas: 2
+      staging_replicas: 1
+    watch_paths:
+      - analytic
+      - pkg
