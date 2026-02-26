@@ -38,7 +38,10 @@ type VoucherService interface {
 	ClaimVoucher(ctx context.Context, userID uuid.UUID, code string) error
 
 	// CalculateCart applies voucher rules to cart items and returns discount calculation
-	CalculateCart(ctx context.Context, items []model.CartItem, voucherCode string) (*model.CalculateCartResult, error)
+	CalculateCart(ctx context.Context, items []model.CartItem, voucherCode string, userID string) (*model.CalculateCartResult, error)
+
+	// ValidateVoucherForCart validates a voucher for Cart Service and returns detailed result
+	ValidateVoucherForCart(ctx context.Context, req *model.ValidateVoucherRequest) (*model.VoucherValidationResult, error)
 
 	// InitializeVoucherStock initializes voucher stock in Redis cache
 	InitializeVoucherStock(ctx context.Context, code string) error

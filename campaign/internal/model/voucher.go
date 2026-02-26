@@ -23,6 +23,14 @@ const (
 	VoucherStatusInactive VoucherStatus = "INACTIVE"
 )
 
+// VoucherAssignType determines who can use the voucher
+type VoucherAssignType string
+
+const (
+	VoucherAssignAll      VoucherAssignType = "ALL"      // Any user can use this voucher
+	VoucherAssignSpecific VoucherAssignType = "SPECIFIC" // Only assigned users can use it
+)
+
 var (
 	ErrVoucherNotFound       = errors.New("voucher not found")
 	ErrVoucherInactive       = errors.New("voucher is inactive")
@@ -31,6 +39,7 @@ var (
 	ErrMinOrderNotMet        = errors.New("minimum order value not met")
 	ErrCategoryNotAllowed    = errors.New("cart items do not match allowed categories")
 	ErrProductExcluded       = errors.New("cart contains excluded products")
+	ErrUserNotEligible       = errors.New("user is not eligible for this voucher")
 )
 
 // VoucherConditions represents the JSONB rule set for voucher eligibility
@@ -57,33 +66,56 @@ func (vc VoucherConditions) Value() ([]byte, error) {
 }
 
 type Voucher struct {
-	ID         uuid.UUID
-	Code       string
-	CampaignID uuid.UUID
-	TotalCount int
-	UsedCount  int
-	Type       VoucherType
-	Value      decimal.Decimal
-	Conditions VoucherConditions
-	Status     VoucherStatus
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID              uuid.UUID
+	Code            string
+	CampaignID      uuid.UUID
+	TotalCount      int
+	UsedCount       int
+	Type            VoucherType
+	Value           decimal.Decimal
+	Conditions      VoucherConditions
+	Status          VoucherStatus
+	AssignType      VoucherAssignType // ALL or SPECIFIC
+	AssignedUserIDs []string          // User IDs who can use this voucher (when AssignType = SPECIFIC)
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
-func NewVoucher(code string, campaignID uuid.UUID, totalCount int, vType VoucherType, value decimal.Decimal, conditions VoucherConditions) *Voucher {
-	return &Voucher{
-		ID:         uuid.New(),
-		Code:       code,
-		CampaignID: campaignID,
-		TotalCount: totalCount,
-		UsedCount:  0,
-		Type:       vType,
-		Value:      value,
-		Conditions: conditions,
-		Status:     VoucherStatusActive,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
+func NewVoucher(code string, campaignID uuid.UUID, totalCount int, vType VoucherType, value decimal.Decimal, conditions VoucherConditions, assignType VoucherAssignType, assignedUserIDs []string) *Voucher {
+	if assignType == "" {
+		assignType = VoucherAssignAll
 	}
+	if assignedUserIDs == nil {
+		assignedUserIDs = []string{}
+	}
+	return &Voucher{
+		ID:              uuid.New(),
+		Code:            code,
+		CampaignID:      campaignID,
+		TotalCount:      totalCount,
+		UsedCount:       0,
+		Type:            vType,
+		Value:           value,
+		Conditions:      conditions,
+		Status:          VoucherStatusActive,
+		AssignType:      assignType,
+		AssignedUserIDs: assignedUserIDs,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+}
+
+// IsUserEligible checks if a user is allowed to use this voucher based on assignment type
+func (v *Voucher) IsUserEligible(userID string) bool {
+	if v.AssignType == VoucherAssignAll {
+		return true
+	}
+	for _, id := range v.AssignedUserIDs {
+		if id == userID {
+			return true
+		}
+	}
+	return false
 }
 
 func (v *Voucher) IsAvailable() bool {

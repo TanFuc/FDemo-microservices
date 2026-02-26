@@ -151,13 +151,37 @@ func (h *VoucherHandler) CalculateCart(c *fiber.Ctx) error {
 		items[i] = item.ToModel()
 	}
 
-	result, err := h.voucherService.CalculateCart(c.Context(), items, req.VoucherCode)
+	result, err := h.voucherService.CalculateCart(c.Context(), items, req.VoucherCode, req.UserID)
 	if err != nil {
 		// Return the result with error message for validation errors
 		if result != nil && result.ErrorMessage != "" {
 			return response.Success(c, result)
 		}
 		return response.InternalError(c, "Failed to calculate cart")
+	}
+
+	return response.Success(c, result)
+}
+
+// ValidateVoucher validates a voucher for Cart Service (internal endpoint).
+// POST /api/v1/vouchers/validate
+func (h *VoucherHandler) ValidateVoucher(c *fiber.Ctx) error {
+	var req model.ValidateVoucherRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Invalid request body")
+	}
+
+	if err := h.validate.Struct(&req); err != nil {
+		return response.ValidationError(c, formatValidationErrors(err))
+	}
+
+	result, err := h.voucherService.ValidateVoucherForCart(c.Context(), &req)
+	if err != nil {
+		// For validation results, return the result even on error
+		if result != nil {
+			return response.Success(c, result)
+		}
+		return response.InternalError(c, "Failed to validate voucher")
 	}
 
 	return response.Success(c, result)

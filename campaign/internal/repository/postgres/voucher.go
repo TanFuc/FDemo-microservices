@@ -26,9 +26,14 @@ func (r *VoucherRepository) Create(ctx context.Context, voucher *domain.Voucher)
 		return fmt.Errorf("failed to marshal conditions: %w", err)
 	}
 
+	assignedUserIDsJSON, err := json.Marshal(voucher.AssignedUserIDs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal assigned_user_ids: %w", err)
+	}
+
 	query := `
-		INSERT INTO vouchers (id, code, campaign_id, total_count, used_count, type, value, conditions, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO vouchers (id, code, campaign_id, total_count, used_count, type, value, conditions, status, assign_type, assigned_user_ids, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	_, err = r.pool.Exec(ctx, query,
 		voucher.ID,
@@ -40,6 +45,8 @@ func (r *VoucherRepository) Create(ctx context.Context, voucher *domain.Voucher)
 		voucher.Value,
 		conditionsJSON,
 		voucher.Status,
+		voucher.AssignType,
+		assignedUserIDsJSON,
 		voucher.CreatedAt,
 		voucher.UpdatedAt,
 	)
@@ -51,7 +58,7 @@ func (r *VoucherRepository) Create(ctx context.Context, voucher *domain.Voucher)
 
 func (r *VoucherRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Voucher, error) {
 	query := `
-		SELECT id, code, campaign_id, total_count, used_count, type, value, conditions, status, created_at, updated_at
+		SELECT id, code, campaign_id, total_count, used_count, type, value, conditions, status, assign_type, assigned_user_ids, created_at, updated_at
 		FROM vouchers
 		WHERE id = $1
 	`
@@ -60,7 +67,7 @@ func (r *VoucherRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 
 func (r *VoucherRepository) GetByCode(ctx context.Context, code string) (*domain.Voucher, error) {
 	query := `
-		SELECT id, code, campaign_id, total_count, used_count, type, value, conditions, status, created_at, updated_at
+		SELECT id, code, campaign_id, total_count, used_count, type, value, conditions, status, assign_type, assigned_user_ids, created_at, updated_at
 		FROM vouchers
 		WHERE code = $1
 	`
@@ -70,6 +77,7 @@ func (r *VoucherRepository) GetByCode(ctx context.Context, code string) (*domain
 func (r *VoucherRepository) scanVoucher(ctx context.Context, query string, arg interface{}) (*domain.Voucher, error) {
 	voucher := &domain.Voucher{}
 	var conditionsJSON []byte
+	var assignedUserIDsJSON []byte
 
 	err := r.pool.QueryRow(ctx, query, arg).Scan(
 		&voucher.ID,
@@ -81,6 +89,8 @@ func (r *VoucherRepository) scanVoucher(ctx context.Context, query string, arg i
 		&voucher.Value,
 		&conditionsJSON,
 		&voucher.Status,
+		&voucher.AssignType,
+		&assignedUserIDsJSON,
 		&voucher.CreatedAt,
 		&voucher.UpdatedAt,
 	)
@@ -95,6 +105,10 @@ func (r *VoucherRepository) scanVoucher(ctx context.Context, query string, arg i
 		return nil, fmt.Errorf("failed to unmarshal conditions: %w", err)
 	}
 
+	if err := json.Unmarshal(assignedUserIDsJSON, &voucher.AssignedUserIDs); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal assigned_user_ids: %w", err)
+	}
+
 	return voucher, nil
 }
 
@@ -104,9 +118,14 @@ func (r *VoucherRepository) Update(ctx context.Context, voucher *domain.Voucher)
 		return fmt.Errorf("failed to marshal conditions: %w", err)
 	}
 
+	assignedUserIDsJSON, err := json.Marshal(voucher.AssignedUserIDs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal assigned_user_ids: %w", err)
+	}
+
 	query := `
 		UPDATE vouchers
-		SET code = $2, total_count = $3, used_count = $4, type = $5, value = $6, conditions = $7, status = $8
+		SET code = $2, total_count = $3, used_count = $4, type = $5, value = $6, conditions = $7, status = $8, assign_type = $9, assigned_user_ids = $10, updated_at = NOW()
 		WHERE id = $1
 	`
 	_, err = r.pool.Exec(ctx, query,
@@ -118,6 +137,8 @@ func (r *VoucherRepository) Update(ctx context.Context, voucher *domain.Voucher)
 		voucher.Value,
 		conditionsJSON,
 		voucher.Status,
+		voucher.AssignType,
+		assignedUserIDsJSON,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update voucher: %w", err)
@@ -152,7 +173,7 @@ func (r *VoucherRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *VoucherRepository) ListByCampaignID(ctx context.Context, campaignID uuid.UUID) ([]*domain.Voucher, error) {
 	query := `
-		SELECT id, code, campaign_id, total_count, used_count, type, value, conditions, status, created_at, updated_at
+		SELECT id, code, campaign_id, total_count, used_count, type, value, conditions, status, assign_type, assigned_user_ids, created_at, updated_at
 		FROM vouchers
 		WHERE campaign_id = $1
 		ORDER BY created_at DESC
@@ -167,6 +188,7 @@ func (r *VoucherRepository) ListByCampaignID(ctx context.Context, campaignID uui
 	for rows.Next() {
 		voucher := &domain.Voucher{}
 		var conditionsJSON []byte
+		var assignedUserIDsJSON []byte
 
 		if err := rows.Scan(
 			&voucher.ID,
@@ -178,6 +200,8 @@ func (r *VoucherRepository) ListByCampaignID(ctx context.Context, campaignID uui
 			&voucher.Value,
 			&conditionsJSON,
 			&voucher.Status,
+			&voucher.AssignType,
+			&assignedUserIDsJSON,
 			&voucher.CreatedAt,
 			&voucher.UpdatedAt,
 		); err != nil {
@@ -186,6 +210,10 @@ func (r *VoucherRepository) ListByCampaignID(ctx context.Context, campaignID uui
 
 		if err := json.Unmarshal(conditionsJSON, &voucher.Conditions); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal conditions: %w", err)
+		}
+
+		if err := json.Unmarshal(assignedUserIDsJSON, &voucher.AssignedUserIDs); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal assigned_user_ids: %w", err)
 		}
 
 		vouchers = append(vouchers, voucher)

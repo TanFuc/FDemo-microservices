@@ -39,6 +39,11 @@ func NewVoucherService(
 
 // CreateVoucher creates a new voucher
 func (s *VoucherService) CreateVoucher(ctx context.Context, req *model.CreateVoucherRequest) (*model.VoucherResponse, error) {
+	// Custom validation
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
 	campaignID, err := uuid.Parse(req.CampaignID)
 	if err != nil {
 		return nil, ErrInvalidID
@@ -51,6 +56,8 @@ func (s *VoucherService) CreateVoucher(ctx context.Context, req *model.CreateVou
 		model.VoucherType(req.Type),
 		req.Value,
 		req.Conditions,
+		model.VoucherAssignType(req.AssignType),
+		req.AssignedUserIDs,
 	)
 
 	if err := s.voucherRepo.Create(ctx, voucher); err != nil {
@@ -105,6 +112,11 @@ func (s *VoucherService) ClaimVoucher(ctx context.Context, userID uuid.UUID, cod
 		return model.ErrVoucherInactive
 	}
 
+	// Check user eligibility based on assignment type
+	if !voucher.IsUserEligible(userID.String()) {
+		return model.ErrUserNotEligible
+	}
+
 	// Step 1: Atomic claim via Redis Lua script
 	if err := s.voucherCache.AtomicClaim(ctx, code, userID); err != nil {
 		return err
@@ -126,7 +138,7 @@ func (s *VoucherService) ClaimVoucher(ctx context.Context, userID uuid.UUID, cod
 }
 
 // CalculateCart applies voucher rules to cart items and returns discount calculation
-func (s *VoucherService) CalculateCart(ctx context.Context, items []model.CartItem, voucherCode string) (*model.CalculateCartResult, error) {
+func (s *VoucherService) CalculateCart(ctx context.Context, items []model.CartItem, voucherCode string, userID string) (*model.CalculateCartResult, error) {
 	// Calculate original total
 	originalTotal := decimal.Zero
 	for _, item := range items {
@@ -151,6 +163,11 @@ func (s *VoucherService) CalculateCart(ctx context.Context, items []model.CartIt
 		return model.NewCalculateCartResultError(originalTotal, model.ErrVoucherInactive.Error()), model.ErrVoucherInactive
 	}
 
+	// Check user eligibility if userID is provided
+	if userID != "" && !voucher.IsUserEligible(userID) {
+		return model.NewCalculateCartResultError(originalTotal, model.ErrUserNotEligible.Error()), model.ErrUserNotEligible
+	}
+
 	// Apply Rule Engine validation
 	if err := s.validateVoucherConditions(voucher, items, originalTotal); err != nil {
 		return model.NewCalculateCartResultError(originalTotal, err.Error()), err
@@ -160,6 +177,110 @@ func (s *VoucherService) CalculateCart(ctx context.Context, items []model.CartIt
 	discount := s.calculateDiscount(voucher, originalTotal)
 
 	return model.NewCalculateCartResult(originalTotal, discount, voucherCode), nil
+}
+
+// ValidateVoucherForCart validates a voucher for Cart Service and returns detailed result
+func (s *VoucherService) ValidateVoucherForCart(ctx context.Context, req *model.ValidateVoucherRequest) (*model.VoucherValidationResult, error) {
+	// Convert items to model.CartItem
+	items := make([]model.CartItem, len(req.Items))
+	for i, item := range req.Items {
+		items[i] = item.ToModel()
+	}
+
+	// Calculate original total
+	originalTotal := decimal.Zero
+	for _, item := range items {
+		originalTotal = originalTotal.Add(item.TotalPrice())
+	}
+
+	// Fetch voucher
+	voucher, err := s.voucherRepo.GetByCode(ctx, req.VoucherCode)
+	if err != nil {
+		return &model.VoucherValidationResult{
+			Valid:         false,
+			OriginalTotal: originalTotal,
+			FinalPrice:    originalTotal,
+			ErrorCode:     "VOUCHER_ERROR",
+			ErrorMessage:  err.Error(),
+		}, err
+	}
+	if voucher == nil {
+		return &model.VoucherValidationResult{
+			Valid:         false,
+			OriginalTotal: originalTotal,
+			FinalPrice:    originalTotal,
+			ErrorCode:     "VOUCHER_NOT_FOUND",
+			ErrorMessage:  model.ErrVoucherNotFound.Error(),
+		}, model.ErrVoucherNotFound
+	}
+
+	// Check voucher is active
+	if voucher.Status != model.VoucherStatusActive {
+		return &model.VoucherValidationResult{
+			Valid:         false,
+			OriginalTotal: originalTotal,
+			FinalPrice:    originalTotal,
+			ErrorCode:     "VOUCHER_INACTIVE",
+			ErrorMessage:  model.ErrVoucherInactive.Error(),
+		}, nil
+	}
+
+	// Check voucher has stock
+	if !voucher.IsAvailable() {
+		return &model.VoucherValidationResult{
+			Valid:         false,
+			OriginalTotal: originalTotal,
+			FinalPrice:    originalTotal,
+			ErrorCode:     "VOUCHER_OUT_OF_STOCK",
+			ErrorMessage:  model.ErrVoucherOutOfStock.Error(),
+		}, nil
+	}
+
+	// Check user eligibility
+	if !voucher.IsUserEligible(req.UserID) {
+		return &model.VoucherValidationResult{
+			Valid:         false,
+			OriginalTotal: originalTotal,
+			FinalPrice:    originalTotal,
+			ErrorCode:     "USER_NOT_ELIGIBLE",
+			ErrorMessage:  model.ErrUserNotEligible.Error(),
+		}, nil
+	}
+
+	// Apply Rule Engine validation
+	if err := s.validateVoucherConditions(voucher, items, originalTotal); err != nil {
+		errorCode := "VALIDATION_FAILED"
+		if errors.Is(err, model.ErrMinOrderNotMet) {
+			errorCode = "MIN_ORDER_NOT_MET"
+		} else if errors.Is(err, model.ErrCategoryNotAllowed) {
+			errorCode = "CATEGORY_NOT_ALLOWED"
+		} else if errors.Is(err, model.ErrProductExcluded) {
+			errorCode = "PRODUCT_EXCLUDED"
+		}
+		return &model.VoucherValidationResult{
+			Valid:         false,
+			OriginalTotal: originalTotal,
+			FinalPrice:    originalTotal,
+			ErrorCode:     errorCode,
+			ErrorMessage:  err.Error(),
+		}, nil
+	}
+
+	// Calculate discount
+	discount := s.calculateDiscount(voucher, originalTotal)
+	finalPrice := originalTotal.Sub(discount)
+
+	return &model.VoucherValidationResult{
+		Valid:          true,
+		VoucherID:      voucher.ID.String(),
+		CampaignID:     voucher.CampaignID.String(),
+		VoucherCode:    voucher.Code,
+		DiscountType:   string(voucher.Type),
+		DiscountValue:  voucher.Value,
+		DiscountAmount: discount,
+		OriginalTotal:  originalTotal,
+		FinalPrice:     finalPrice,
+	}, nil
 }
 
 // validateVoucherConditions applies the rule engine to check voucher eligibility

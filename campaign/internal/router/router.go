@@ -80,8 +80,9 @@ func (r *Router) Setup() *fiber.App {
 	vouchers.Get("/code/:code", r.voucherHandler.GetVoucherByCode)
 	vouchers.Get("/:id", r.voucherHandler.GetVoucher)
 
-	// Calculate cart - public endpoint
+	// Public endpoints for internal service calls
 	vouchers.Post("/calculate", r.voucherHandler.CalculateCart)
+	vouchers.Post("/validate", r.voucherHandler.ValidateVoucher) // Internal endpoint for Cart Service
 
 	// Protected voucher routes
 	if r.authMiddleware != nil {

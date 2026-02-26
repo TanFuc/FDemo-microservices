@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -93,46 +94,62 @@ func (c *Campaign) ToResponse() *CampaignResponse {
 
 // CreateVoucherRequest represents the request to create a voucher
 type CreateVoucherRequest struct {
-	Code       string            `json:"code" validate:"required,min=3,max=50"`
-	CampaignID string            `json:"campaignId" validate:"required,uuid"`
-	TotalCount int               `json:"totalCount" validate:"required,gt=0"`
-	Type       string            `json:"type" validate:"required,oneof=PERCENTAGE FIXED_AMOUNT"`
-	Value      decimal.Decimal   `json:"value" validate:"required"`
-	Conditions VoucherConditions `json:"conditions"`
+	Code            string            `json:"code" validate:"required,min=3,max=50"`
+	CampaignID      string            `json:"campaignId" validate:"required,uuid"`
+	TotalCount      int               `json:"totalCount" validate:"required,gt=0"`
+	Type            string            `json:"type" validate:"required,oneof=PERCENTAGE FIXED_AMOUNT"`
+	Value           decimal.Decimal   `json:"value" validate:"required"`
+	Conditions      VoucherConditions `json:"conditions"`
+	AssignType      string            `json:"assignType" validate:"required,oneof=ALL SPECIFIC"`
+	AssignedUserIDs []string          `json:"assignedUserIds"` // Required when assignType = SPECIFIC
 }
+
+// Validate performs custom validation for CreateVoucherRequest
+func (r *CreateVoucherRequest) Validate() error {
+	if r.AssignType == "SPECIFIC" && len(r.AssignedUserIDs) == 0 {
+		return ErrAssignedUserIDsRequired
+	}
+	return nil
+}
+
+var ErrAssignedUserIDsRequired = errors.New("assignedUserIds is required when assignType is SPECIFIC")
 
 // VoucherResponse represents the response for a voucher
 type VoucherResponse struct {
-	ID             string            `json:"id"`
-	Code           string            `json:"code"`
-	CampaignID     string            `json:"campaignId"`
-	TotalCount     int               `json:"totalCount"`
-	UsedCount      int               `json:"usedCount"`
-	RemainingStock int               `json:"remainingStock"`
-	Type           string            `json:"type"`
-	Value          decimal.Decimal   `json:"value"`
-	Conditions     VoucherConditions `json:"conditions"`
-	Status         string            `json:"status"`
-	IsAvailable    bool              `json:"isAvailable"`
-	CreatedAt      time.Time         `json:"createdAt"`
-	UpdatedAt      time.Time         `json:"updatedAt"`
+	ID              string            `json:"id"`
+	Code            string            `json:"code"`
+	CampaignID      string            `json:"campaignId"`
+	TotalCount      int               `json:"totalCount"`
+	UsedCount       int               `json:"usedCount"`
+	RemainingStock  int               `json:"remainingStock"`
+	Type            string            `json:"type"`
+	Value           decimal.Decimal   `json:"value"`
+	Conditions      VoucherConditions `json:"conditions"`
+	Status          string            `json:"status"`
+	IsAvailable     bool              `json:"isAvailable"`
+	AssignType      string            `json:"assignType"`
+	AssignedUserIDs []string          `json:"assignedUserIds,omitempty"`
+	CreatedAt       time.Time         `json:"createdAt"`
+	UpdatedAt       time.Time         `json:"updatedAt"`
 }
 
 func (v *Voucher) ToResponse() *VoucherResponse {
 	return &VoucherResponse{
-		ID:             v.ID.String(),
-		Code:           v.Code,
-		CampaignID:     v.CampaignID.String(),
-		TotalCount:     v.TotalCount,
-		UsedCount:      v.UsedCount,
-		RemainingStock: v.RemainingStock(),
-		Type:           string(v.Type),
-		Value:          v.Value,
-		Conditions:     v.Conditions,
-		Status:         string(v.Status),
-		IsAvailable:    v.IsAvailable(),
-		CreatedAt:      v.CreatedAt,
-		UpdatedAt:      v.UpdatedAt,
+		ID:              v.ID.String(),
+		Code:            v.Code,
+		CampaignID:      v.CampaignID.String(),
+		TotalCount:      v.TotalCount,
+		UsedCount:       v.UsedCount,
+		RemainingStock:  v.RemainingStock(),
+		Type:            string(v.Type),
+		Value:           v.Value,
+		Conditions:      v.Conditions,
+		Status:          string(v.Status),
+		IsAvailable:     v.IsAvailable(),
+		AssignType:      string(v.AssignType),
+		AssignedUserIDs: v.AssignedUserIDs,
+		CreatedAt:       v.CreatedAt,
+		UpdatedAt:       v.UpdatedAt,
 	}
 }
 
@@ -146,6 +163,29 @@ type ClaimVoucherRequest struct {
 type CalculateCartRequest struct {
 	Items       []CartItemRequest `json:"items" validate:"required,min=1,dive"`
 	VoucherCode string            `json:"voucherCode"`
+	UserID      string            `json:"userId"` // Optional: for eligibility check
+}
+
+// ValidateVoucherRequest represents the request from Cart Service to validate a voucher
+type ValidateVoucherRequest struct {
+	VoucherCode string            `json:"voucherCode" validate:"required"`
+	UserID      string            `json:"userId" validate:"required,uuid"`
+	Items       []CartItemRequest `json:"items" validate:"required,min=1,dive"`
+}
+
+// VoucherValidationResult represents the result of voucher validation for Cart Service
+type VoucherValidationResult struct {
+	Valid          bool            `json:"valid"`
+	VoucherID      string          `json:"voucherId,omitempty"`
+	CampaignID     string          `json:"campaignId,omitempty"`
+	VoucherCode    string          `json:"voucherCode,omitempty"`
+	DiscountType   string          `json:"discountType,omitempty"` // PERCENTAGE or FIXED_AMOUNT
+	DiscountValue  decimal.Decimal `json:"discountValue,omitempty"`
+	DiscountAmount decimal.Decimal `json:"discountAmount"`
+	OriginalTotal  decimal.Decimal `json:"originalTotal"`
+	FinalPrice     decimal.Decimal `json:"finalPrice"`
+	ErrorCode      string          `json:"errorCode,omitempty"`
+	ErrorMessage   string          `json:"errorMessage,omitempty"`
 }
 
 type CartItemRequest struct {
