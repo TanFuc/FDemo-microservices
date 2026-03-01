@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -105,4 +106,9 @@ func (a *CODAdapter) QueryStatus(ctx context.Context, providerTxID string) (*por
 			"message": "COD payment status managed by delivery system",
 		},
 	}, nil
+}
+
+// Refund is not supported for COD payments
+func (a *CODAdapter) Refund(ctx context.Context, providerTxID string, amount decimal.Decimal) (string, error) {
+	return "", errors.New("refund not supported for COD")
 }

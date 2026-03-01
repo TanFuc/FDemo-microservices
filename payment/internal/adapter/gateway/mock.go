@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"microservices/payment/internal/domain"
 	"microservices/payment/internal/port"
 )
@@ -154,4 +155,21 @@ func (m *MockGateway) QueryStatus(ctx context.Context, providerTxID string) (*po
 			"mock": true,
 		},
 	}, nil
+}
+
+// Refund initiates a mock refund
+func (m *MockGateway) Refund(ctx context.Context, providerTxID string, amount decimal.Decimal) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	payment, exists := m.payments[providerTxID]
+	if !exists {
+		return "", fmt.Errorf("payment not found: %s", providerTxID)
+	}
+
+	// Update payment status to refunded
+	payment.Status = domain.StatusRefunded
+
+	refundID := fmt.Sprintf("MOCK-REFUND-%s", uuid.New().String())
+	return refundID, nil
 }

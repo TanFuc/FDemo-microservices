@@ -10,6 +10,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/checkout/session"
+	"github.com/stripe/stripe-go/v76/refund"
 	"github.com/stripe/stripe-go/v76/webhook"
 	"microservices/payment/internal/domain"
 	"microservices/payment/internal/port"
@@ -204,6 +205,39 @@ func (a *StripeAdapter) QueryStatus(ctx context.Context, providerTxID string) (*
 			"customer_email":  s.CustomerDetails.Email,
 		},
 	}, nil
+}
+
+// Refund initiates a refund with Stripe
+func (a *StripeAdapter) Refund(ctx context.Context, providerTxID string, amount decimal.Decimal) (string, error) {
+	// Get the session to find the payment intent
+	s, err := session.Get(providerTxID, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to get Stripe session: %w", err)
+	}
+
+	if s.PaymentIntent == nil {
+		return "", fmt.Errorf("no payment intent found for session")
+	}
+
+	// Convert amount to cents
+	amountCents := amount.Mul(decimal.NewFromInt(100)).IntPart()
+
+	// For VND, use whole amount
+	if s.Currency == stripe.CurrencyVND {
+		amountCents = amount.IntPart()
+	}
+
+	params := &stripe.RefundParams{
+		PaymentIntent: stripe.String(s.PaymentIntent.ID),
+		Amount:        stripe.Int64(amountCents),
+	}
+
+	r, err := refund.New(params)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Stripe refund: %w", err)
+	}
+
+	return r.ID, nil
 }
 
 // mapStripeCurrency maps Stripe currency to domain currency

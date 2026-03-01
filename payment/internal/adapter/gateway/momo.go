@@ -305,6 +305,75 @@ func (a *MoMoAdapter) QueryStatus(ctx context.Context, providerTxID string) (*po
 	}, nil
 }
 
+// Refund initiates a refund with MoMo
+func (a *MoMoAdapter) Refund(ctx context.Context, providerTxID string, amount decimal.Decimal) (string, error) {
+	requestID := uuid.New().String()
+	amountInt := amount.IntPart()
+
+	// Build signature for refund
+	// accessKey=$accessKey&amount=$amount&description=$description&orderId=$orderId&partnerCode=$partnerCode&requestId=$requestId
+	rawSignature := fmt.Sprintf(
+		"accessKey=%s&amount=%d&description=%s&orderId=%s&partnerCode=%s&requestId=%s&transId=%s",
+		a.config.AccessKey,
+		amountInt,
+		"Refund transaction",
+		providerTxID,
+		a.config.PartnerCode,
+		requestID,
+		"0", // Original transId would be needed here in production
+	)
+
+	signature := a.signHMAC(rawSignature)
+
+	refundReq := map[string]interface{}{
+		"partnerCode": a.config.PartnerCode,
+		"orderId":     providerTxID,
+		"requestId":   requestID,
+		"amount":      amountInt,
+		"transId":     0, // Would need actual transId from original payment
+		"lang":        "vi",
+		"description": "Refund transaction",
+		"signature":   signature,
+	}
+
+	jsonData, err := json.Marshal(refundReq)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", a.config.Endpoint+"/refund", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := a.client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var refundResp struct {
+		ResultCode int    `json:"resultCode"`
+		Message    string `json:"message"`
+		TransId    int64  `json:"transId"`
+	}
+	if err := json.Unmarshal(body, &refundResp); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if refundResp.ResultCode != 0 {
+		return "", fmt.Errorf("MoMo refund error: %s (code: %d)", refundResp.Message, refundResp.ResultCode)
+	}
+
+	return fmt.Sprintf("%d", refundResp.TransId), nil
+}
+
 // signHMAC creates HMAC-SHA256 signature
 func (a *MoMoAdapter) signHMAC(data string) string {
 	h := hmac.New(sha256.New, []byte(a.config.SecretKey))

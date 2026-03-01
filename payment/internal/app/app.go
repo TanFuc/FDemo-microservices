@@ -81,6 +81,29 @@ func New(cfg *config.Config) (*App, error) {
 		gateway.NewCODAdapter(),
 	}
 
+	// Add VNPay gateway if configured
+	if cfg.VNPay.TmnCode != "" {
+		gateways = append(gateways, gateway.NewVNPayAdapter(gateway.VNPayConfig{
+			TmnCode:    cfg.VNPay.TmnCode,
+			HashSecret: cfg.VNPay.HashSecret,
+			PayURL:     cfg.VNPay.PayURL,
+			APIURL:     cfg.VNPay.APIURL,
+			ReturnURL:  cfg.VNPay.ReturnURL,
+		}))
+		logger.Info().Msg("VNPay gateway registered")
+	}
+
+	// Add ZaloPay gateway if configured
+	if cfg.ZaloPay.AppID > 0 {
+		gateways = append(gateways, gateway.NewZaloPayAdapter(gateway.ZaloPayConfig{
+			AppID:    cfg.ZaloPay.AppID,
+			Key1:     cfg.ZaloPay.Key1,
+			Key2:     cfg.ZaloPay.Key2,
+			Endpoint: cfg.ZaloPay.Endpoint,
+		}))
+		logger.Info().Msg("ZaloPay gateway registered")
+	}
+
 	// Create use case
 	paymentUC := usecase.NewPaymentUseCase(repo, natsPublisher, gateways, nil)
 

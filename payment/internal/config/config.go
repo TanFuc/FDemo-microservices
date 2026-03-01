@@ -15,6 +15,8 @@ type Config struct {
 	NATS     NATSConfig     `mapstructure:"nats"`
 	Stripe   StripeConfig   `mapstructure:"stripe"`
 	MoMo     MoMoConfig     `mapstructure:"momo"`
+	VNPay    VNPayConfig    `mapstructure:"vnpay"`
+	ZaloPay  ZaloPayConfig  `mapstructure:"zalopay"`
 	Webhook  WebhookConfig  `mapstructure:"webhook"`
 	Job      JobConfig      `mapstructure:"job"`
 }
@@ -50,6 +52,23 @@ type MoMoConfig struct {
 	AccessKey   string `mapstructure:"access_key"`
 	SecretKey   string `mapstructure:"secret_key"`
 	Endpoint    string `mapstructure:"endpoint"`
+}
+
+// VNPayConfig holds VNPay configuration
+type VNPayConfig struct {
+	TmnCode    string `mapstructure:"tmn_code"`
+	HashSecret string `mapstructure:"hash_secret"`
+	PayURL     string `mapstructure:"pay_url"`
+	APIURL     string `mapstructure:"api_url"`
+	ReturnURL  string `mapstructure:"return_url"`
+}
+
+// ZaloPayConfig holds ZaloPay configuration
+type ZaloPayConfig struct {
+	AppID    int    `mapstructure:"app_id"`
+	Key1     string `mapstructure:"key1"`
+	Key2     string `mapstructure:"key2"`
+	Endpoint string `mapstructure:"endpoint"`
 }
 
 // WebhookConfig holds webhook configuration
@@ -125,6 +144,19 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("momo.secret_key", "")
 	v.SetDefault("momo.endpoint", "https://test-payment.momo.vn/v2/gateway/api")
 
+	// VNPay defaults
+	v.SetDefault("vnpay.tmn_code", "")
+	v.SetDefault("vnpay.hash_secret", "")
+	v.SetDefault("vnpay.pay_url", "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html")
+	v.SetDefault("vnpay.api_url", "https://sandbox.vnpayment.vn/merchant_webapi/api/transaction")
+	v.SetDefault("vnpay.return_url", "")
+
+	// ZaloPay defaults
+	v.SetDefault("zalopay.app_id", 0)
+	v.SetDefault("zalopay.key1", "")
+	v.SetDefault("zalopay.key2", "")
+	v.SetDefault("zalopay.endpoint", "https://sb-openapi.zalopay.vn/v2")
+
 	// Webhook defaults
 	v.SetDefault("webhook.base_url", "http://localhost:8083/api/v1/webhooks")
 
@@ -157,6 +189,19 @@ func bindEnvVars(v *viper.Viper) {
 	v.BindEnv("momo.access_key", "MOMO_ACCESS_KEY")
 	v.BindEnv("momo.secret_key", "MOMO_SECRET_KEY")
 	v.BindEnv("momo.endpoint", "MOMO_ENDPOINT")
+
+	// VNPay
+	v.BindEnv("vnpay.tmn_code", "VNPAY_TMN_CODE")
+	v.BindEnv("vnpay.hash_secret", "VNPAY_HASH_SECRET")
+	v.BindEnv("vnpay.pay_url", "VNPAY_PAY_URL")
+	v.BindEnv("vnpay.api_url", "VNPAY_API_URL")
+	v.BindEnv("vnpay.return_url", "VNPAY_RETURN_URL")
+
+	// ZaloPay
+	v.BindEnv("zalopay.app_id", "ZALOPAY_APP_ID")
+	v.BindEnv("zalopay.key1", "ZALOPAY_KEY1")
+	v.BindEnv("zalopay.key2", "ZALOPAY_KEY2")
+	v.BindEnv("zalopay.endpoint", "ZALOPAY_ENDPOINT")
 
 	// Webhook
 	v.BindEnv("webhook.base_url", "WEBHOOK_BASE_URL")

@@ -59,4 +59,9 @@ type PaymentGateway interface {
 
 	// QueryStatus queries the payment status from the gateway
 	QueryStatus(ctx context.Context, providerTxID string) (*QueryStatusResponse, error)
+
+	// Refund initiates a refund at the provider level.
+	// Returns the provider-side refund reference ID.
+	// Returns error if provider does not support programmatic refunds.
+	Refund(ctx context.Context, providerTxID string, amount decimal.Decimal) (refundID string, err error)
 }

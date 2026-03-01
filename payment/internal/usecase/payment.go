@@ -54,15 +54,17 @@ func NewPaymentUseCase(
 
 // InitiatePaymentRequest represents a request to initiate a payment
 type InitiatePaymentRequest struct {
-	OrderID     uuid.UUID
-	UserID      uuid.UUID
-	Amount      decimal.Decimal
-	Currency    domain.Currency
-	Provider    domain.Provider
-	Description string
-	CallbackURL string
-	ReturnURL   string
-	Metadata    map[string]string
+	OrderID       uuid.UUID
+	UserID        uuid.UUID
+	Amount        decimal.Decimal
+	Currency      domain.Currency
+	Provider      domain.Provider
+	Description   string
+	CallbackURL   string
+	ReturnURL     string
+	IsWalletTopup bool
+	WalletTxID    string
+	Metadata      map[string]string
 }
 
 // InitiatePaymentResponse represents the response from initiating a payment
@@ -99,6 +101,14 @@ func (uc *PaymentUseCase) InitiatePayment(ctx context.Context, req *InitiatePaym
 		req.Currency,
 		req.Provider,
 	)
+
+	// Set wallet fields if this is a wallet top-up
+	if req.IsWalletTopup {
+		tx.IsWalletTopup = true
+		if req.WalletTxID != "" {
+			tx.WalletTxID = &req.WalletTxID
+		}
+	}
 
 	// Save initial transaction
 	if err := uc.repo.Create(ctx, tx); err != nil {
@@ -406,4 +416,121 @@ func (uc *PaymentUseCase) logWebhookPayload(provider domain.Provider, payload []
 	if err := uc.repo.CreateLog(context.Background(), log); err != nil {
 		uc.logger.Error("failed to log webhook payload", "error", err)
 	}
+}
+
+// RefundRequest represents a request to refund a payment
+type RefundRequest struct {
+	TransactionID uuid.UUID
+	Amount        decimal.Decimal
+	Reason        string
+}
+
+// RefundResponse represents the response from refunding a payment
+type RefundResponse struct {
+	TransactionID uuid.UUID       `json:"transaction_id"`
+	Status        domain.Status   `json:"status"`
+	Amount        decimal.Decimal `json:"amount"`
+	Currency      domain.Currency `json:"currency"`
+	Provider      domain.Provider `json:"provider"`
+	RefundID      string          `json:"refund_id"`
+}
+
+// RefundPayment initiates a refund for a payment transaction
+func (uc *PaymentUseCase) RefundPayment(ctx context.Context, req *RefundRequest) (*RefundResponse, error) {
+	// Get the transaction
+	tx, err := uc.repo.GetByID(ctx, req.TransactionID)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrTransactionNotFound, err)
+	}
+	if tx == nil {
+		return nil, ErrTransactionNotFound
+	}
+
+	// Validate transaction status - can only refund SUCCESS transactions
+	if tx.Status != domain.StatusSuccess {
+		return nil, fmt.Errorf("transaction is not in SUCCESS state (current: %s)", tx.Status)
+	}
+
+	// Validate refund amount
+	if req.Amount.GreaterThan(tx.Amount) {
+		return nil, fmt.Errorf("refund amount (%s) exceeds transaction amount (%s)",
+			req.Amount.String(), tx.Amount.String())
+	}
+
+	// Get the gateway
+	gateway, ok := uc.gateways[tx.Provider]
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidProvider, tx.Provider)
+	}
+
+	// Call gateway to process refund
+	refundID, err := gateway.Refund(ctx, tx.ProviderTxID, req.Amount)
+	if err != nil {
+		uc.logger.Error("failed to process refund with gateway",
+			"error", err,
+			"provider", tx.Provider,
+			"transaction_id", tx.ID,
+		)
+		return nil, fmt.Errorf("failed to process refund: %w", err)
+	}
+
+	// Update transaction status
+	previousStatus := tx.Status
+	tx.UpdateStatus(domain.StatusRefunded)
+
+	// Update metadata with refund info
+	meta, _ := tx.GetMetadata()
+	if meta == nil {
+		meta = make(map[string]interface{})
+	}
+	meta["refund"] = map[string]interface{}{
+		"refund_id": refundID,
+		"amount":    req.Amount.String(),
+		"reason":    req.Reason,
+		"timestamp": time.Now().UTC(),
+	}
+	_ = tx.SetMetadata(meta)
+
+	if err := uc.repo.Update(ctx, tx); err != nil {
+		uc.logger.Error("failed to update transaction after refund",
+			"error", err,
+			"transaction_id", tx.ID,
+		)
+		return nil, fmt.Errorf("failed to update transaction: %w", err)
+	}
+
+	// Log the refund
+	logEntry := domain.NewPaymentLog(tx.Provider, "refund", json.RawMessage(fmt.Sprintf(
+		`{"refund_id":"%s","amount":"%s","reason":"%s"}`,
+		refundID, req.Amount.String(), req.Reason,
+	)), "")
+	logEntry.SetTransactionID(tx.ID)
+	if err := uc.repo.CreateLog(ctx, logEntry); err != nil {
+		uc.logger.Error("failed to create refund log", "error", err)
+	}
+
+	// Publish refund event
+	event := domain.NewPaymentEvent(tx)
+	if err := uc.publisher.Publish(ctx, port.SubjectPaymentRefunded, event); err != nil {
+		uc.logger.Error("failed to publish refund event",
+			"error", err,
+			"transaction_id", tx.ID,
+		)
+	} else {
+		uc.logger.Info("refund event published",
+			"transaction_id", tx.ID,
+			"previous_status", previousStatus,
+			"new_status", tx.Status,
+			"refund_id", refundID,
+		)
+	}
+
+	return &RefundResponse{
+		TransactionID: tx.ID,
+		Status:        tx.Status,
+		Amount:        req.Amount,
+		Currency:      tx.Currency,
+		Provider:      tx.Provider,
+		RefundID:      refundID,
+	}, nil
 }

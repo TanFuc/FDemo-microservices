@@ -69,6 +69,10 @@ func (r *Router) Setup() *fiber.App {
 	payments.Post("/", r.paymentHandler.CreatePayment)
 	payments.Get("/:id", r.paymentHandler.GetPayment)
 	payments.Get("/order/:orderId", r.paymentHandler.GetPaymentsByOrder)
+	payments.Post("/:id/refund", r.paymentHandler.RefundPayment)
+
+	// VNPay return URL (browser redirect - read only, no auth needed)
+	payments.Get("/vnpay-return", r.paymentHandler.VNPayReturn)
 
 	// Webhook routes (no auth - external providers need to call these)
 	webhooks := api.Group("/webhooks")

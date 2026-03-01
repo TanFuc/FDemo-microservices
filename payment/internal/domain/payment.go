@@ -10,17 +10,19 @@ import (
 
 // PaymentTransaction represents a payment transaction in the ledger
 type PaymentTransaction struct {
-	ID           uuid.UUID       `json:"id"`
-	OrderID      uuid.UUID       `json:"order_id"`
-	UserID       uuid.UUID       `json:"user_id"`
-	Amount       decimal.Decimal `json:"amount"`
-	Currency     Currency        `json:"currency"`
-	Provider     Provider        `json:"provider"`
-	ProviderTxID string          `json:"provider_tx_id,omitempty"`
-	Status       Status          `json:"status"`
-	Metadata     json.RawMessage `json:"metadata,omitempty"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ID            uuid.UUID       `json:"id"`
+	OrderID       uuid.UUID       `json:"order_id"`
+	UserID        uuid.UUID       `json:"user_id"`
+	Amount        decimal.Decimal `json:"amount"`
+	Currency      Currency        `json:"currency"`
+	Provider      Provider        `json:"provider"`
+	ProviderTxID  string          `json:"provider_tx_id,omitempty"`
+	Status        Status          `json:"status"`
+	IsWalletTopup bool            `json:"is_wallet_topup"`
+	WalletTxID    *string         `json:"wallet_tx_id,omitempty"`
+	Metadata      json.RawMessage `json:"metadata,omitempty"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 // NewPaymentTransaction creates a new payment transaction
@@ -108,18 +110,25 @@ type PaymentEvent struct {
 	Provider      Provider  `json:"provider"`
 	Amount        string    `json:"amount"`
 	Currency      Currency  `json:"currency"`
+	IsWalletTopup bool      `json:"is_wallet_topup"`
+	WalletTxID    string    `json:"wallet_tx_id,omitempty"`
 	Timestamp     time.Time `json:"timestamp"`
 }
 
 // NewPaymentEvent creates a new payment event from a transaction
 func NewPaymentEvent(tx *PaymentTransaction) *PaymentEvent {
-	return &PaymentEvent{
+	event := &PaymentEvent{
 		OrderID:       tx.OrderID,
 		TransactionID: tx.ID,
 		Status:        tx.Status,
 		Provider:      tx.Provider,
 		Amount:        tx.Amount.String(),
 		Currency:      tx.Currency,
+		IsWalletTopup: tx.IsWalletTopup,
 		Timestamp:     time.Now(),
 	}
+	if tx.WalletTxID != nil {
+		event.WalletTxID = *tx.WalletTxID
+	}
+	return event
 }

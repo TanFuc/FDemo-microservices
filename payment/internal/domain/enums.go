@@ -4,15 +4,17 @@ package domain
 type Provider string
 
 const (
-	ProviderStripe Provider = "STRIPE"
-	ProviderMoMo   Provider = "MOMO"
-	ProviderCOD    Provider = "COD"
+	ProviderStripe  Provider = "STRIPE"
+	ProviderMoMo    Provider = "MOMO"
+	ProviderCOD     Provider = "COD"
+	ProviderVNPay   Provider = "VNPAY"
+	ProviderZaloPay Provider = "ZALOPAY"
 )
 
 // IsValid checks if the provider is valid
 func (p Provider) IsValid() bool {
 	switch p {
-	case ProviderStripe, ProviderMoMo, ProviderCOD:
+	case ProviderStripe, ProviderMoMo, ProviderCOD, ProviderVNPay, ProviderZaloPay:
 		return true
 	}
 	return false

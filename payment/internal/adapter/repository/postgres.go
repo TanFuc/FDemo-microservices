@@ -32,8 +32,8 @@ var _ port.PaymentRepository = (*PostgresRepository)(nil)
 // Create creates a new payment transaction
 func (r *PostgresRepository) Create(ctx context.Context, tx *domain.PaymentTransaction) error {
 	query := `
-		INSERT INTO payment_transactions (id, order_id, user_id, amount, currency, provider, provider_tx_id, status, metadata, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO payment_transactions (id, order_id, user_id, amount, currency, provider, provider_tx_id, status, is_wallet_topup, wallet_tx_id, metadata, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		tx.ID,
@@ -44,6 +44,8 @@ func (r *PostgresRepository) Create(ctx context.Context, tx *domain.PaymentTrans
 		tx.Provider,
 		tx.ProviderTxID,
 		tx.Status,
+		tx.IsWalletTopup,
+		tx.WalletTxID,
 		tx.Metadata,
 		tx.CreatedAt,
 		tx.UpdatedAt,
@@ -77,7 +79,7 @@ func (r *PostgresRepository) Update(ctx context.Context, tx *domain.PaymentTrans
 // GetByID retrieves a payment transaction by ID
 func (r *PostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.PaymentTransaction, error) {
 	query := `
-		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, metadata, created_at, updated_at
+		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, is_wallet_topup, wallet_tx_id, metadata, created_at, updated_at
 		FROM payment_transactions
 		WHERE id = $1
 	`
@@ -87,7 +89,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain
 // GetByOrderID retrieves payment transactions by order ID
 func (r *PostgresRepository) GetByOrderID(ctx context.Context, orderID uuid.UUID) ([]*domain.PaymentTransaction, error) {
 	query := `
-		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, metadata, created_at, updated_at
+		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, is_wallet_topup, wallet_tx_id, metadata, created_at, updated_at
 		FROM payment_transactions
 		WHERE order_id = $1
 		ORDER BY created_at DESC
@@ -104,7 +106,7 @@ func (r *PostgresRepository) GetByOrderID(ctx context.Context, orderID uuid.UUID
 // GetByProviderTxID retrieves a payment transaction by provider transaction ID
 func (r *PostgresRepository) GetByProviderTxID(ctx context.Context, provider domain.Provider, providerTxID string) (*domain.PaymentTransaction, error) {
 	query := `
-		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, metadata, created_at, updated_at
+		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, is_wallet_topup, wallet_tx_id, metadata, created_at, updated_at
 		FROM payment_transactions
 		WHERE provider = $1 AND provider_tx_id = $2
 	`
@@ -114,7 +116,7 @@ func (r *PostgresRepository) GetByProviderTxID(ctx context.Context, provider dom
 // GetPendingTransactions retrieves pending transactions older than the given time
 func (r *PostgresRepository) GetPendingTransactions(ctx context.Context, olderThan time.Time) ([]*domain.PaymentTransaction, error) {
 	query := `
-		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, metadata, created_at, updated_at
+		SELECT id, order_id, user_id, amount, currency, provider, provider_tx_id, status, is_wallet_topup, wallet_tx_id, metadata, created_at, updated_at
 		FROM payment_transactions
 		WHERE status = 'PENDING' AND created_at < $1
 		ORDER BY created_at ASC
@@ -192,6 +194,8 @@ func (r *PostgresRepository) scanTransaction(row pgx.Row) (*domain.PaymentTransa
 		&tx.Provider,
 		&tx.ProviderTxID,
 		&tx.Status,
+		&tx.IsWalletTopup,
+		&tx.WalletTxID,
 		&tx.Metadata,
 		&tx.CreatedAt,
 		&tx.UpdatedAt,
@@ -219,6 +223,8 @@ func (r *PostgresRepository) scanTransactions(rows pgx.Rows) ([]*domain.PaymentT
 			&tx.Provider,
 			&tx.ProviderTxID,
 			&tx.Status,
+			&tx.IsWalletTopup,
+			&tx.WalletTxID,
 			&tx.Metadata,
 			&tx.CreatedAt,
 			&tx.UpdatedAt,
