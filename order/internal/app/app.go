@@ -33,6 +33,7 @@ type App struct {
 	inventoryClient    *inventorygrpc.InventoryClient
 	natsPublisher      *messaging.NATSPublisher
 	paymentListener    *messaging.PaymentEventListener
+	walletListener     *messaging.WalletEventListener
 	authClient         *authclient.Client
 	draftCleanupWorker *worker.DraftCleanupWorker
 	ctx                context.Context
@@ -202,6 +203,29 @@ func New(cfg *config.Config) (*App, error) {
 		logger.Info().Msg("Payment event listener started")
 	}
 
+	// Initialize wallet event listener
+	var walletListener *messaging.WalletEventListener
+	walletListener, err = messaging.NewWalletEventListener(
+		&cfg.NATS,
+		orderRepo,
+		stockConfirmer,
+		eventPublisher,
+		slogger,
+	)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to create wallet listener")
+	}
+
+	// Start wallet listener in background
+	if walletListener != nil {
+		go func() {
+			if err := walletListener.Start(ctx); err != nil {
+				logger.Error().Err(err).Msg("Wallet listener error")
+			}
+		}()
+		logger.Info().Msg("Wallet event listener started")
+	}
+
 	// Draft cleanup worker — runs at 3:00 AM daily, deletes drafts older than 24h
 	draftCleanupWorker := worker.NewDraftCleanupWorker(
 		orderRepo,
@@ -221,6 +245,7 @@ func New(cfg *config.Config) (*App, error) {
 		inventoryClient:    inventoryClient,
 		natsPublisher:      natsPublisher,
 		paymentListener:    paymentListener,
+		walletListener:     walletListener,
 		authClient:         authClient,
 		draftCleanupWorker: draftCleanupWorker,
 		ctx:                ctx,
@@ -276,6 +301,9 @@ func (a *App) Run() error {
 func (a *App) cleanup() {
 	if a.paymentListener != nil {
 		a.paymentListener.Stop()
+	}
+	if a.walletListener != nil {
+		a.walletListener.Stop()
 	}
 	if a.natsPublisher != nil {
 		a.natsPublisher.Close()

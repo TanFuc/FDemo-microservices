@@ -3,7 +3,7 @@ package dto
 import (
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // CalculateFeeRequest represents the request body for fee calculation
@@ -79,4 +79,13 @@ func ToDomainParcels(parcels []Parcel) []domain.Parcel {
 // ParseInternalOrderID parses the internal order ID string to UUID
 func (r *CreateShipmentRequest) ParseInternalOrderID() (uuid.UUID, error) {
 	return uuid.Parse(r.InternalOrderID)
+}
+
+// CompareFeesRequest represents the request body for comparing fees
+type CompareFeesRequest struct {
+	FromDistrictID int      `json:"from_district_id" binding:"required"`
+	ToDistrictID   int      `json:"to_district_id" binding:"required"`
+	WeightGram     int      `json:"weight_gram" binding:"required,min=1"`
+	InsuranceValue int      `json:"insurance_value"`
+	Providers      []string `json:"providers,omitempty"`
 }

@@ -16,15 +16,16 @@ const (
 type ProviderName string
 
 const (
-	ProviderMock ProviderName = "MOCK"
-	ProviderGHN  ProviderName = "GHN"
-	ProviderGHTK ProviderName = "GHTK"
+	ProviderMock        ProviderName = "MOCK"
+	ProviderGHN         ProviderName = "GHN"
+	ProviderGHTK        ProviderName = "GHTK"
+	ProviderViettelPost ProviderName = "VIETTELPOST"
 )
 
 // IsValid checks if the provider name is valid
 func (p ProviderName) IsValid() bool {
 	switch p {
-	case ProviderMock, ProviderGHN, ProviderGHTK:
+	case ProviderMock, ProviderGHN, ProviderGHTK, ProviderViettelPost:
 		return true
 	}
 	return false
@@ -73,6 +74,15 @@ var StatusMapping = map[ProviderName]map[string]SystemStatus{
 		"delivered": StatusDelivered,
 		"returned":  StatusReturned,
 		"cancelled": StatusCancelled,
+	},
+	ProviderViettelPost: {
+		"PHAT_THANH_CONG":      StatusDelivered,
+		"PHAT_KHONG_THANH_CONG": StatusShipping,
+		"DA_GUI_POST":          StatusShipping,
+		"CHUYEN_HOAN":          StatusReturned,
+		"HUY":                  StatusCancelled,
+		"CHO_PHAT":             StatusPending,
+		"DONG_GOI_CHO_CHUYEN":  StatusPending,
 	},
 }
 

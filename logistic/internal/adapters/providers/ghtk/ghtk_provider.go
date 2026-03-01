@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // Config holds GHTK API configuration
@@ -180,6 +180,44 @@ func (p *Provider) CreateOrder(ctx context.Context, req *ports.ShipRequest) (*po
 		LabelURL:     result.Order.Label,
 		ShippingFee:  float64(result.Order.Fee),
 	}, nil
+}
+
+// CancelOrder cancels a GHTK shipment
+func (p *Provider) CancelOrder(ctx context.Context, trackingCode string) error {
+	httpReq, err := http.NewRequestWithContext(ctx, "POST",
+		fmt.Sprintf("%s/services/shipment/cancel/%s", p.config.APIURL, trackingCode),
+		nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Token", p.config.Token)
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var result struct {
+		Success bool   `json:"success"`
+		Message string `json:"message"`
+	}
+
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if !result.Success {
+		return fmt.Errorf("GHTK API error: %s", result.Message)
+	}
+
+	return nil
 }
 
 // GHTKWebhookPayload represents GHTK webhook structure

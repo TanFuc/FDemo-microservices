@@ -4,9 +4,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"microservices/pkg/authclient"
-	"tafu-logistic/logistics-service/internal/api/http/handlers"
-	"tafu-logistic/logistics-service/internal/api/http/middleware"
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/api/http/handlers"
+	"microservices/logistic/internal/api/http/middleware"
+	"microservices/logistic/internal/core/services"
 )
 
 // Router holds the HTTP router and handlers
@@ -78,10 +78,12 @@ func (r *Router) setupRoutes() {
 
 		{
 			shipping.POST("/calculate-fee", r.shippingHandler.CalculateFee)
+			shipping.POST("/compare-fees", r.shippingHandler.CompareFees)
 			shipping.POST("/create", r.shippingHandler.CreateShipment)
 			shipping.GET("/providers", r.shippingHandler.ListProviders)
 			shipping.GET("/:id", r.shippingHandler.GetShipment)
 			shipping.GET("/track/:tracking_code", r.shippingHandler.GetShipmentByTracking)
+			shipping.POST("/:id/cancel", r.shippingHandler.CancelShipment)
 		}
 
 		// Webhook routes (no auth - external providers need to call these)

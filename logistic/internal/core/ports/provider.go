@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // RateRequest contains parameters for calculating shipping fee
@@ -51,6 +51,9 @@ type Provider interface {
 
 	// CreateOrder creates a shipping order and returns tracking info
 	CreateOrder(ctx context.Context, req *ShipRequest) (*ShipResponse, error)
+
+	// CancelOrder cancels a shipment at the carrier level
+	CancelOrder(ctx context.Context, trackingCode string) error
 
 	// ParseWebhook parses incoming webhook from provider
 	ParseWebhook(r *http.Request) (*WebhookPayload, error)

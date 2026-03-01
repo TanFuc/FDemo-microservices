@@ -3,21 +3,25 @@ package ghn
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // Config holds GHN API configuration
 type Config struct {
-	APIURL string
-	Token  string
-	ShopID string
+	APIURL        string
+	Token         string
+	ShopID        string
+	WebhookSecret string
 }
 
 // Provider implements Provider interface for GiaoHangNhanh
@@ -191,6 +195,55 @@ func (p *Provider) CreateOrder(ctx context.Context, req *ports.ShipRequest) (*po
 	}, nil
 }
 
+// CancelOrder cancels a GHN shipment
+func (p *Provider) CancelOrder(ctx context.Context, trackingCode string) error {
+	payload := map[string]interface{}{
+		"order_codes": []string{trackingCode},
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST",
+		p.config.APIURL+"/shiip/public-api/v2/switch-status/cancel",
+		bytes.NewReader(body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Token", p.config.Token)
+	httpReq.Header.Set("ShopId", p.config.ShopID)
+
+	resp, err := p.client.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var result struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	}
+
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	if result.Code != 200 {
+		return fmt.Errorf("GHN API error: %s", result.Message)
+	}
+
+	return nil
+}
+
 // GHNWebhookPayload represents GHN webhook structure
 type GHNWebhookPayload struct {
 	OrderCode       string `json:"OrderCode"`
@@ -198,13 +251,24 @@ type GHNWebhookPayload struct {
 	Status          string `json:"Status"`
 }
 
-// ParseWebhook parses GHN webhook requests
+// ParseWebhook parses GHN webhook requests with signature verification
 func (p *Provider) ParseWebhook(r *http.Request) (*ports.WebhookPayload, error) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body: %w", err)
 	}
 	defer r.Body.Close()
+
+	// Verify X-Checksum signature if WebhookSecret is configured
+	checksum := r.Header.Get("X-Checksum")
+	if p.config.WebhookSecret != "" && checksum != "" {
+		mac := hmac.New(sha256.New, []byte(p.config.WebhookSecret))
+		mac.Write(body)
+		expected := hex.EncodeToString(mac.Sum(nil))
+		if checksum != expected {
+			return nil, fmt.Errorf("GHN webhook signature mismatch")
+		}
+	}
 
 	var payload GHNWebhookPayload
 	if err := json.Unmarshal(body, &payload); err != nil {

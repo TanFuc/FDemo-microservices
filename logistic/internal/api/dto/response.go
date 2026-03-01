@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // APIResponse is a generic API response wrapper
@@ -99,4 +99,24 @@ func NewErrorResponse(code, message string) *APIResponse {
 			Message: message,
 		},
 	}
+}
+
+// FeeQuote represents a fee quote from a single provider
+type FeeQuote struct {
+	Provider  string  `json:"provider"`
+	Fee       float64 `json:"fee,omitempty"`
+	FromCache bool    `json:"from_cache"`
+	Error     string  `json:"error,omitempty"`
+}
+
+// CompareFeesResponse represents the fee comparison response
+type CompareFeesResponse struct {
+	Quotes   []FeeQuote `json:"quotes"`
+	Cheapest string     `json:"cheapest,omitempty"`
+}
+
+// CancelShipmentResponse represents the cancel shipment response
+type CancelShipmentResponse struct {
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status"`
 }

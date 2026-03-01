@@ -8,8 +8,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // WebhookService handles webhook processing from providers
@@ -174,4 +174,102 @@ func (s *WebhookService) logWebhookError(ctx context.Context, provider domain.Pr
 	log := domain.NewWebhookLog(provider, trackingCode, carrierStatus, json.RawMessage(rawPayload))
 	log.SetError(httpStatus, err.Error())
 	_ = s.webhookLogRepo.Create(ctx, log)
+}
+
+// ProcessWebhook processes a webhook from raw body bytes
+func (s *WebhookService) ProcessWebhook(ctx context.Context, providerName domain.ProviderName, body []byte) (*HandleWebhookResult, error) {
+	// Get the provider
+	provider, err := s.providerFactory.GetProvider(providerName)
+	if err != nil {
+		return nil, fmt.Errorf("provider not found: %w", err)
+	}
+
+	// Parse the webhook payload directly from JSON
+	var payload ports.WebhookPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		s.logWebhookError(ctx, providerName, "", "", body, http.StatusBadRequest, err)
+		return nil, fmt.Errorf("failed to parse webhook: %w", err)
+	}
+	payload.RawPayload = body
+
+	// Create webhook log entry
+	webhookLog := domain.NewWebhookLog(
+		providerName,
+		payload.TrackingCode,
+		payload.CarrierStatus,
+		json.RawMessage(body),
+	)
+
+	// Find the shipping order
+	var order *domain.ShippingOrder
+
+	// Try by tracking code first
+	if payload.TrackingCode != "" {
+		order, err = s.repository.GetByTrackingCode(ctx, payload.TrackingCode)
+		if err != nil {
+			s.saveWebhookLog(ctx, webhookLog, nil, http.StatusInternalServerError, err)
+			return nil, fmt.Errorf("failed to get order by tracking code: %w", err)
+		}
+	}
+
+	// Fall back to internal order ID if provided
+	if order == nil && payload.InternalOrderID != "" {
+		internalID, parseErr := uuid.Parse(payload.InternalOrderID)
+		if parseErr == nil {
+			order, err = s.repository.GetByInternalOrderID(ctx, internalID)
+			if err != nil {
+				s.saveWebhookLog(ctx, webhookLog, nil, http.StatusInternalServerError, err)
+				return nil, fmt.Errorf("failed to get order by internal ID: %w", err)
+			}
+		}
+	}
+
+	if order == nil {
+		err := fmt.Errorf("shipping order not found for tracking code: %s", payload.TrackingCode)
+		s.saveWebhookLog(ctx, webhookLog, nil, http.StatusNotFound, err)
+		return nil, err
+	}
+
+	// Get old status
+	oldStatus := order.SystemStatus
+
+	// Map carrier status to system status
+	newStatus := domain.MapCarrierStatus(providerName, payload.CarrierStatus)
+
+	// Update order status
+	order.UpdateStatus(payload.CarrierStatus)
+
+	// Store raw payload as metadata
+	order.SetMetadata(payload.RawPayload)
+
+	// Update in database
+	if err := s.repository.Update(ctx, order); err != nil {
+		s.saveWebhookLog(ctx, webhookLog, &order.ID, http.StatusInternalServerError, err)
+		return nil, fmt.Errorf("failed to update order: %w", err)
+	}
+
+	// Log successful webhook
+	s.saveWebhookLog(ctx, webhookLog, &order.ID, http.StatusOK, nil)
+
+	// Publish status update event
+	if s.publisher != nil {
+		event := &ports.StatusUpdatedEvent{
+			InternalOrderID: order.InternalOrderID,
+			TrackingCode:    order.TrackingCode,
+			Provider:        order.Provider,
+			CarrierStatus:   payload.CarrierStatus,
+			SystemStatus:    newStatus,
+		}
+		_ = s.publisher.PublishStatusUpdated(ctx, event)
+	}
+
+	// Use provider for type assertion check (ensure it's not unused)
+	_ = provider
+
+	return &HandleWebhookResult{
+		TrackingCode:  order.TrackingCode,
+		OldStatus:     oldStatus,
+		NewStatus:     newStatus,
+		CarrierStatus: payload.CarrierStatus,
+	}, nil
 }

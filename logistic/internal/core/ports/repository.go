@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // ShippingOrderRepository defines the interface for shipping order persistence

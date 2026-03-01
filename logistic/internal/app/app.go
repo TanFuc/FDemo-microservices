@@ -9,8 +9,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
+	goredis "github.com/redis/go-redis/v9"
 
-	"microservices/logistic/internal/adapters/cache/redis"
+	rediscache "microservices/logistic/internal/adapters/cache/redis"
 	"microservices/logistic/internal/adapters/messaging/nats"
 	"microservices/logistic/internal/adapters/providers"
 	"microservices/logistic/internal/adapters/providers/ghn"
@@ -28,7 +29,7 @@ type App struct {
 	cfg             *config.Config
 	httpRouter      *router.Router
 	dbPool          *pgxpool.Pool
-	redisClient     *redis.Client
+	redisClient     *goredis.Client
 	natsPublisher   *nats.Publisher
 	natsConsumer    *nats.Consumer
 	paymentConsumer *nats.PaymentConsumer
@@ -58,7 +59,7 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Initialize Redis client
 	logger.Info().Msg("Connecting to Redis...")
-	redisClient, err := redis.NewRedisClient(cfg.Redis.URL)
+	redisClient, err := rediscache.NewRedisClient(cfg.Redis.URL)
 	if err != nil {
 		dbPool.Close()
 		cancel()
@@ -83,7 +84,7 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize adapters
 	shippingRepo := postgres.NewShippingRepository(dbPool)
 	webhookLogRepo := postgres.NewWebhookLogRepository(dbPool)
-	cache := redis.NewCache(redisClient)
+	cache := rediscache.NewCache(redisClient)
 
 	// Initialize provider factory
 	providerCfg := providers.ProviderConfig{}

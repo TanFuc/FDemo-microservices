@@ -53,8 +53,8 @@ func (h *WebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 
 	return response.Success(c, &dto.WebhookResponse{
 		TrackingCode:  result.TrackingCode,
-		OldStatus:     result.OldStatus,
-		NewStatus:     result.NewStatus,
+		OldStatus:     string(result.OldStatus),
+		NewStatus:     string(result.NewStatus),
 		CarrierStatus: result.CarrierStatus,
 	})
 }

@@ -5,9 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"tafu-logistic/logistics-service/internal/api/dto"
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/api/dto"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/services"
 )
 
 // WebhookHandler handles webhook requests from providers

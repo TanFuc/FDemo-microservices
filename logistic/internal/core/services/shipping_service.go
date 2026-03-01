@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
-	"tafu-logistic/logistics-service/pkg/retry"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
+	"microservices/logistic/pkg/retry"
 )
 
 // ShippingService handles shipping-related use cases
@@ -211,4 +212,166 @@ func (s *ShippingService) GetShipmentByTrackingCode(ctx context.Context, trackin
 // ListProviders returns all available providers
 func (s *ShippingService) ListProviders() []domain.ProviderName {
 	return s.providerFactory.ListProviders()
+}
+
+// CompareFeesRequest contains parameters for comparing fees across providers
+type CompareFeesRequest struct {
+	FromDistrictID int                   `json:"from_district_id"`
+	ToDistrictID   int                   `json:"to_district_id"`
+	WeightGram     int                   `json:"weight_gram"`
+	InsuranceValue int                   `json:"insurance_value"`
+	Providers      []domain.ProviderName `json:"providers,omitempty"`
+}
+
+// FeeQuote represents a fee quote from a single provider
+type FeeQuote struct {
+	Provider  domain.ProviderName `json:"provider"`
+	Fee       float64             `json:"fee,omitempty"`
+	FromCache bool                `json:"from_cache"`
+	Error     string              `json:"error,omitempty"`
+}
+
+// CompareFeesResponse contains fee quotes from all requested providers
+type CompareFeesResponse struct {
+	Quotes   []FeeQuote          `json:"quotes"`
+	Cheapest domain.ProviderName `json:"cheapest,omitempty"`
+}
+
+// CompareFees compares shipping fees across multiple providers concurrently
+func (s *ShippingService) CompareFees(ctx context.Context, req *CompareFeesRequest) (*CompareFeesResponse, error) {
+	// If no providers specified, use all registered providers
+	providers := req.Providers
+	if len(providers) == 0 {
+		providers = s.providerFactory.ListProviders()
+	}
+
+	// Create channels for results
+	quotes := make([]FeeQuote, len(providers))
+	var wg sync.WaitGroup
+
+	// Query all providers concurrently
+	for i, providerName := range providers {
+		wg.Add(1)
+		go func(idx int, pName domain.ProviderName) {
+			defer wg.Done()
+
+			quote := FeeQuote{
+				Provider:  pName,
+				FromCache: false,
+			}
+
+			// Try cache first
+			if s.cache != nil {
+				fee, found, err := s.cache.GetFee(ctx, string(pName), req.FromDistrictID, req.ToDistrictID, req.WeightGram)
+				if err == nil && found {
+					quote.Fee = fee
+					quote.FromCache = true
+					quotes[idx] = quote
+					return
+				}
+			}
+
+			// Get provider and calculate fee
+			provider, err := s.providerFactory.GetProvider(pName)
+			if err != nil {
+				quote.Error = err.Error()
+				quotes[idx] = quote
+				return
+			}
+
+			rateReq := &ports.RateRequest{
+				FromDistrictID: req.FromDistrictID,
+				ToDistrictID:   req.ToDistrictID,
+				WeightGram:     req.WeightGram,
+				InsuranceValue: req.InsuranceValue,
+			}
+
+			fee, err := provider.CalculateFee(ctx, rateReq)
+			if err != nil {
+				quote.Error = err.Error()
+				quotes[idx] = quote
+				return
+			}
+
+			quote.Fee = fee
+
+			// Cache the result
+			if s.cache != nil {
+				_ = s.cache.SetFee(ctx, string(pName), req.FromDistrictID, req.ToDistrictID, req.WeightGram, fee)
+			}
+
+			quotes[idx] = quote
+		}(i, providerName)
+	}
+
+	wg.Wait()
+
+	// Find cheapest provider
+	var cheapest domain.ProviderName
+	var lowestFee float64 = -1
+
+	for _, quote := range quotes {
+		if quote.Error == "" && (lowestFee < 0 || quote.Fee < lowestFee) {
+			lowestFee = quote.Fee
+			cheapest = quote.Provider
+		}
+	}
+
+	return &CompareFeesResponse{
+		Quotes:   quotes,
+		Cheapest: cheapest,
+	}, nil
+}
+
+// CancelShipment cancels a shipment
+func (s *ShippingService) CancelShipment(ctx context.Context, id uuid.UUID) error {
+	// Load shipping order from repository
+	order, err := s.repository.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get shipment: %w", err)
+	}
+	if order == nil {
+		return fmt.Errorf("shipment not found")
+	}
+
+	// Validate status - cannot cancel if already cancelled or delivered
+	if order.SystemStatus == domain.StatusCancelled {
+		return fmt.Errorf("shipment is already cancelled")
+	}
+	if order.SystemStatus == domain.StatusDelivered {
+		return fmt.Errorf("cannot cancel delivered shipment")
+	}
+
+	// Get provider
+	provider, err := s.providerFactory.GetProvider(order.Provider)
+	if err != nil {
+		return fmt.Errorf("provider not available: %w", err)
+	}
+
+	// Call provider to cancel order
+	if err := provider.CancelOrder(ctx, order.TrackingCode); err != nil {
+		return fmt.Errorf("failed to cancel shipment with provider: %w", err)
+	}
+
+	// Update order status
+	order.SystemStatus = domain.StatusCancelled
+
+	// Save to database
+	if err := s.repository.Update(ctx, order); err != nil {
+		return fmt.Errorf("failed to update shipping order: %w", err)
+	}
+
+	// Publish NATS event
+	if s.publisher != nil {
+		event := &ports.StatusUpdatedEvent{
+			InternalOrderID: order.InternalOrderID,
+			TrackingCode:    order.TrackingCode,
+			Provider:        order.Provider,
+			CarrierStatus:   "cancelled",
+			SystemStatus:    domain.StatusCancelled,
+		}
+		_ = s.publisher.PublishStatusUpdated(ctx, event)
+	}
+
+	return nil
 }

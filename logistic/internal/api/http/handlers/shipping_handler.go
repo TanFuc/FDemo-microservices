@@ -6,9 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/api/dto"
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/api/dto"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/services"
 )
 
 // ShippingHandler handles shipping-related HTTP requests
@@ -156,5 +156,72 @@ func (h *ShippingHandler) ListProviders(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dto.NewSuccessResponse(&dto.ProvidersResponse{
 		Providers: providerNames,
+	}))
+}
+
+// CompareFees handles fee comparison requests across multiple providers
+// POST /api/v1/shipping/compare-fees
+func (h *ShippingHandler) CompareFees(c *gin.Context) {
+	var req dto.CompareFeesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewErrorResponse("INVALID_REQUEST", err.Error()))
+		return
+	}
+
+	// Convert provider names to domain type
+	var providerNames []domain.ProviderName
+	for _, p := range req.Providers {
+		providerNames = append(providerNames, domain.ProviderName(p))
+	}
+
+	// Compare fees
+	result, err := h.shippingService.CompareFees(c.Request.Context(), &services.CompareFeesRequest{
+		FromDistrictID: req.FromDistrictID,
+		ToDistrictID:   req.ToDistrictID,
+		WeightGram:     req.WeightGram,
+		InsuranceValue: req.InsuranceValue,
+		Providers:      providerNames,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.NewErrorResponse("COMPARISON_ERROR", err.Error()))
+		return
+	}
+
+	// Convert to response DTO
+	quotes := make([]dto.FeeQuote, len(result.Quotes))
+	for i, q := range result.Quotes {
+		quotes[i] = dto.FeeQuote{
+			Provider:  string(q.Provider),
+			Fee:       q.Fee,
+			FromCache: q.FromCache,
+			Error:     q.Error,
+		}
+	}
+
+	c.JSON(http.StatusOK, dto.NewSuccessResponse(&dto.CompareFeesResponse{
+		Quotes:   quotes,
+		Cheapest: string(result.Cheapest),
+	}))
+}
+
+// CancelShipment handles shipment cancellation requests
+// POST /api/v1/shipping/:id/cancel
+func (h *ShippingHandler) CancelShipment(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewErrorResponse("INVALID_ID", "Invalid shipment ID"))
+		return
+	}
+
+	// Cancel shipment
+	if err := h.shippingService.CancelShipment(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusInternalServerError, dto.NewErrorResponse("CANCELLATION_ERROR", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NewSuccessResponse(&dto.CancelShipmentResponse{
+		ID:     id,
+		Status: string(domain.StatusCancelled),
 	}))
 }

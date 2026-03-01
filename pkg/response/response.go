@@ -90,6 +90,11 @@ func InternalError(c *fiber.Ctx, message string) error {
 	})
 }
 
+// InternalServerError is an alias for InternalError
+func InternalServerError(c *fiber.Ctx, message string) error {
+	return InternalError(c, message)
+}
+
 func Unauthorized(c *fiber.Ctx, message string) error {
 	return c.Status(fiber.StatusUnauthorized).JSON(Response{
 		Success:   false,

@@ -3,17 +3,19 @@ package providers
 import (
 	"fmt"
 
-	"tafu-logistic/logistics-service/internal/adapters/providers/ghn"
-	"tafu-logistic/logistics-service/internal/adapters/providers/ghtk"
-	"tafu-logistic/logistics-service/internal/adapters/providers/mock"
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/adapters/providers/ghn"
+	"microservices/logistic/internal/adapters/providers/ghtk"
+	"microservices/logistic/internal/adapters/providers/mock"
+	"microservices/logistic/internal/adapters/providers/viettelpost"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // ProviderConfig holds configuration for all providers
 type ProviderConfig struct {
-	GHN  ghn.Config
-	GHTK ghtk.Config
+	GHN         ghn.Config
+	GHTK        ghtk.Config
+	ViettelPost viettelpost.Config
 }
 
 // Factory creates and manages provider instances
@@ -46,6 +48,15 @@ func NewFactory(cfg ProviderConfig) (*Factory, error) {
 			return nil, fmt.Errorf("failed to create GHTK provider: %w", err)
 		}
 		f.providers[domain.ProviderGHTK] = ghtkProvider
+	}
+
+	// Register ViettelPost provider if configured
+	if cfg.ViettelPost.Username != "" {
+		vtpProvider, err := viettelpost.NewProvider(cfg.ViettelPost)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create ViettelPost provider: %w", err)
+		}
+		f.providers[domain.ProviderViettelPost] = vtpProvider
 	}
 
 	return f, nil

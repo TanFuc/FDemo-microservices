@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/core/services"
 )
 
 // HealthHandler handles health check requests

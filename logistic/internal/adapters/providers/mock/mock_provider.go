@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // MockProvider implements Provider interface for testing/development
@@ -75,6 +75,12 @@ type MockWebhookPayload struct {
 	TrackingCode    string `json:"tracking_code"`
 	InternalOrderID string `json:"internal_order_id"`
 	Status          string `json:"status"`
+}
+
+// CancelOrder cancels a mock shipment (always succeeds)
+func (p *MockProvider) CancelOrder(ctx context.Context, trackingCode string) error {
+	// Mock provider always returns success
+	return nil
 }
 
 // ParseWebhook parses mock webhook requests
