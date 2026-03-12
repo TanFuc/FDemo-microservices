@@ -14,9 +14,13 @@ import (
 )
 
 const (
-	StreamName     = "USERS"
-	SubjectPrefix  = "user."
-	SubjectCreated = "user.registered"
+	StreamName           = "USERS"
+	SubjectPrefix        = "user."
+	SubjectCreated       = "user.registered"
+	SubjectIdentityCreated      = "identity.user.created"
+	SubjectIdentityRoleChanged  = "identity.user.role_changed"
+	SubjectIdentityStatusChanged = "identity.user.status_changed"
+	SubjectIdentityDeleted      = "identity.user.deleted"
 )
 
 type NATSClient struct {
@@ -30,6 +34,39 @@ type UserRegisteredEvent struct {
 	Email        string `json:"email"`
 	FullName     string `json:"fullName"`
 	RegisteredAt string `json:"registeredAt"`
+}
+
+// UserCreatedEvent for federated user context propagation
+type UserCreatedEvent struct {
+	UserID      string `json:"userId"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"`
+	Role        string `json:"role"`
+	Timestamp   string `json:"timestamp"`
+}
+
+// UserRoleChangedEvent is published when user role changes
+type UserRoleChangedEvent struct {
+	UserID    string `json:"userId"`
+	OldRole   string `json:"oldRole"`
+	NewRole   string `json:"newRole"`
+	Timestamp string `json:"timestamp"`
+}
+
+// UserStatusChangedEvent is published when user status changes
+type UserStatusChangedEvent struct {
+	UserID    string `json:"userId"`
+	OldStatus string `json:"oldStatus"`
+	NewStatus string `json:"newStatus"`
+	Reason    string `json:"reason,omitempty"`
+	Timestamp string `json:"timestamp"`
+}
+
+// UserDeletedEvent is published when user is soft-deleted
+type UserDeletedEvent struct {
+	UserID    string `json:"userId"`
+	Reason    string `json:"reason,omitempty"`
+	Timestamp string `json:"timestamp"`
 }
 
 func NewNATSClient(cfg *config.Config) (*NATSClient, error) {
@@ -83,7 +120,7 @@ func (n *NATSClient) initStream() error {
 		stream, err = n.js.CreateStream(ctx, jetstream.StreamConfig{
 			Name:        StreamName,
 			Description: "User events stream",
-			Subjects:    []string{SubjectPrefix + "*"},
+			Subjects:    []string{SubjectPrefix + "*", "identity.user.*"},
 			Retention:   jetstream.LimitsPolicy,
 			MaxAge:      7 * 24 * time.Hour, // 7 days retention
 			MaxMsgs:     -1,
@@ -145,4 +182,83 @@ func (n *NATSClient) JetStream() jetstream.JetStream {
 
 func (n *NATSClient) Stream() jetstream.Stream {
 	return n.stream
+}
+
+// PublishUserCreated publishes identity.user.created event for federated user context
+func (n *NATSClient) PublishUserCreated(ctx context.Context, event *UserCreatedEvent) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	_, err = n.js.Publish(ctx, SubjectIdentityCreated, data)
+	if err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	logger.Info().
+		Str("userId", event.UserID).
+		Str("role", event.Role).
+		Msg("Published identity.user.created event")
+
+	return nil
+}
+
+// PublishUserRoleChanged publishes identity.user.role_changed event
+func (n *NATSClient) PublishUserRoleChanged(ctx context.Context, event *UserRoleChangedEvent) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	_, err = n.js.Publish(ctx, SubjectIdentityRoleChanged, data)
+	if err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	logger.Info().
+		Str("userId", event.UserID).
+		Str("newRole", event.NewRole).
+		Msg("Published identity.user.role_changed event")
+
+	return nil
+}
+
+// PublishUserStatusChanged publishes identity.user.status_changed event
+func (n *NATSClient) PublishUserStatusChanged(ctx context.Context, event *UserStatusChangedEvent) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	_, err = n.js.Publish(ctx, SubjectIdentityStatusChanged, data)
+	if err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	logger.Info().
+		Str("userId", event.UserID).
+		Str("newStatus", event.NewStatus).
+		Msg("Published identity.user.status_changed event")
+
+	return nil
+}
+
+// PublishUserDeleted publishes identity.user.deleted event
+func (n *NATSClient) PublishUserDeleted(ctx context.Context, event *UserDeletedEvent) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal event: %w", err)
+	}
+
+	_, err = n.js.Publish(ctx, SubjectIdentityDeleted, data)
+	if err != nil {
+		return fmt.Errorf("failed to publish event: %w", err)
+	}
+
+	logger.Info().
+		Str("userId", event.UserID).
+		Msg("Published identity.user.deleted event")
+
+	return nil
 }

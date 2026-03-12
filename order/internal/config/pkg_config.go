@@ -249,6 +249,24 @@ func (c *CustomFieldsPackageConfig) ToCustomFieldsConfig() *customfields.Config 
 	}
 }
 
+// getEnv gets a string environment variable with a default value
+func getEnv(key string, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getEnvInt gets an integer environment variable with a default value
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
+}
+
 // getEnvBool gets a boolean environment variable with a default value
 func getEnvBool(key string, defaultValue bool) bool {
 	if value := os.Getenv(key); value != "" {

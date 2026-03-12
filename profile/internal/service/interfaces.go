@@ -44,6 +44,9 @@ type ProfileService interface {
 	// UpdateShop updates shop details
 	UpdateShop(ctx context.Context, userID string, req *model.UpdateShopRequest) (*model.Profile, error)
 
+	// RegisterAffiliate registers a user as an affiliate
+	RegisterAffiliate(ctx context.Context, userID string, req *model.RegisterAffiliateRequest) (*model.Profile, error)
+
 	// GetUserInfo retrieves user info for internal API
 	GetUserInfo(ctx context.Context, userID string) (*model.UserInfoResponse, error)
 }

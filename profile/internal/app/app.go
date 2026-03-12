@@ -35,7 +35,7 @@ func New(cfg *config.Config) (*App, error) {
 	addressRepo := mongodb.NewAddressRepository(db)
 
 	// Initialize services
-	profileService := impl.NewProfileService(profileRepo, addressRepo)
+	profileService := impl.NewProfileService(profileRepo, addressRepo, db.Client())
 
 	// Initialize event listener
 	listener := event.NewUserRegisteredListener(cfg, profileService)

@@ -79,6 +79,36 @@ var (
 		Message:    "Internal server error",
 		StatusCode: http.StatusInternalServerError,
 	}
+	ErrAlreadyAffiliate = &AppError{
+		Code:       "ALREADY_AFFILIATE",
+		Message:    "User is already registered as an affiliate",
+		StatusCode: http.StatusConflict,
+	}
+	ErrSelfReferral = &AppError{
+		Code:       "SELF_REFERRAL",
+		Message:    "Cannot use your own referral code",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrInvalidReferralCode = &AppError{
+		Code:       "INVALID_REFERRAL_CODE",
+		Message:    "Invalid referral code",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrBusinessRequiresImage = &AppError{
+		Code:       "BUSINESS_REQUIRES_IMAGE",
+		Message:    "Business type shop requires at least one image (logo or banner)",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrBusinessRequiresAddress = &AppError{
+		Code:       "BUSINESS_REQUIRES_ADDRESS",
+		Message:    "Business type shop requires a complete shop address",
+		StatusCode: http.StatusBadRequest,
+	}
+	ErrAlreadyHasShop = &AppError{
+		Code:       "ALREADY_HAS_SHOP",
+		Message:    "User already has a registered shop",
+		StatusCode: http.StatusConflict,
+	}
 )
 
 func GetAppError(err error) *AppError {

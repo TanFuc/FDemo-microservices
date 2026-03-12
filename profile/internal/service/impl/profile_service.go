@@ -2,6 +2,8 @@ package impl
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base32"
 	"regexp"
 	"strings"
 	"time"
@@ -20,15 +22,18 @@ import (
 type profileService struct {
 	profileRepo repository.ProfileRepository
 	addressRepo repository.AddressRepository
+	mongoClient *mongo.Client
 }
 
 func NewProfileService(
 	profileRepo repository.ProfileRepository,
 	addressRepo repository.AddressRepository,
+	mongoClient *mongo.Client,
 ) service.ProfileService {
 	return &profileService{
 		profileRepo: profileRepo,
 		addressRepo: addressRepo,
+		mongoClient: mongoClient,
 	}
 }
 
@@ -303,6 +308,11 @@ func (s *profileService) RegisterShop(ctx context.Context, userID string, req *m
 		return nil, err
 	}
 
+	// Check if user already has a shop
+	if profile.HasShop() {
+		return nil, errors.ErrAlreadyHasShop
+	}
+
 	// Check if shop name is unique
 	exists, err := s.profileRepo.ExistsByShopName(ctx, req.ShopName, userID)
 	if err != nil {
@@ -312,25 +322,114 @@ func (s *profileService) RegisterShop(ctx context.Context, userID string, req *m
 		return nil, errors.ErrShopNameExists
 	}
 
-	// Create shop config
+	// Determine business type (default to INDIVIDUAL)
+	businessType := req.BusinessType
+	if businessType == "" {
+		businessType = model.BusinessTypeIndividual
+	}
+
+	// Validate BUSINESS type requirements
+	if businessType == model.BusinessTypeBusiness {
+		// Must have at least one image
+		if req.LogoURL == "" && req.BannerURL == "" {
+			return nil, errors.ErrBusinessRequiresImage
+		}
+		// Must have complete shop address
+		if req.ShopAddress == nil {
+			return nil, errors.ErrBusinessRequiresAddress
+		}
+	}
+
+	// Use MongoDB session for transaction (atomicity for BUSINESS type with address)
+	if businessType == model.BusinessTypeBusiness && req.ShopAddress != nil {
+		return s.registerBusinessShopWithTransaction(ctx, profile, req, businessType)
+	}
+
+	// For INDIVIDUAL type, no transaction needed
 	profile.ShopConfig = &model.ShopConfig{
 		ShopID:             uuid.New().String(),
 		ShopName:           req.ShopName,
 		ShopSlug:           generateSlug(req.ShopName),
 		Description:        req.Description,
 		LogoURL:            req.LogoURL,
-		BusinessType:       model.BusinessTypeIndividual,
+		BannerURL:          req.BannerURL,
+		BusinessType:       businessType,
 		VerificationStatus: model.VerificationStatusPending,
 		JoinedAt:           time.Now(),
 	}
 
 	profile.UpdatedAt = time.Now()
+	profile.Version++
 
 	if err := s.profileRepo.Update(ctx, profile); err != nil {
 		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to register shop", 500)
 	}
 
+	logger.Info().
+		Str("userId", userID).
+		Str("shopId", profile.ShopConfig.ShopID).
+		Str("businessType", string(businessType)).
+		Msg("Shop registered successfully")
+
 	return profile, nil
+}
+
+func (s *profileService) registerBusinessShopWithTransaction(
+	ctx context.Context,
+	profile *model.Profile,
+	req *model.RegisterShopRequest,
+	businessType model.BusinessType,
+) (*model.Profile, error) {
+	session, err := s.mongoClient.StartSession()
+	if err != nil {
+		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to start session", 500)
+	}
+	defer session.EndSession(ctx)
+
+	result, err := session.WithTransaction(ctx, func(sc mongo.SessionContext) (interface{}, error) {
+		// Create address first
+		req.ShopAddress.Type = model.AddressTypeOther
+		req.ShopAddress.IsDefault = false
+		address, err := s.AddAddress(sc, profile.UserID, req.ShopAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create shop config with the address ID
+		profile.ShopConfig = &model.ShopConfig{
+			ShopID:             uuid.New().String(),
+			ShopName:           req.ShopName,
+			ShopSlug:           generateSlug(req.ShopName),
+			Description:        req.Description,
+			LogoURL:            req.LogoURL,
+			BannerURL:          req.BannerURL,
+			PickupAddressID:    &address.ID,
+			BusinessType:       businessType,
+			VerificationStatus: model.VerificationStatusPending,
+			JoinedAt:           time.Now(),
+		}
+
+		profile.UpdatedAt = time.Now()
+		profile.Version++
+
+		if err := s.profileRepo.Update(sc, profile); err != nil {
+			return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to register shop", 500)
+		}
+
+		return profile, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info().
+		Str("userId", profile.UserID).
+		Str("shopId", profile.ShopConfig.ShopID).
+		Str("businessType", string(businessType)).
+		Msg("Business shop registered successfully with address")
+
+	return result.(*model.Profile), nil
 }
 
 func (s *profileService) UpdateShop(ctx context.Context, userID string, req *model.UpdateShopRequest) (*model.Profile, error) {
@@ -373,6 +472,104 @@ func (s *profileService) UpdateShop(ctx context.Context, userID string, req *mod
 	}
 
 	return profile, nil
+}
+
+// Affiliate operations
+
+func (s *profileService) RegisterAffiliate(ctx context.Context, userID string, req *model.RegisterAffiliateRequest) (*model.Profile, error) {
+	profile, err := s.GetOrCreateProfile(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if user is already an affiliate
+	if profile.IsAffiliate() {
+		return nil, errors.ErrAlreadyAffiliate
+	}
+
+	// Validate referral code if provided
+	if req.ReferredBy != "" {
+		// Prevent self-referral
+		if profile.AffiliateConfig != nil && profile.AffiliateConfig.AffiliateCode == req.ReferredBy {
+			return nil, errors.ErrSelfReferral
+		}
+
+		// Check if referral code exists
+		referrerProfile, err := s.profileRepo.FindByAffiliateCode(ctx, req.ReferredBy)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, errors.ErrInvalidReferralCode
+			}
+			return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to verify referral code", 500)
+		}
+
+		// Prevent referring yourself by checking userID
+		if referrerProfile.UserID == userID {
+			return nil, errors.ErrSelfReferral
+		}
+	}
+
+	// Generate unique affiliate code with collision handling
+	affiliateCode, err := s.generateUniqueAffiliateCode(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create affiliate config
+	profile.AffiliateConfig = &model.AffiliateConfig{
+		AffiliateCode:   affiliateCode,
+		Status:          model.AffiliateStatusActive,
+		CommissionRate:  0.05, // Default 5% commission
+		TotalReferrals:  0,
+		TotalEarnings:   0,
+		PendingEarnings: 0,
+		PayoutThreshold: 100000, // Default payout threshold in VND
+		ReferredBy:      req.ReferredBy,
+		JoinedAt:        time.Now(),
+	}
+
+	profile.UpdatedAt = time.Now()
+	profile.Version++
+
+	if err := s.profileRepo.Update(ctx, profile); err != nil {
+		return nil, errors.Wrap(err, "DATABASE_ERROR", "Failed to register affiliate", 500)
+	}
+
+	logger.Info().
+		Str("userId", userID).
+		Str("affiliateCode", affiliateCode).
+		Str("referredBy", req.ReferredBy).
+		Msg("User registered as affiliate")
+
+	return profile, nil
+}
+
+func (s *profileService) generateUniqueAffiliateCode(ctx context.Context) (string, error) {
+	maxRetries := 3
+	for i := 0; i < maxRetries; i++ {
+		code := generateAffiliateCode()
+		exists, err := s.profileRepo.ExistsByAffiliateCode(ctx, code)
+		if err != nil {
+			return "", errors.Wrap(err, "DATABASE_ERROR", "Failed to check affiliate code", 500)
+		}
+		if !exists {
+			return code, nil
+		}
+	}
+	return "", errors.New("AFFILIATE_CODE_GENERATION_FAILED", "Failed to generate unique affiliate code after retries", 500)
+}
+
+// generateAffiliateCode generates a short unique code like REF-A9K2B
+func generateAffiliateCode() string {
+	bytes := make([]byte, 4)
+	rand.Read(bytes)
+	// Use base32 without padding for cleaner codes
+	code := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(bytes)
+	// Take first 5 characters and uppercase
+	if len(code) > 5 {
+		code = code[:5]
+	}
+	return "REF-" + strings.ToUpper(code)
 }
 
 // Internal API operations

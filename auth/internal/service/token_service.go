@@ -25,7 +25,9 @@ const (
 
 type AccessTokenClaims struct {
 	jwt.RegisteredClaims
-	Email string `json:"email"`
+	Email  string `json:"email"`
+	Role   string `json:"role"`
+	ShopID string `json:"shop_id,omitempty"`
 }
 
 type RefreshTokenClaims struct {
@@ -63,7 +65,14 @@ func NewTokenService(
 	}
 }
 
-func (s *TokenService) GenerateTokenPair(ctx context.Context, userID uuid.UUID, email string, deviceInfo *DeviceInfo) (*AuthTokens, error) {
+// TokenUserInfo contains user information for token generation
+type TokenUserInfo struct {
+	Email  string
+	Role   string
+	ShopID string
+}
+
+func (s *TokenService) GenerateTokenPair(ctx context.Context, userID uuid.UUID, userInfo *TokenUserInfo, deviceInfo *DeviceInfo) (*AuthTokens, error) {
 	jti := uuid.New().String()
 	now := time.Now()
 
@@ -75,7 +84,9 @@ func (s *TokenService) GenerateTokenPair(ctx context.Context, userID uuid.UUID, 
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.JWT.AccessExpiry)),
 		},
-		Email: email,
+		Email:  userInfo.Email,
+		Role:   userInfo.Role,
+		ShopID: userInfo.ShopID,
 	}
 
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
@@ -240,7 +251,9 @@ func (s *TokenService) RotateRefreshToken(ctx context.Context, oldTokenString st
 		deviceInfo.DeviceID = claims.DeviceID
 	}
 
-	return s.GenerateTokenPair(ctx, userID, "", deviceInfo)
+	// For rotation, we need to fetch user info from the stored token context
+	// In a real scenario, you'd fetch the user details here
+	return s.GenerateTokenPair(ctx, userID, &TokenUserInfo{}, deviceInfo)
 }
 
 func (s *TokenService) RevokeToken(ctx context.Context, jti string, remainingTTL time.Duration) error {

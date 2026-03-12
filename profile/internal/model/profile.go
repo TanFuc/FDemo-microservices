@@ -70,6 +70,7 @@ type Profile struct {
 	City                string                 `bson:"city,omitempty" json:"city,omitempty"`
 	Preferences         *UserPreferences       `bson:"preferences,omitempty" json:"preferences,omitempty"`
 	ShopConfig          *ShopConfig            `bson:"shopConfig,omitempty" json:"shopConfig,omitempty"`
+	AffiliateConfig     *AffiliateConfig       `bson:"affiliateConfig,omitempty" json:"affiliateConfig,omitempty"`
 	Stats               *ProfileStats          `bson:"stats,omitempty" json:"stats,omitempty"`
 	Identity            *IdentityDocument      `bson:"identity,omitempty" json:"identity,omitempty"`
 	MembershipTier      MembershipTier         `bson:"membershipTier" json:"membershipTier"`
@@ -84,6 +85,7 @@ type Profile struct {
 	LastActiveAt        *time.Time             `bson:"lastActiveAt,omitempty" json:"lastActiveAt,omitempty"`
 	IsDeleted           bool                   `bson:"isDeleted" json:"isDeleted"`
 	DeletedAt           *time.Time             `bson:"deletedAt,omitempty" json:"deletedAt,omitempty"`
+	Version             int64                  `bson:"version" json:"version"`
 	CreatedAt           time.Time              `bson:"createdAt" json:"createdAt"`
 	UpdatedAt           time.Time              `bson:"updatedAt" json:"updatedAt"`
 }
@@ -177,6 +179,27 @@ type SocialLinks struct {
 	Website   string `bson:"website,omitempty" json:"website,omitempty"`
 }
 
+type AffiliateStatus string
+
+const (
+	AffiliateStatusActive   AffiliateStatus = "ACTIVE"
+	AffiliateStatusInactive AffiliateStatus = "INACTIVE"
+	AffiliateStatusPending  AffiliateStatus = "PENDING"
+)
+
+type AffiliateConfig struct {
+	AffiliateCode     string          `bson:"affiliateCode" json:"affiliateCode"`
+	Status            AffiliateStatus `bson:"status" json:"status"`
+	CommissionRate    float64         `bson:"commissionRate" json:"commissionRate"`
+	TotalReferrals    int             `bson:"totalReferrals" json:"totalReferrals"`
+	TotalEarnings     float64         `bson:"totalEarnings" json:"totalEarnings"`
+	PendingEarnings   float64         `bson:"pendingEarnings" json:"pendingEarnings"`
+	PayoutThreshold   float64         `bson:"payoutThreshold" json:"payoutThreshold"`
+	ReferredBy        string          `bson:"referredBy,omitempty" json:"referredBy,omitempty"`
+	JoinedAt          time.Time       `bson:"joinedAt" json:"joinedAt"`
+	LastPayoutAt      *time.Time      `bson:"lastPayoutAt,omitempty" json:"lastPayoutAt,omitempty"`
+}
+
 type ProfileStats struct {
 	TotalOrders       int     `bson:"totalOrders" json:"totalOrders"`
 	CompletedOrders   int     `bson:"completedOrders" json:"completedOrders"`
@@ -225,4 +248,8 @@ func NewProfile(userID, displayName, email string) *Profile {
 
 func (p *Profile) HasShop() bool {
 	return p.ShopConfig != nil && p.ShopConfig.ShopID != ""
+}
+
+func (p *Profile) IsAffiliate() bool {
+	return p.AffiliateConfig != nil && p.AffiliateConfig.AffiliateCode != ""
 }

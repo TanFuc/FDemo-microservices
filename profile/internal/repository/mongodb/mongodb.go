@@ -104,6 +104,15 @@ func (m *MongoDB) CreateIndexes(ctx context.Context) error {
 		{
 			Keys: map[string]interface{}{"shopConfig.verificationStatus": 1},
 		},
+		{
+			Keys: map[string]interface{}{"affiliateConfig.affiliateCode": 1},
+			Options: options.Index().
+				SetUnique(true).
+				SetSparse(true).
+				SetPartialFilterExpression(map[string]interface{}{
+					"affiliateConfig.affiliateCode": map[string]interface{}{"$exists": true},
+				}),
+		},
 	}
 
 	_, err := profileCollection.Indexes().CreateMany(ctx, profileIndexes)

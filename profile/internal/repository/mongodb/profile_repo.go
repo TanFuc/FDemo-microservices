@@ -115,3 +115,26 @@ func (r *profileRepository) ExistsByShopName(ctx context.Context, shopName strin
 	}
 	return count > 0, nil
 }
+
+func (r *profileRepository) FindByAffiliateCode(ctx context.Context, affiliateCode string) (*model.Profile, error) {
+	var profile model.Profile
+	err := r.collection.FindOne(ctx, bson.M{
+		"affiliateConfig.affiliateCode": affiliateCode,
+		"isDeleted":                     bson.M{"$ne": true},
+	}).Decode(&profile)
+	if err != nil {
+		return nil, err
+	}
+	return &profile, nil
+}
+
+func (r *profileRepository) ExistsByAffiliateCode(ctx context.Context, affiliateCode string) (bool, error) {
+	count, err := r.collection.CountDocuments(ctx, bson.M{
+		"affiliateConfig.affiliateCode": affiliateCode,
+		"isDeleted":                     bson.M{"$ne": true},
+	})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}

@@ -264,6 +264,37 @@ func (h *ProfileHandler) DeleteAddress(c *fiber.Ctx) error {
 	return response.SuccessWithMessage(c, nil, "Address deleted successfully")
 }
 
+// RegisterAffiliate godoc
+// @Summary Register as affiliate
+// @Tags profiles
+// @Accept json
+// @Produce json
+// @Param X-User-ID header string true "User ID"
+// @Param request body model.RegisterAffiliateRequest true "Affiliate registration details"
+// @Success 200 {object} response.Response
+// @Failure 400 {object} response.ErrorResponse
+// @Failure 409 {object} response.ErrorResponse
+// @Router /profiles/me/affiliate [post]
+func (h *ProfileHandler) RegisterAffiliate(c *fiber.Ctx) error {
+	userID := c.Get("X-User-ID")
+	if userID == "" {
+		return response.Error(c, errors.ErrUnauthorized)
+	}
+
+	var req model.RegisterAffiliateRequest
+	if err := c.BodyParser(&req); err != nil {
+		// Allow empty body for registration without referral
+		req = model.RegisterAffiliateRequest{}
+	}
+
+	profile, err := h.profileService.RegisterAffiliate(c.Context(), userID, &req)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	return response.Success(c, profile)
+}
+
 func formatValidationErrors(err error) []string {
 	var errs []string
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {

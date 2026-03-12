@@ -30,6 +30,12 @@ type ProfileRepository interface {
 
 	// ExistsByShopName checks if a shop name already exists
 	ExistsByShopName(ctx context.Context, shopName string, excludeUserID string) (bool, error)
+
+	// FindByAffiliateCode retrieves a profile by affiliate code
+	FindByAffiliateCode(ctx context.Context, affiliateCode string) (*model.Profile, error)
+
+	// ExistsByAffiliateCode checks if affiliate code already exists
+	ExistsByAffiliateCode(ctx context.Context, affiliateCode string) (bool, error)
 }
 
 // AddressRepository defines the interface for address data access

@@ -9,6 +9,7 @@ import (
 	"microservices/order/internal/config"
 	httphandler "microservices/order/internal/handler/http"
 	"microservices/pkg/authclient"
+	"microservices/pkg/usercontext"
 )
 
 type Router struct {
@@ -48,8 +49,11 @@ func (r *Router) Setup() *fiber.App {
 	r.app.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders: "Origin,Content-Type,Accept,Authorization",
+		AllowHeaders: "Origin,Content-Type,Accept,Authorization,X-User-ID,X-User-Role,X-User-Email,X-Shop-ID",
 	}))
+
+	// Extract user context from headers (propagated by API Gateway)
+	r.app.Use(usercontext.ExtractUserMiddleware())
 
 	// Health check endpoints
 	r.app.Get("/health", r.healthHandler.Health)

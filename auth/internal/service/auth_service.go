@@ -125,8 +125,26 @@ func (s *AuthService) Login(ctx context.Context, input *LoginInput, deviceInfo *
 		}
 	}
 
-	// Generate token pair
-	tokens, err := s.tokenService.GenerateTokenPair(ctx, user.ID, user.Email, deviceInfo)
+	// Get user with roles first (we need roles for the token)
+	userWithRoles, err := s.userService.GetUserWithRoles(ctx, user.ID)
+	if err != nil {
+		logger.Warn().Err(err).Msg("Failed to get user with roles")
+		userWithRoles = user
+	}
+
+	// Get primary role (first role or default to CUSTOMER)
+	primaryRole := "CUSTOMER"
+	roles := userWithRoles.GetRoleNames()
+	if len(roles) > 0 {
+		primaryRole = roles[0]
+	}
+
+	// Generate token pair with user info including role
+	userInfo := &TokenUserInfo{
+		Email: user.Email,
+		Role:  primaryRole,
+	}
+	tokens, err := s.tokenService.GenerateTokenPair(ctx, user.ID, userInfo, deviceInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -139,13 +157,6 @@ func (s *AuthService) Login(ctx context.Context, input *LoginInput, deviceInfo *
 	// Record successful login
 	ua := deviceInfo.UserAgent
 	s.userService.RecordLoginHistory(ctx, user.ID, model.LoginStatusSuccess, model.AuthMethodPassword, deviceInfo.IPAddress, &ua)
-
-	// Get user with roles
-	userWithRoles, err := s.userService.GetUserWithRoles(ctx, user.ID)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to get user with roles")
-		userWithRoles = user
-	}
 
 	return &LoginResponse{
 		User:   s.userService.ToUserResponse(userWithRoles),

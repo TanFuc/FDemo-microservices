@@ -13,6 +13,7 @@ type JWTClaims struct {
 	UserID string `json:"user_id"`
 	Email  string `json:"email"`
 	Role   string `json:"role"`
+	ShopID string `json:"shop_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -58,13 +59,25 @@ func JWTAuth(cfg *config.JWTConfig) fiber.Handler {
 			})
 		}
 
-		c.Locals("user_id", claims.UserID)
+		// Also try to get user_id from Subject claim (standard JWT)
+		userID := claims.UserID
+		if userID == "" && claims.Subject != "" {
+			userID = claims.Subject
+		}
+
+		c.Locals("user_id", userID)
 		c.Locals("email", claims.Email)
 		c.Locals("role", claims.Role)
+		if claims.ShopID != "" {
+			c.Locals("shop_id", claims.ShopID)
+		}
 
-		c.Request().Header.Set("X-User-ID", claims.UserID)
+		c.Request().Header.Set("X-User-ID", userID)
 		c.Request().Header.Set("X-User-Email", claims.Email)
 		c.Request().Header.Set("X-User-Role", claims.Role)
+		if claims.ShopID != "" {
+			c.Request().Header.Set("X-Shop-ID", claims.ShopID)
+		}
 
 		return c.Next()
 	}
@@ -97,13 +110,25 @@ func OptionalJWTAuth(cfg *config.JWTConfig) fiber.Handler {
 
 		claims, ok := token.Claims.(*JWTClaims)
 		if ok && token.Valid {
-			c.Locals("user_id", claims.UserID)
+			// Also try to get user_id from Subject claim (standard JWT)
+			userID := claims.UserID
+			if userID == "" && claims.Subject != "" {
+				userID = claims.Subject
+			}
+
+			c.Locals("user_id", userID)
 			c.Locals("email", claims.Email)
 			c.Locals("role", claims.Role)
+			if claims.ShopID != "" {
+				c.Locals("shop_id", claims.ShopID)
+			}
 
-			c.Request().Header.Set("X-User-ID", claims.UserID)
+			c.Request().Header.Set("X-User-ID", userID)
 			c.Request().Header.Set("X-User-Email", claims.Email)
 			c.Request().Header.Set("X-User-Role", claims.Role)
+			if claims.ShopID != "" {
+				c.Request().Header.Set("X-Shop-ID", claims.ShopID)
+			}
 		}
 
 		return c.Next()

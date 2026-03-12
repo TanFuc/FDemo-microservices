@@ -69,6 +69,7 @@ func (r *Router) Setup() *fiber.App {
 	profiles.Get("/me/addresses/:id", r.profileHandler.GetAddress)
 	profiles.Patch("/me/addresses/:id/set-default", r.profileHandler.SetDefaultAddress)
 	profiles.Delete("/me/addresses/:id", r.profileHandler.DeleteAddress)
+	profiles.Post("/me/affiliate", r.profileHandler.RegisterAffiliate)
 
 	// Internal routes
 	internal := api.Group("/internal")

@@ -28,9 +28,17 @@ type UpdateAddressRequest struct {
 
 // RegisterShopRequest represents the request to register a shop
 type RegisterShopRequest struct {
-	ShopName    string `json:"shopName" validate:"required"`
-	Description string `json:"description,omitempty"`
-	LogoURL     string `json:"logoUrl,omitempty" validate:"omitempty,url"`
+	ShopName     string                `json:"shopName" validate:"required"`
+	Description  string                `json:"description,omitempty"`
+	LogoURL      string                `json:"logoUrl,omitempty" validate:"omitempty,url"`
+	BannerURL    string                `json:"bannerUrl,omitempty" validate:"omitempty,url"`
+	BusinessType BusinessType          `json:"businessType,omitempty"`
+	ShopAddress  *CreateAddressRequest `json:"shopAddress,omitempty"`
+}
+
+// RegisterAffiliateRequest represents the request to register as affiliate
+type RegisterAffiliateRequest struct {
+	ReferredBy string `json:"referredBy,omitempty"`
 }
 
 // UpdateShopRequest represents the request to update shop details
@@ -66,6 +74,7 @@ type ProfileResponse struct {
 	IsIdentityVerified  bool             `json:"isIdentityVerified"`
 	Preferences         *UserPreferences `json:"preferences,omitempty"`
 	ShopConfig          *ShopConfig      `json:"shopConfig,omitempty"`
+	AffiliateConfig     *AffiliateConfig `json:"affiliateConfig,omitempty"`
 	Stats               *ProfileStats    `json:"stats,omitempty"`
 	CreatedAt           string           `json:"createdAt"`
 	UpdatedAt           string           `json:"updatedAt"`
@@ -108,6 +117,7 @@ func (p *Profile) ToResponse() *ProfileResponse {
 		IsIdentityVerified: p.IsIdentityVerified,
 		Preferences:        p.Preferences,
 		ShopConfig:         p.ShopConfig,
+		AffiliateConfig:    p.AffiliateConfig,
 		Stats:              p.Stats,
 		CreatedAt:          p.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 		UpdatedAt:          p.UpdatedAt.Format("2006-01-02T15:04:05Z07:00"),
