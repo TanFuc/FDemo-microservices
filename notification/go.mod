@@ -43,3 +43,7 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
+
+require microservices/pkg/safego v0.0.0
+
+replace microservices/pkg/safego => ../pkg/safego

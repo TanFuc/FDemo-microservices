@@ -392,9 +392,9 @@ func (m *metricsCollector) RecordDelete() {
 func (m *metricsCollector) RecordError(err error) {
 	m.errors.Add(1)
 	m.errorMu.Lock()
+	defer m.errorMu.Unlock()
 	m.lastError = err
 	m.lastErrorAt = time.Now()
-	m.errorMu.Unlock()
 }
 
 // UpdateSize updates the current cache size.
@@ -488,15 +488,19 @@ func (m *metricsCollector) Reset() {
 	m.deletes.Store(0)
 	m.errors.Store(0)
 
-	m.mu.Lock()
-	m.getLatencies = m.getLatencies[:0]
-	m.setLatencies = m.setLatencies[:0]
-	m.mu.Unlock()
+	func() {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		m.getLatencies = m.getLatencies[:0]
+		m.setLatencies = m.setLatencies[:0]
+	}()
 
-	m.errorMu.Lock()
-	m.lastError = nil
-	m.lastErrorAt = time.Time{}
-	m.errorMu.Unlock()
+	func() {
+		m.errorMu.Lock()
+		defer m.errorMu.Unlock()
+		m.lastError = nil
+		m.lastErrorAt = time.Time{}
+	}()
 }
 
 // noopMetrics is a no-op metrics collector for when metrics are disabled.

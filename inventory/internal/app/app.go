@@ -19,6 +19,7 @@ import (
 	"microservices/inventory/internal/service"
 	"microservices/inventory/internal/service/impl"
 	"microservices/inventory/pkg/logger"
+t"microservices/pkg/safego"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -99,20 +100,20 @@ func New(cfg *config.Config) (*App, error) {
 
 func (a *App) Run() error {
 	// Start gRPC server in goroutine
-	go func() {
+	safego.Go(func() {
 		if err := a.grpcServer.Start(); err != nil {
 			logger.Error("gRPC server error", err)
 		}
-	}()
+	})
 
 	// Start HTTP server in goroutine
-	go func() {
+	safego.Go(func() {
 		addr := ":" + a.cfg.App.Port
 		logger.Infof("Starting HTTP server on %s", addr)
 		if err := a.httpServer.Listen(addr); err != nil {
 			logger.Error("HTTP server error", err)
 		}
-	}()
+	})
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

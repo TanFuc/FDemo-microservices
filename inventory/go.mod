@@ -38,3 +38,7 @@ require (
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 )
+
+require microservices/pkg/safego v0.0.0
+
+replace microservices/pkg/safego => ../pkg/safego

@@ -71,3 +71,5 @@ replace (
 	microservices/pkg/customfields => ../pkg/customfields
 	microservices/pkg/usercontext => ../pkg/usercontext
 )
+
+replace microservices/pkg/safego => ../pkg/safego

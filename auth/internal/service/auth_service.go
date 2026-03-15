@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -107,28 +108,69 @@ func (s *AuthService) Login(ctx context.Context, input *LoginInput, deviceInfo *
 	// Validate credentials
 	user, err := s.userService.ValidateCredentials(ctx, input.Email, input.Password)
 	if err != nil {
-		// Record failed login
+		// Record failed login asynchronously
 		if user != nil {
-			ua := deviceInfo.UserAgent
-			s.userService.RecordLoginHistory(ctx, user.ID, model.LoginStatusFailed, model.AuthMethodPassword, deviceInfo.IPAddress, &ua)
+			go func(userID uuid.UUID, ip, ua string) {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error().Interface("panic", r).Msg("Panic in failed login history recording")
+					}
+				}()
+				s.userService.RecordLoginHistory(ctx, userID, model.LoginStatusFailed, model.AuthMethodPassword, ip, &ua)
+			}(user.ID, deviceInfo.IPAddress, deviceInfo.UserAgent)
 		}
 		return nil, err
 	}
 
-	// Get user permissions and cache them
-	permissions, err := s.userService.GetUserPermissions(ctx, user.ID)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to get user permissions")
-	} else if len(permissions) > 0 {
-		if err := s.cache.CacheUserPermissions(ctx, user.ID.String(), permissions, PermissionsTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache user permissions")
-		}
-	}
+	// Fetch permissions and user roles in parallel for better performance
+	var (
+		wg            sync.WaitGroup
+		userWithRoles *model.User
+	)
 
-	// Get user with roles first (we need roles for the token)
-	userWithRoles, err := s.userService.GetUserWithRoles(ctx, user.ID)
-	if err != nil {
-		logger.Warn().Err(err).Msg("Failed to get user with roles")
+	wg.Add(2)
+
+	// Goroutine 1: Get user permissions and cache them
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error().Interface("panic", r).Msg("Panic in permissions fetch")
+			}
+		}()
+		permissions, err := s.userService.GetUserPermissions(ctx, user.ID)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to get user permissions")
+			return
+		}
+		if len(permissions) > 0 {
+			if err := s.cache.CacheUserPermissions(ctx, user.ID.String(), permissions, PermissionsTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache user permissions")
+			}
+		}
+	}()
+
+	// Goroutine 2: Get user with roles
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error().Interface("panic", r).Msg("Panic in user roles fetch")
+			}
+		}()
+		uwr, err := s.userService.GetUserWithRoles(ctx, user.ID)
+		if err != nil {
+			logger.Warn().Err(err).Msg("Failed to get user with roles")
+			userWithRoles = user
+			return
+		}
+		userWithRoles = uwr
+	}()
+
+	wg.Wait()
+
+	// Ensure userWithRoles has a value
+	if userWithRoles == nil {
 		userWithRoles = user
 	}
 
@@ -149,14 +191,18 @@ func (s *AuthService) Login(ctx context.Context, input *LoginInput, deviceInfo *
 		return nil, err
 	}
 
-	// Update login info
-	if err := s.userService.UpdateLoginInfo(ctx, user.ID, deviceInfo.IPAddress); err != nil {
-		logger.Warn().Err(err).Msg("Failed to update login info")
-	}
-
-	// Record successful login
-	ua := deviceInfo.UserAgent
-	s.userService.RecordLoginHistory(ctx, user.ID, model.LoginStatusSuccess, model.AuthMethodPassword, deviceInfo.IPAddress, &ua)
+	// Update login info and record login history asynchronously (non-blocking)
+	go func(userID uuid.UUID, ip, ua string) {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error().Interface("panic", r).Msg("Panic in login info update")
+			}
+		}()
+		if err := s.userService.UpdateLoginInfo(ctx, userID, ip); err != nil {
+			logger.Warn().Err(err).Msg("Failed to update login info")
+		}
+		s.userService.RecordLoginHistory(ctx, userID, model.LoginStatusSuccess, model.AuthMethodPassword, ip, &ua)
+	}(user.ID, deviceInfo.IPAddress, deviceInfo.UserAgent)
 
 	return &LoginResponse{
 		User:   s.userService.ToUserResponse(userWithRoles),
@@ -169,33 +215,72 @@ func (s *AuthService) RefreshTokens(ctx context.Context, refreshToken string, de
 }
 
 func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID, accessTokenJti string, accessTokenExp time.Time, deviceID *string) error {
+	var wg sync.WaitGroup
+
 	// Blacklist the access token
 	remainingTTL := time.Until(accessTokenExp)
 	if remainingTTL > 0 {
-		if err := s.tokenService.RevokeToken(ctx, accessTokenJti, remainingTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to blacklist access token")
-		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Error().Interface("panic", r).Msg("Panic in token blacklist")
+				}
+			}()
+			if err := s.tokenService.RevokeToken(ctx, accessTokenJti, remainingTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to blacklist access token")
+			}
+		}()
 	}
 
 	// Revoke refresh tokens for the device
 	if deviceID != nil && *deviceID != "" {
-		if err := s.tokenService.RevokeDeviceTokens(ctx, userID, *deviceID); err != nil {
-			logger.Warn().Err(err).Msg("Failed to revoke device tokens")
-		}
+		wg.Add(1)
+		go func(devID string) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Error().Interface("panic", r).Msg("Panic in device token revoke")
+				}
+			}()
+			if err := s.tokenService.RevokeDeviceTokens(ctx, userID, devID); err != nil {
+				logger.Warn().Err(err).Msg("Failed to revoke device tokens")
+			}
+		}(*deviceID)
 	}
 
 	// Remove active session from cache
 	if deviceID != nil && *deviceID != "" {
-		if err := s.cache.RemoveActiveSession(ctx, userID.String(), *deviceID); err != nil {
-			logger.Warn().Err(err).Msg("Failed to remove active session")
-		}
+		wg.Add(1)
+		go func(devID string) {
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					logger.Error().Interface("panic", r).Msg("Panic in session removal")
+				}
+			}()
+			if err := s.cache.RemoveActiveSession(ctx, userID.String(), devID); err != nil {
+				logger.Warn().Err(err).Msg("Failed to remove active session")
+			}
+		}(*deviceID)
 	}
 
 	// Invalidate permissions cache
-	if err := s.userService.InvalidateUserPermissionsCache(ctx, userID); err != nil {
-		logger.Warn().Err(err).Msg("Failed to invalidate permissions cache")
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Error().Interface("panic", r).Msg("Panic in permissions cache invalidation")
+			}
+		}()
+		if err := s.userService.InvalidateUserPermissionsCache(ctx, userID); err != nil {
+			logger.Warn().Err(err).Msg("Failed to invalidate permissions cache")
+		}
+	}()
 
+	wg.Wait()
 	return nil
 }
 

@@ -16,6 +16,7 @@ import (
 	"microservices/template-service/internal/router"
 	"microservices/template-service/internal/service/impl"
 	"microservices/template-service/pkg/logger"
+t"microservices/pkg/safego"
 )
 
 type App struct {
@@ -70,21 +71,21 @@ func (a *App) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start HTTP server
-	go func() {
+	safego.Go(func() {
 		logger.Info().
 			Str("port", a.cfg.App.Port).
 			Msg("HTTP server started")
 		if err := httpApp.Listen(":" + a.cfg.App.Port); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to start HTTP server")
 		}
-	}()
+	})
 
 	// Start gRPC server
-	go func() {
+	safego.Go(func() {
 		if err := a.grpcServer.Run(); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to start gRPC server")
 		}
-	}()
+	})
 
 	logger.Info().
 		Str("httpPort", a.cfg.App.Port).

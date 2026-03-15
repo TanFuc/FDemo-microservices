@@ -23,6 +23,7 @@ import (
 	"microservices/pkg/cache"
 	"microservices/pkg/cache/redis"
 	"microservices/pkg/logger"
+t"microservices/pkg/safego"
 )
 
 type App struct {
@@ -195,11 +196,11 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Start payment listener in background
 	if paymentListener != nil {
-		go func() {
+		safego.Go(func() {
 			if err := paymentListener.Start(ctx); err != nil {
 				logger.Error().Err(err).Msg("Payment listener error")
 			}
-		}()
+		})
 		logger.Info().Msg("Payment event listener started")
 	}
 
@@ -218,11 +219,11 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Start wallet listener in background
 	if walletListener != nil {
-		go func() {
+		safego.Go(func() {
 			if err := walletListener.Start(ctx); err != nil {
 				logger.Error().Err(err).Msg("Wallet listener error")
 			}
-		}()
+		})
 		logger.Info().Msg("Wallet event listener started")
 	}
 
@@ -262,7 +263,7 @@ func (a *App) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start HTTP server
-	go func() {
+	safego.Go(func() {
 		addr := a.cfg.App.Host + ":" + a.cfg.App.Port
 		logger.Info().
 			Str("port", a.cfg.App.Port).
@@ -270,7 +271,7 @@ func (a *App) Run() error {
 		if err := httpApp.Listen(addr); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to start HTTP server")
 		}
-	}()
+	})
 
 	logger.Info().
 		Str("httpPort", a.cfg.App.Port).

@@ -41,3 +41,7 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+require microservices/pkg/safego v0.0.0
+
+replace microservices/pkg/safego => ../pkg/safego

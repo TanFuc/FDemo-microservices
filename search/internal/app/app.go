@@ -18,6 +18,7 @@ import (
 	"microservices/search/internal/router"
 	"microservices/search/internal/usecase"
 	"microservices/pkg/logger"
+t"microservices/pkg/safego"
 )
 
 type App struct {
@@ -113,7 +114,7 @@ func (a *App) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start HTTP server
-	go func() {
+	safego.Go(func() {
 		addr := a.cfg.App.Host + ":" + a.cfg.App.Port
 		logger.Info().
 			Str("port", a.cfg.App.Port).
@@ -121,7 +122,7 @@ func (a *App) Run() error {
 		if err := httpApp.Listen(addr); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to start HTTP server")
 		}
-	}()
+	})
 
 	logger.Info().
 		Str("httpPort", a.cfg.App.Port).

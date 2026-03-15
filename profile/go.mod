@@ -63,3 +63,7 @@ replace (
 	microservices/pkg/cache => ../pkg/cache
 	microservices/pkg/customfields => ../pkg/customfields
 )
+
+require microservices/pkg/safego v0.0.0
+
+replace microservices/pkg/safego => ../pkg/safego

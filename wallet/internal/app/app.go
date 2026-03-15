@@ -140,30 +140,30 @@ func (a *App) Run() error {
 
 	// Start user listener
 	if a.userListener != nil {
-		go func() {
+		safego.Go(func() {
 			if err := a.userListener.Start(ctx); err != nil {
 				a.logger.Error("User listener error", "error", err)
 			}
-		}()
+		})
 	}
 
 	// Start payment listener
 	if a.paymentListener != nil {
-		go func() {
+		safego.Go(func() {
 			if err := a.paymentListener.Start(ctx); err != nil {
 				a.logger.Error("Payment listener error", "error", err)
 			}
-		}()
+		})
 	}
 
 	// Start HTTP server in goroutine
 	addr := fmt.Sprintf("%s:%s", a.cfg.App.Host, a.cfg.App.Port)
-	go func() {
+	safego.Go(func() {
 		a.logger.Info("Starting HTTP server", "address", addr)
 		if err := a.router.App().Listen(addr); err != nil {
 			a.logger.Error("HTTP server error", "error", err)
 		}
-	}()
+	})
 
 	// Wait for shutdown signal
 	quit := make(chan os.Signal, 1)

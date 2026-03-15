@@ -64,25 +64,25 @@ func (a *App) Run() error {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Start event listener (non-blocking)
-	go func() {
+	safego.Go(func() {
 		if err := a.listener.Start(ctx); err != nil {
 			logger.Warn().Err(err).Msg("Failed to start event listener, continuing without it")
 		}
-	}()
+	})
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start HTTP server
-	go func() {
+	safego.Go(func() {
 		logger.Info().
 			Str("port", a.cfg.App.Port).
 			Msg("HTTP server started")
 		if err := httpApp.Listen(":" + a.cfg.App.Port); err != nil {
 			logger.Fatal().Err(err).Msg("Failed to start HTTP server")
 		}
-	}()
+	})
 
 	logger.Info().
 		Str("httpPort", a.cfg.App.Port).

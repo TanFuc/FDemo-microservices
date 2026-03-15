@@ -85,3 +85,7 @@ replace (
 	microservices/pkg/logger => ../pkg/logger
 	microservices/pkg/response => ../pkg/response
 )
+
+require microservices/pkg/safego v0.0.0
+
+replace microservices/pkg/safego => ../pkg/safego

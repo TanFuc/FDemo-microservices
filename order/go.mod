@@ -107,3 +107,7 @@ replace (
 	microservices/pkg/response => ../pkg/response
 	microservices/pkg/usercontext => ../pkg/usercontext
 )
+
+require microservices/pkg/safego v0.0.0
+
+replace microservices/pkg/safego => ../pkg/safego
