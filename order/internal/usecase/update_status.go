@@ -35,7 +35,7 @@ func (uc *MarkAsPaidUseCase) Execute(ctx context.Context, orderID uuid.UUID) err
 	}
 
 	// Step 2: Mark as paid (validates status transition)
-	if err := order.MarkAsPaid(); err != nil {
+	if err := order.MarkAsPaid(order.PaymentReference); err != nil {
 		return err
 	}
 
@@ -81,7 +81,12 @@ func (uc *MarkAsShippedUseCase) Execute(ctx context.Context, orderID uuid.UUID) 
 	}
 
 	// Step 2: Mark as shipped (validates status transition)
-	if err := order.MarkAsShipped(); err != nil {
+	if order.Status == domain.StatusPaid {
+		if err := order.Confirm(); err != nil {
+			return err
+		}
+	}
+	if err := order.MarkAsShipped(order.TrackingNumber, order.ShippingCarrier); err != nil {
 		return err
 	}
 
@@ -127,7 +132,12 @@ func (uc *MarkAsCompletedUseCase) Execute(ctx context.Context, orderID uuid.UUID
 	}
 
 	// Step 2: Mark as completed (validates status transition)
-	if err := order.MarkAsCompleted(); err != nil {
+	if order.Status == domain.StatusShipped {
+		if err := order.MarkAsDelivered(); err != nil {
+			return err
+		}
+	}
+	if err := order.Complete(); err != nil {
 		return err
 	}
 

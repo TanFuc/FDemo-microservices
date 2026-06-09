@@ -12,9 +12,9 @@ import (
 
 // CreateOrderUseCase handles order creation logic
 type CreateOrderUseCase struct {
-	orderRepo    domain.OrderRepository
+	orderRepo     domain.OrderRepository
 	stockReserver grpc.StockReserver
-	publisher    messaging.EventPublisher
+	publisher     messaging.EventPublisher
 }
 
 // NewCreateOrderUseCase creates a new CreateOrderUseCase
@@ -24,9 +24,9 @@ func NewCreateOrderUseCase(
 	publisher messaging.EventPublisher,
 ) *CreateOrderUseCase {
 	return &CreateOrderUseCase{
-		orderRepo:    orderRepo,
+		orderRepo:     orderRepo,
 		stockReserver: stockReserver,
-		publisher:    publisher,
+		publisher:     publisher,
 	}
 }
 
@@ -37,14 +37,21 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, req *CreateOrderReque
 		return nil, err
 	}
 
-	// Step 2: Convert shipping address to JSON
-	shippingJSON, err := req.ShippingAddress.ToJSON()
-	if err != nil {
-		return nil, domain.ErrInvalidAddress
+	// Step 2: Build the immutable shipping-address snapshot.
+	shippingAddress := domain.ShippingAddress{
+		ContactName:   req.ShippingAddress.FullName,
+		Phone:         req.ShippingAddress.Phone,
+		CountryCode:   req.ShippingAddress.Country,
+		ProvinceName:  req.ShippingAddress.City,
+		DistrictName:  req.ShippingAddress.District,
+		WardName:      req.ShippingAddress.Ward,
+		StreetAddress: req.ShippingAddress.Address,
+		PostalCode:    req.ShippingAddress.PostalCode,
+		FullAddress:   req.ShippingAddress.Address,
 	}
 
-	// Step 3: Create order entity
-	order := domain.NewOrder(req.UserID, req.PaymentMethod, shippingJSON)
+	// Step 3: Create order entity.
+	order := domain.NewOrder(req.UserID, req.PaymentMethod, shippingAddress)
 
 	// Step 4: Create order items and reserve stock
 	reservedItems := make([]reservationInfo, 0, len(req.Items))
@@ -59,7 +66,7 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, req *CreateOrderReque
 		)
 		if err != nil {
 			// Rollback: Release all previously reserved stock
-			uc.releaseReservations(ctx, reservedItems)
+			uc.releaseReservations(ctx, order.ID.String(), reservedItems)
 			return nil, err
 		}
 
@@ -76,20 +83,25 @@ func (uc *CreateOrderUseCase) Execute(ctx context.Context, req *CreateOrderReque
 			itemDTO.ProductName,
 			itemDTO.SkuCode,
 			itemDTO.Thumbnail,
+			nil,
 			itemDTO.Quantity,
 			itemDTO.UnitPrice,
+			itemDTO.UnitPrice,
+			0,
 		)
 		item.SetReservationID(reservationID)
 		order.AddItem(*item)
 	}
 
 	// Step 5: Calculate totals
-	order.CalculateTotals(req.ShippingFee, req.DiscountAmount)
+	order.ShippingFee = req.ShippingFee
+	order.DiscountAmount = req.DiscountAmount
+	order.CalculateTotals()
 
 	// Step 6: Persist order to database
 	if err := uc.orderRepo.Create(ctx, order); err != nil {
 		// Rollback: Release all reserved stock on DB failure
-		uc.releaseReservations(ctx, reservedItems)
+		uc.releaseReservations(ctx, order.ID.String(), reservedItems)
 		return nil, err
 	}
 
@@ -148,9 +160,9 @@ type reservationInfo struct {
 }
 
 // releaseReservations releases all reserved stock (best effort)
-func (uc *CreateOrderUseCase) releaseReservations(ctx context.Context, reservations []reservationInfo) {
-	for _, r := range reservations {
-		_ = uc.stockReserver.ReleaseStock(ctx, r.reservationID)
+func (uc *CreateOrderUseCase) releaseReservations(ctx context.Context, orderID string, reservations []reservationInfo) {
+	if len(reservations) > 0 {
+		_ = uc.stockReserver.ReleaseStock(ctx, orderID)
 	}
 }
 
@@ -174,7 +186,7 @@ func (uc *CreateOrderUseCase) toOrderResponse(order *domain.Order) *OrderRespons
 	return &OrderResponse{
 		ID:              order.ID,
 		UserID:          order.UserID,
-		TotalAmount:     order.TotalAmount,
+		TotalAmount:     order.SubTotal,
 		ShippingFee:     order.ShippingFee,
 		DiscountAmount:  order.DiscountAmount,
 		FinalAmount:     order.FinalAmount,

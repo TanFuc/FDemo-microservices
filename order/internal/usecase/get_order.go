@@ -50,7 +50,7 @@ func (uc *GetOrderUseCase) toOrderResponse(order *domain.Order) *OrderResponse {
 	return &OrderResponse{
 		ID:              order.ID,
 		UserID:          order.UserID,
-		TotalAmount:     order.TotalAmount,
+		TotalAmount:     order.SubTotal,
 		ShippingFee:     order.ShippingFee,
 		DiscountAmount:  order.DiscountAmount,
 		FinalAmount:     order.FinalAmount,
@@ -117,7 +117,7 @@ func (uc *ListOrdersUseCase) toOrderResponse(order *domain.Order) *OrderResponse
 	return &OrderResponse{
 		ID:              order.ID,
 		UserID:          order.UserID,
-		TotalAmount:     order.TotalAmount,
+		TotalAmount:     order.SubTotal,
 		ShippingFee:     order.ShippingFee,
 		DiscountAmount:  order.DiscountAmount,
 		FinalAmount:     order.FinalAmount,

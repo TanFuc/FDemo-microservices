@@ -91,8 +91,8 @@ func TestCreateOrderUseCase_Execute_Success(t *testing.T) {
 
 	// Check totals
 	expectedTotal := decimal.NewFromInt(200000) // 2 * 100000
-	if !createdOrder.TotalAmount.Equal(expectedTotal) {
-		t.Errorf("Expected total amount %s, got %s", expectedTotal, createdOrder.TotalAmount)
+	if !createdOrder.SubTotal.Equal(expectedTotal) {
+		t.Errorf("Expected total amount %s, got %s", expectedTotal, createdOrder.SubTotal)
 	}
 
 	expectedFinal := decimal.NewFromInt(220000) // 200000 + 30000 - 10000
@@ -179,7 +179,8 @@ func TestCreateOrderUseCase_Execute_RollbackOnSecondItemOutOfStock(t *testing.T)
 	mockRepo := &MockOrderRepository{}
 
 	reservedSkus := make([]string, 0)
-	releasedSkus := make([]string, 0)
+	releasedOrderIDs := make([]string, 0)
+	var reservedOrderID string
 
 	mockStock := &MockStockReserver{
 		ReserveStockFunc: func(ctx context.Context, skuID string, quantity int, orderID string) (string, error) {
@@ -187,10 +188,11 @@ func TestCreateOrderUseCase_Execute_RollbackOnSecondItemOutOfStock(t *testing.T)
 				return "", domain.ErrOutOfStock
 			}
 			reservedSkus = append(reservedSkus, skuID)
+			reservedOrderID = orderID
 			return "reservation-" + skuID, nil
 		},
-		ReleaseStockFunc: func(ctx context.Context, reservationID string) error {
-			releasedSkus = append(releasedSkus, reservationID)
+		ReleaseStockFunc: func(ctx context.Context, orderID string) error {
+			releasedOrderIDs = append(releasedOrderIDs, orderID)
 			return nil
 		},
 	}
@@ -242,8 +244,8 @@ func TestCreateOrderUseCase_Execute_RollbackOnSecondItemOutOfStock(t *testing.T)
 		t.Errorf("Expected only sku-1 to be reserved, got %v", reservedSkus)
 	}
 
-	if len(releasedSkus) != 1 || releasedSkus[0] != "reservation-sku-1" {
-		t.Errorf("Expected sku-1 reservation to be released, got %v", releasedSkus)
+	if len(releasedOrderIDs) != 1 || releasedOrderIDs[0] != reservedOrderID {
+		t.Errorf("Expected reservations for order %s to be released, got %v", reservedOrderID, releasedOrderIDs)
 	}
 }
 

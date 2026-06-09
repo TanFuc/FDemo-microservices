@@ -44,7 +44,7 @@ func (uc *CancelOrderUseCase) Execute(ctx context.Context, orderID uuid.UUID) er
 	}
 
 	// Step 3: Cancel order
-	if err := order.Cancel(); err != nil {
+	if err := order.Cancel("cancelled by user", "user", order.UserID.String()); err != nil {
 		return err
 	}
 
@@ -58,10 +58,10 @@ func (uc *CancelOrderUseCase) Execute(ctx context.Context, orderID uuid.UUID) er
 	for _, item := range order.Items {
 		if item.ReservationID != "" {
 			reservationIDs = append(reservationIDs, item.ReservationID)
-			// Best effort release - don't fail cancellation if release fails
-			_ = uc.stockReserver.ReleaseStock(ctx, item.ReservationID)
 		}
 	}
+	// Inventory releases reservations atomically by order ID.
+	_ = uc.stockReserver.ReleaseStock(ctx, order.ID.String())
 
 	// Step 6: Publish order cancelled event
 	event := &messaging.OrderCancelledEvent{

@@ -289,27 +289,27 @@ func (m *mockStockReserver) ReleaseStock(ctx context.Context, reservationID stri
 type mockEventPublisher struct{}
 
 func (m *mockEventPublisher) PublishOrderCreated(ctx context.Context, event *messaging.OrderCreatedEvent) error {
-	logger.Debug().Str("orderId", event.OrderID).Msg("[MOCK] Publishing order.created")
+	logger.Debug().Str("orderId", event.OrderID.String()).Msg("[MOCK] Publishing order.created")
 	return nil
 }
 
 func (m *mockEventPublisher) PublishOrderCancelled(ctx context.Context, event *messaging.OrderCancelledEvent) error {
-	logger.Debug().Str("orderId", event.OrderID).Msg("[MOCK] Publishing order.cancelled")
+	logger.Debug().Str("orderId", event.OrderID.String()).Msg("[MOCK] Publishing order.cancelled")
 	return nil
 }
 
 func (m *mockEventPublisher) PublishOrderPaid(ctx context.Context, event *messaging.OrderPaidEvent) error {
-	logger.Debug().Str("orderId", event.OrderID).Msg("[MOCK] Publishing order.paid")
+	logger.Debug().Str("orderId", event.OrderID.String()).Msg("[MOCK] Publishing order.paid")
 	return nil
 }
 
 func (m *mockEventPublisher) PublishOrderShipped(ctx context.Context, event *messaging.OrderShippedEvent) error {
-	logger.Debug().Str("orderId", event.OrderID).Msg("[MOCK] Publishing order.shipped")
+	logger.Debug().Str("orderId", event.OrderID.String()).Msg("[MOCK] Publishing order.shipped")
 	return nil
 }
 
 func (m *mockEventPublisher) PublishOrderCompleted(ctx context.Context, event *messaging.OrderCompletedEvent) error {
-	logger.Debug().Str("orderId", event.OrderID).Msg("[MOCK] Publishing order.completed")
+	logger.Debug().Str("orderId", event.OrderID.String()).Msg("[MOCK] Publishing order.completed")
 	return nil
 }
 

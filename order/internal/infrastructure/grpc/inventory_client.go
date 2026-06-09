@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"microservices/order/internal/config"
-	"microservices/order/internal/domain"
-	pb "microservices/order/proto/inventory"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	pb "microservices/inventory/pkg/pb"
+	"microservices/order/internal/config"
+	"microservices/order/internal/domain"
 )
 
 // InventoryClient wraps the gRPC client for Inventory Service
@@ -50,39 +50,44 @@ func (c *InventoryClient) ReserveStock(ctx context.Context, skuID string, quanti
 	defer cancel()
 
 	resp, err := c.client.ReserveStock(ctx, &pb.ReserveStockRequest{
-		SkuId:    skuID,
-		Quantity: int32(quantity),
-		OrderId:  orderID,
+		OrderId: orderID,
+		Items: []*pb.ReservationItem{{
+			SkuId:    skuID,
+			Quantity: int32(quantity),
+		}},
 	})
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", domain.ErrInventoryServiceUnavailable, err)
 	}
 
 	if !resp.Success {
-		if resp.ErrorMessage != "" {
-			return "", fmt.Errorf("%w: %s", domain.ErrOutOfStock, resp.ErrorMessage)
+		if resp.Message != "" {
+			return "", fmt.Errorf("%w: %s", domain.ErrOutOfStock, resp.Message)
 		}
 		return "", domain.ErrOutOfStock
 	}
 
-	return resp.ReservationId, nil
+	if len(resp.Reservations) != 1 {
+		return "", fmt.Errorf("inventory returned %d reservations for one item", len(resp.Reservations))
+	}
+	return resp.Reservations[0].Id, nil
 }
 
-// ReleaseStock releases previously reserved stock
-func (c *InventoryClient) ReleaseStock(ctx context.Context, reservationID string) error {
+// ReleaseStock releases all reservations for an order.
+func (c *InventoryClient) ReleaseStock(ctx context.Context, orderID string) error {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
 	resp, err := c.client.ReleaseStock(ctx, &pb.ReleaseStockRequest{
-		ReservationId: reservationID,
+		OrderId: orderID,
 	})
 	if err != nil {
 		return fmt.Errorf("%w: %v", domain.ErrInventoryServiceUnavailable, err)
 	}
 
 	if !resp.Success {
-		if resp.ErrorMessage != "" {
-			return fmt.Errorf("%w: %s", domain.ErrStockReleaseFailed, resp.ErrorMessage)
+		if resp.Message != "" {
+			return fmt.Errorf("%w: %s", domain.ErrStockReleaseFailed, resp.Message)
 		}
 		return domain.ErrStockReleaseFailed
 	}
@@ -95,14 +100,18 @@ func (c *InventoryClient) CheckStock(ctx context.Context, skuID string) (bool, i
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	resp, err := c.client.CheckStock(ctx, &pb.CheckStockRequest{
+	resp, err := c.client.GetInventory(ctx, &pb.GetInventoryRequest{
 		SkuId: skuID,
 	})
 	if err != nil {
 		return false, 0, fmt.Errorf("%w: %v", domain.ErrInventoryServiceUnavailable, err)
 	}
 
-	return resp.Available, int(resp.Quantity), nil
+	if resp.Inventory == nil {
+		return false, 0, nil
+	}
+	quantity := int(resp.Inventory.AvailableStock)
+	return quantity > 0, quantity, nil
 }
 
 // ConfirmStock confirms all reservations for an order (after payment success)
@@ -118,8 +127,8 @@ func (c *InventoryClient) ConfirmStock(ctx context.Context, orderID string) erro
 	}
 
 	if !resp.Success {
-		if resp.ErrorMessage != "" {
-			return fmt.Errorf("stock confirmation failed: %s", resp.ErrorMessage)
+		if resp.Message != "" {
+			return fmt.Errorf("stock confirmation failed: %s", resp.Message)
 		}
 		return fmt.Errorf("stock confirmation failed for order %s", orderID)
 	}
@@ -132,7 +141,7 @@ func (c *InventoryClient) ReleaseStockByOrderID(ctx context.Context, orderID str
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	resp, err := c.client.ReleaseStockByOrderId(ctx, &pb.ReleaseStockByOrderIdRequest{
+	resp, err := c.client.ReleaseStock(ctx, &pb.ReleaseStockRequest{
 		OrderId: orderID,
 	})
 	if err != nil {
@@ -140,8 +149,8 @@ func (c *InventoryClient) ReleaseStockByOrderID(ctx context.Context, orderID str
 	}
 
 	if !resp.Success {
-		if resp.ErrorMessage != "" {
-			return fmt.Errorf("%w: %s", domain.ErrStockReleaseFailed, resp.ErrorMessage)
+		if resp.Message != "" {
+			return fmt.Errorf("%w: %s", domain.ErrStockReleaseFailed, resp.Message)
 		}
 		return domain.ErrStockReleaseFailed
 	}
@@ -152,7 +161,7 @@ func (c *InventoryClient) ReleaseStockByOrderID(ctx context.Context, orderID str
 // StockReserver interface for dependency injection
 type StockReserver interface {
 	ReserveStock(ctx context.Context, skuID string, quantity int, orderID string) (string, error)
-	ReleaseStock(ctx context.Context, reservationID string) error
+	ReleaseStock(ctx context.Context, orderID string) error
 }
 
 // StockConfirmer interface for payment flow

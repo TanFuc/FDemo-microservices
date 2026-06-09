@@ -6,7 +6,7 @@ import (
 
 	"microservices/inventory/internal/service"
 
-	authpb "microservices/auth/pkg/pb"
+	authpb "microservices/auth/pkg/pb/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -66,5 +66,5 @@ func (s *authService) CheckPermission(ctx context.Context, userID string, permis
 		return false, err
 	}
 
-	return resp.HasPermission, nil
+	return resp.Allowed, nil
 }

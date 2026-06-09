@@ -30,13 +30,13 @@ type StockConfirmer interface {
 
 // PaymentEventListener listens to payment events and updates order status
 type PaymentEventListener struct {
-	conn          *nats.Conn
-	js            nats.JetStreamContext
-	orderRepo     domain.OrderRepository
-	stockClient   StockConfirmer
-	publisher     EventPublisher
-	subscription  *nats.Subscription
-	logger        *slog.Logger
+	conn         *nats.Conn
+	js           nats.JetStreamContext
+	orderRepo    domain.OrderRepository
+	stockClient  StockConfirmer
+	publisher    EventPublisher
+	subscription *nats.Subscription
+	logger       *slog.Logger
 }
 
 // NewPaymentEventListener creates a new payment event listener
@@ -167,7 +167,7 @@ func (l *PaymentEventListener) handlePaymentProcessed(msg *nats.Msg) {
 	}
 
 	if event.Status == "SUCCESS" {
-		if err := l.handlePaymentSuccess(ctx, order); err != nil {
+		if err := l.handlePaymentSuccess(ctx, order, &event); err != nil {
 			l.logger.Error("Failed to handle payment success", "order_id", event.OrderID, "error", err)
 			msg.Nak()
 			return
@@ -184,9 +184,9 @@ func (l *PaymentEventListener) handlePaymentProcessed(msg *nats.Msg) {
 }
 
 // handlePaymentSuccess handles successful payment
-func (l *PaymentEventListener) handlePaymentSuccess(ctx context.Context, order *domain.Order) error {
+func (l *PaymentEventListener) handlePaymentSuccess(ctx context.Context, order *domain.Order, event *PaymentProcessedEvent) error {
 	// Update order status to PAID
-	if err := order.MarkAsPaid(); err != nil {
+	if err := order.MarkAsPaid(event.TransactionID); err != nil {
 		return err
 	}
 
@@ -223,7 +223,7 @@ func (l *PaymentEventListener) handlePaymentSuccess(ctx context.Context, order *
 // handlePaymentFailed handles failed payment
 func (l *PaymentEventListener) handlePaymentFailed(ctx context.Context, order *domain.Order) error {
 	// Cancel order
-	if err := order.Cancel(); err != nil {
+	if err := order.Cancel("payment failed", "system", "payment-listener"); err != nil {
 		return err
 	}
 
@@ -248,7 +248,7 @@ func (l *PaymentEventListener) handlePaymentFailed(ctx context.Context, order *d
 		if err := l.publisher.PublishOrderCancelled(ctx, &OrderCancelledEvent{
 			OrderID:        order.ID,
 			UserID:         order.UserID,
-			ReservationIDs: order.ReservationIDs,
+			ReservationIDs: reservationIDs(order),
 			CancelledAt:    time.Now(),
 		}); err != nil {
 			l.logger.Error("Failed to publish order.cancelled event", "order_id", order.ID, "error", err)
@@ -256,4 +256,14 @@ func (l *PaymentEventListener) handlePaymentFailed(ctx context.Context, order *d
 	}
 
 	return nil
+}
+
+func reservationIDs(order *domain.Order) []string {
+	ids := make([]string, 0, len(order.Items))
+	for _, item := range order.Items {
+		if item.ReservationID != "" {
+			ids = append(ids, item.ReservationID)
+		}
+	}
+	return ids
 }

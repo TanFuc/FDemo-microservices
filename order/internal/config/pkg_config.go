@@ -19,14 +19,14 @@ type SharedPackagesConfig struct {
 
 // CachePackageConfig holds cache package configuration
 type CachePackageConfig struct {
-	Enabled      bool   `json:"enabled"`
-	Type         string `json:"type"` // redis, memory, multilayer
-	ServiceName  string `json:"service_name"`
-	RedisAddr    string `json:"redis_addr"`
+	Enabled       bool   `json:"enabled"`
+	Type          string `json:"type"` // redis, memory, multilayer
+	ServiceName   string `json:"service_name"`
+	RedisAddr     string `json:"redis_addr"`
 	RedisPassword string `json:"redis_password"`
-	RedisDB      int    `json:"redis_db"`
-	PoolSize     int    `json:"pool_size"`
-	MinIdleConns int    `json:"min_idle_conns"`
+	RedisDB       int    `json:"redis_db"`
+	PoolSize      int    `json:"pool_size"`
+	MinIdleConns  int    `json:"min_idle_conns"`
 }
 
 // AuthorizationPackageConfig holds authorization package configuration
@@ -44,10 +44,10 @@ type AuthorizationPackageConfig struct {
 	DBName     string `json:"db_name"`
 
 	// Cache
-	CacheEnabled bool   `json:"cache_enabled"`
-	RedisAddr    string `json:"redis_addr"`
+	CacheEnabled  bool   `json:"cache_enabled"`
+	RedisAddr     string `json:"redis_addr"`
 	RedisPassword string `json:"redis_password"`
-	RedisDB      int    `json:"redis_db"`
+	RedisDB       int    `json:"redis_db"`
 }
 
 // CustomFieldsPackageConfig holds custom fields package configuration
@@ -64,24 +64,24 @@ type CustomFieldsPackageConfig struct {
 	DBName     string `json:"db_name"`
 
 	// Cache
-	CacheEnabled bool   `json:"cache_enabled"`
-	RedisAddr    string `json:"redis_addr"`
+	CacheEnabled  bool   `json:"cache_enabled"`
+	RedisAddr     string `json:"redis_addr"`
 	RedisPassword string `json:"redis_password"`
-	RedisDB      int    `json:"redis_db"`
+	RedisDB       int    `json:"redis_db"`
 }
 
 // LoadSharedPackagesConfig loads shared packages configuration from environment
 func LoadSharedPackagesConfig() *SharedPackagesConfig {
 	return &SharedPackagesConfig{
 		Cache: CachePackageConfig{
-			Enabled:      getEnvBool("CACHE_ENABLED", true),
-			Type:         getEnv("CACHE_TYPE", "redis"),
-			ServiceName:  getEnv("CACHE_SERVICE_NAME", "order-service"),
-			RedisAddr:    getEnv("REDIS_ADDR", "localhost:6379"),
+			Enabled:       getEnvBool("CACHE_ENABLED", true),
+			Type:          getEnv("CACHE_TYPE", "redis"),
+			ServiceName:   getEnv("CACHE_SERVICE_NAME", "order-service"),
+			RedisAddr:     getEnv("REDIS_ADDR", "localhost:6379"),
 			RedisPassword: getEnv("REDIS_PASSWORD", ""),
-			RedisDB:      getEnvInt("REDIS_DB", 0),
-			PoolSize:     getEnvInt("REDIS_POOL_SIZE", 10),
-			MinIdleConns: getEnvInt("REDIS_MIN_IDLE_CONNS", 2),
+			RedisDB:       getEnvInt("REDIS_DB", 0),
+			PoolSize:      getEnvInt("REDIS_POOL_SIZE", 10),
+			MinIdleConns:  getEnvInt("REDIS_MIN_IDLE_CONNS", 2),
 		},
 		Authorization: AuthorizationPackageConfig{
 			Enabled:       getEnvBool("AUTHZ_ENABLED", false),
@@ -247,6 +247,22 @@ func (c *CustomFieldsPackageConfig) ToCustomFieldsConfig() *customfields.Config 
 		EnableEncryption: false,
 		MetricsEnabled:   true,
 	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
 }
 
 // getEnvBool gets a boolean environment variable with a default value

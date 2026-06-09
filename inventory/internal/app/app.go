@@ -18,6 +18,7 @@ import (
 	"microservices/inventory/internal/service"
 	"microservices/inventory/internal/service/impl"
 	"microservices/inventory/pkg/logger"
+	pb "microservices/inventory/pkg/pb"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -85,9 +86,8 @@ func New(cfg *config.Config) (*App, error) {
 	}
 
 	// Register gRPC handlers
-	_ = grpchandler.NewInventoryHandler(inventoryService, reservationService)
-	// Note: Register with pb generated service when available
-	// pb.RegisterInventoryServiceServer(grpcServer.GetGRPCServer(), grpcHandler)
+	grpcHandler := grpchandler.NewInventoryHandler(inventoryService, reservationService)
+	pb.RegisterInventoryServiceServer(grpcServer.GetGRPCServer(), grpcHandler)
 
 	return &App{
 		cfg:        cfg,

@@ -156,7 +156,7 @@ func (l *LogisticsEventListener) handleLogisticsStatusUpdated(msg *nats.Msg) {
 	// Handle status transitions
 	switch event.SystemStatus {
 	case "SHIPPING":
-		if err := l.handleShippingStatus(ctx, order); err != nil {
+		if err := l.handleShippingStatus(ctx, order, &event); err != nil {
 			l.logger.Error("Failed to handle shipping status", "order_id", event.InternalOrderID, "error", err)
 			msg.Nak()
 			return
@@ -173,8 +173,8 @@ func (l *LogisticsEventListener) handleLogisticsStatusUpdated(msg *nats.Msg) {
 }
 
 // handleShippingStatus handles when order starts shipping
-func (l *LogisticsEventListener) handleShippingStatus(ctx context.Context, order *domain.Order) error {
-	// Only transition from PAID status
+func (l *LogisticsEventListener) handleShippingStatus(ctx context.Context, order *domain.Order, event *LogisticsStatusEvent) error {
+	// A carrier pickup confirms the paid order before moving it to shipped.
 	if order.Status != domain.StatusPaid {
 		l.logger.Warn("Order is not in PAID status, skipping shipping transition",
 			"order_id", order.ID,
@@ -183,7 +183,10 @@ func (l *LogisticsEventListener) handleShippingStatus(ctx context.Context, order
 		return nil
 	}
 
-	if err := order.MarkAsShipped(); err != nil {
+	if err := order.Confirm(); err != nil {
+		return err
+	}
+	if err := order.MarkAsShipped(event.TrackingCode, event.Provider); err != nil {
 		return err
 	}
 
@@ -218,7 +221,10 @@ func (l *LogisticsEventListener) handleDeliveredStatus(ctx context.Context, orde
 		return nil
 	}
 
-	if err := order.MarkAsCompleted(); err != nil {
+	if err := order.MarkAsDelivered(); err != nil {
+		return err
+	}
+	if err := order.Complete(); err != nil {
 		return err
 	}
 

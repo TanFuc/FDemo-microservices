@@ -55,7 +55,7 @@ func (m *MockOrderRepository) UpdateStatus(ctx context.Context, id uuid.UUID, st
 // MockStockReserver is a mock implementation of grpc.StockReserver
 type MockStockReserver struct {
 	ReserveStockFunc func(ctx context.Context, skuID string, quantity int, orderID string) (string, error)
-	ReleaseStockFunc func(ctx context.Context, reservationID string) error
+	ReleaseStockFunc func(ctx context.Context, orderID string) error
 }
 
 func (m *MockStockReserver) ReserveStock(ctx context.Context, skuID string, quantity int, orderID string) (string, error) {
@@ -65,9 +65,9 @@ func (m *MockStockReserver) ReserveStock(ctx context.Context, skuID string, quan
 	return uuid.New().String(), nil
 }
 
-func (m *MockStockReserver) ReleaseStock(ctx context.Context, reservationID string) error {
+func (m *MockStockReserver) ReleaseStock(ctx context.Context, orderID string) error {
 	if m.ReleaseStockFunc != nil {
-		return m.ReleaseStockFunc(ctx, reservationID)
+		return m.ReleaseStockFunc(ctx, orderID)
 	}
 	return nil
 }

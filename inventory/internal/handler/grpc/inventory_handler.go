@@ -7,6 +7,7 @@ import (
 	"microservices/inventory/internal/model"
 	"microservices/inventory/internal/service"
 	"microservices/inventory/pkg/logger"
+	pb "microservices/inventory/pkg/pb"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -19,6 +20,7 @@ import (
 // once the pb package is generated
 
 type InventoryHandler struct {
+	pb.UnimplementedInventoryServiceServer
 	inventoryService   service.InventoryService
 	reservationService service.ReservationService
 }
@@ -34,8 +36,8 @@ func NewInventoryHandler(
 }
 
 // InventoryToProto converts model to proto message
-func InventoryToProto(item *model.InventoryItem) *InventoryItemProto {
-	return &InventoryItemProto{
+func InventoryToProto(item *model.InventoryItem) *pb.InventoryItem {
+	return &pb.InventoryItem{
 		SkuId:          item.SkuID,
 		TotalStock:     int32(item.TotalStock),
 		ReservedStock:  int32(item.ReservedStock),
@@ -45,8 +47,8 @@ func InventoryToProto(item *model.InventoryItem) *InventoryItemProto {
 }
 
 // ReservationToProto converts model to proto message
-func ReservationToProto(r *model.StockReservation) *StockReservationProto {
-	return &StockReservationProto{
+func ReservationToProto(r *model.StockReservation) *pb.StockReservation {
+	return &pb.StockReservation{
 		Id:        r.ID.String(),
 		OrderId:   r.OrderID,
 		SkuId:     r.SkuID,
@@ -56,26 +58,6 @@ func ReservationToProto(r *model.StockReservation) *StockReservationProto {
 		CreatedAt: timestamppb.New(r.CreatedAt),
 		UpdatedAt: timestamppb.New(r.UpdatedAt),
 	}
-}
-
-// Proto message types (placeholder - will be replaced by generated code)
-type InventoryItemProto struct {
-	SkuId          string
-	TotalStock     int32
-	ReservedStock  int32
-	AvailableStock int32
-	UpdatedAt      *timestamppb.Timestamp
-}
-
-type StockReservationProto struct {
-	Id        string
-	OrderId   string
-	SkuId     string
-	Quantity  int32
-	Status    string
-	ExpiresAt *timestamppb.Timestamp
-	CreatedAt *timestamppb.Timestamp
-	UpdatedAt *timestamppb.Timestamp
 }
 
 // HandleCreateInventory handles create inventory request
@@ -208,6 +190,111 @@ func (h *InventoryHandler) HandleListReservations(ctx context.Context, statusFil
 	}
 
 	return reservations, total, nil
+}
+
+func (h *InventoryHandler) CreateInventory(ctx context.Context, req *pb.CreateInventoryRequest) (*pb.CreateInventoryResponse, error) {
+	item, err := h.HandleCreateInventory(ctx, req.SkuId, req.TotalStock)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.CreateInventoryResponse{Inventory: InventoryToProto(item)}, nil
+}
+
+func (h *InventoryHandler) GetInventory(ctx context.Context, req *pb.GetInventoryRequest) (*pb.GetInventoryResponse, error) {
+	item, err := h.HandleGetInventory(ctx, req.SkuId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetInventoryResponse{Inventory: InventoryToProto(item)}, nil
+}
+
+func (h *InventoryHandler) UpdateInventory(ctx context.Context, req *pb.UpdateInventoryRequest) (*pb.UpdateInventoryResponse, error) {
+	item, err := h.HandleUpdateInventory(ctx, req.SkuId, req.TotalStock)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.UpdateInventoryResponse{Inventory: InventoryToProto(item)}, nil
+}
+
+func (h *InventoryHandler) DeleteInventory(ctx context.Context, req *pb.DeleteInventoryRequest) (*pb.DeleteInventoryResponse, error) {
+	if err := h.HandleDeleteInventory(ctx, req.SkuId); err != nil {
+		return nil, err
+	}
+	return &pb.DeleteInventoryResponse{Success: true}, nil
+}
+
+func (h *InventoryHandler) ListInventory(ctx context.Context, req *pb.ListInventoryRequest) (*pb.ListInventoryResponse, error) {
+	items, total, err := h.HandleListInventory(ctx, req.Page, req.Limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*pb.InventoryItem, len(items))
+	for i := range items {
+		result[i] = InventoryToProto(&items[i])
+	}
+	return &pb.ListInventoryResponse{Items: result, Total: total, Page: req.Page, Limit: req.Limit}, nil
+}
+
+func (h *InventoryHandler) ReserveStock(ctx context.Context, req *pb.ReserveStockRequest) (*pb.ReserveStockResponse, error) {
+	items := make([]model.ReservationItem, len(req.Items))
+	for i, item := range req.Items {
+		items[i] = model.ReservationItem{SkuID: item.SkuId, Quantity: int(item.Quantity)}
+	}
+	reservations, err := h.HandleReserveStock(ctx, req.OrderId, items)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*pb.StockReservation, len(reservations))
+	for i := range reservations {
+		result[i] = ReservationToProto(&reservations[i])
+	}
+	return &pb.ReserveStockResponse{Success: true, Reservations: result}, nil
+}
+
+func (h *InventoryHandler) ConfirmStock(ctx context.Context, req *pb.ConfirmStockRequest) (*pb.ConfirmStockResponse, error) {
+	if err := h.HandleConfirmStock(ctx, req.OrderId); err != nil {
+		return nil, err
+	}
+	return &pb.ConfirmStockResponse{Success: true}, nil
+}
+
+func (h *InventoryHandler) ReleaseStock(ctx context.Context, req *pb.ReleaseStockRequest) (*pb.ReleaseStockResponse, error) {
+	if err := h.HandleReleaseStock(ctx, req.OrderId); err != nil {
+		return nil, err
+	}
+	return &pb.ReleaseStockResponse{Success: true}, nil
+}
+
+func (h *InventoryHandler) SyncInventory(ctx context.Context, req *pb.SyncInventoryRequest) (*pb.SyncInventoryResponse, error) {
+	item, err := h.HandleSyncInventory(ctx, req.SkuId)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.SyncInventoryResponse{Success: true, Inventory: InventoryToProto(item)}, nil
+}
+
+func (h *InventoryHandler) GetReservation(ctx context.Context, req *pb.GetReservationRequest) (*pb.GetReservationResponse, error) {
+	reservations, err := h.HandleGetReservation(ctx, req.OrderId)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*pb.StockReservation, len(reservations))
+	for i := range reservations {
+		result[i] = ReservationToProto(&reservations[i])
+	}
+	return &pb.GetReservationResponse{Reservations: result}, nil
+}
+
+func (h *InventoryHandler) ListReservations(ctx context.Context, req *pb.ListReservationsRequest) (*pb.ListReservationsResponse, error) {
+	reservations, total, err := h.HandleListReservations(ctx, req.Status, req.Page, req.Limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*pb.StockReservation, len(reservations))
+	for i := range reservations {
+		result[i] = ReservationToProto(&reservations[i])
+	}
+	return &pb.ListReservationsResponse{Reservations: result, Total: total, Page: req.Page, Limit: req.Limit}, nil
 }
 
 func mapError(err error) error {
