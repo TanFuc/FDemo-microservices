@@ -51,7 +51,7 @@ export class UserService {
         email: dto.email.toLowerCase(),
         passwordHash,
         fullName: dto.fullName,
-        isActive: true,
+        status: 'ACTIVE',
       });
 
       const savedUser = await this.userRepository.save(user);
@@ -77,7 +77,7 @@ export class UserService {
    */
   async findById(id: string): Promise<User | null> {
     return this.userRepository.findOne({
-      where: { id, isActive: true },
+      where: { id, status: 'ACTIVE' },
     });
   }
 
@@ -89,7 +89,7 @@ export class UserService {
       .createQueryBuilder('user')
       .addSelect('user.passwordHash')
       .where('user.email = :email', { email: email.toLowerCase() })
-      .andWhere('user.isActive = :isActive', { isActive: true })
+      .andWhere('user.status = :status', { status: 'ACTIVE' })
       .getOne();
   }
 
@@ -117,7 +117,7 @@ export class UserService {
    */
   async getUserWithRoles(userId: string): Promise<User | null> {
     return this.userRepository.findOne({
-      where: { id: userId, isActive: true },
+      where: { id: userId, status: 'ACTIVE' },
       relations: ['userRoles', 'userRoles.role'],
     });
   }
@@ -273,7 +273,7 @@ export class UserService {
    * Deactivate user
    */
   async deactivateUser(userId: string): Promise<void> {
-    await this.userRepository.update({ id: userId }, { isActive: false });
+    await this.userRepository.update({ id: userId }, { status: 'INACTIVE' });
     await this.redisCacheService.invalidateUserPermissions(userId);
   }
 
@@ -287,7 +287,7 @@ export class UserService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      isActive: user.isActive,
+      isActive: user.status === 'ACTIVE',
       roles,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,

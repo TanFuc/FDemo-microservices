@@ -8,9 +8,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"api-gateway/internal/config"
-	"api-gateway/internal/middleware"
-	"api-gateway/internal/routes"
+	"microservices/api-gateway/internal/config"
+	"microservices/api-gateway/internal/middleware"
+	"microservices/api-gateway/internal/routes"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"api-gateway/internal/config"
+	"microservices/api-gateway/internal/config"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"

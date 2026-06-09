@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"api-gateway/internal/config"
-	"api-gateway/internal/middleware"
+	"microservices/api-gateway/internal/config"
+	"microservices/api-gateway/internal/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"

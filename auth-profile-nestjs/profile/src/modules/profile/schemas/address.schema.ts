@@ -120,7 +120,7 @@ AddressSchema.index(
 );
 
 // Pre-save hook to compute full address
-AddressSchema.pre('save', function (next) {
+AddressSchema.pre('save', function () {
   if (this.isModified('streetAddress') || this.isModified('wardName') ||
       this.isModified('districtName') || this.isModified('provinceName')) {
     const parts = [
@@ -132,5 +132,4 @@ AddressSchema.pre('save', function (next) {
     ].filter(Boolean);
     this.fullAddress = parts.join(', ');
   }
-  next();
 });

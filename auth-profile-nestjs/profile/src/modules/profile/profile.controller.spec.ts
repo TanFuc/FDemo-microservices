@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ProfileController } from './profile.controller';
-import { ProfileService } from './profile.service';
+import { ProfileController } from './controllers/profile.controller';
+import { ProfileService } from './services/profile.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CreateAddressDto } from './dto/address.dto';
 import { RegisterShopDto } from './dto/register-shop.dto';

@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { connect, NatsConnection, JetStreamClient, JetStreamManager, ConsumerConfig, AckPolicy, DeliverPolicy } from 'nats';
-import { ProfileService } from '../profile/profile.service';
+import { ProfileService } from '../profile/services/profile.service';
 
 interface UserRegisteredEvent {
   userId: string;

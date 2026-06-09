@@ -43,7 +43,7 @@ export class InternalController {
         userId: profile.userId,
         displayName: profile.displayName || `User-${userId.slice(-4)}`,
         avatarUrl: profile.avatarUrl || '',
-        email: profile.email,
+        email: profile.email ?? undefined,
       };
     } catch (error) {
       // Return default info if profile creation fails

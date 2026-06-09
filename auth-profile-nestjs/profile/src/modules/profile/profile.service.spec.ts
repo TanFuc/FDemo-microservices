@@ -1,44 +1,40 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken, getConnectionToken } from '@nestjs/mongoose';
-import { Model, Connection, Types } from 'mongoose';
-import { NotFoundException, ConflictException } from '@nestjs/common';
-import { ProfileService } from './profile.service';
-import { Profile, ProfileDocument } from './schemas/profile.schema';
-import { Address, AddressDocument } from './schemas/address.schema';
-import { CreateAddressDto } from './dto/address.dto';
-import { RegisterShopDto } from './dto/register-shop.dto';
+import { PrismaService } from '../../database/prisma.service';
 import { AddressType } from './schemas/address.schema';
+import { ProfileService } from './services/profile.service';
 
 describe('ProfileService', () => {
   let service: ProfileService;
-  let profileModel: Model<ProfileDocument>;
-  let addressModel: Model<AddressDocument>;
-  let connection: Connection;
 
-  const mockProfileModel = {
-    findOne: jest.fn(),
-    create: jest.fn(),
+  const prisma = {
+    profile: {
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    address: {
+      count: jest.fn(),
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      updateMany: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    shopConfig: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    $transaction: jest.fn(),
   };
 
-  const mockAddressModel = {
-    find: jest.fn(),
-    findOne: jest.fn(),
-    findOneAndUpdate: jest.fn(),
-    create: jest.fn(),
-    countDocuments: jest.fn(),
-    updateMany: jest.fn(),
-    deleteOne: jest.fn(),
-  };
-
-  const mockSession = {
-    startTransaction: jest.fn(),
-    commitTransaction: jest.fn(),
-    abortTransaction: jest.fn(),
-    endSession: jest.fn(),
-  };
-
-  const mockConnection = {
-    startSession: jest.fn().mockResolvedValue(mockSession),
+  const profile = {
+    id: 'profile-1',
+    userId: 'test-user-id',
+    displayName: 'Test User',
+    shopConfig: null,
   };
 
   beforeEach(async () => {
@@ -46,305 +42,192 @@ describe('ProfileService', () => {
       providers: [
         ProfileService,
         {
-          provide: getModelToken(Profile.name),
-          useValue: mockProfileModel,
-        },
-        {
-          provide: getModelToken(Address.name),
-          useValue: mockAddressModel,
-        },
-        {
-          provide: getConnectionToken(),
-          useValue: mockConnection,
+          provide: PrismaService,
+          useValue: prisma,
         },
       ],
     }).compile();
 
-    service = module.get<ProfileService>(ProfileService);
-    profileModel = module.get<Model<ProfileDocument>>(
-      getModelToken(Profile.name),
-    );
-    addressModel = module.get<Model<AddressDocument>>(
-      getModelToken(Address.name),
-    );
-    connection = module.get<Connection>(getConnectionToken());
-
+    service = module.get(ProfileService);
     jest.clearAllMocks();
+    prisma.profile.findUnique.mockResolvedValue(profile);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('getOrCreateProfile', () => {
-    it('should return existing profile if found', async () => {
-      const mockProfile = {
-        userId: 'test-user-id',
-        displayName: 'Test User',
-      };
-
-      mockProfileModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(mockProfile),
-      });
-
-      const result = await service.getOrCreateProfile('test-user-id');
-
-      expect(result).toEqual(mockProfile);
-      expect(mockProfileModel.findOne).toHaveBeenCalledWith({
-        userId: 'test-user-id',
-      });
-    });
-
-    it('should create new profile if not found', async () => {
-      const mockProfile = {
-        userId: 'test-user-id',
-        displayName: 'User-r-id',
-      };
-
-      mockProfileModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(null),
-      });
-      mockProfileModel.create.mockResolvedValue(mockProfile);
-
-      const result = await service.getOrCreateProfile('test-user-id');
-
-      expect(result).toEqual(mockProfile);
-      expect(mockProfileModel.create).toHaveBeenCalledWith({
-        userId: 'test-user-id',
-        displayName: 'User-r-id',
-      });
+  it('returns an existing profile', async () => {
+    await expect(service.getOrCreateProfile(profile.userId)).resolves.toEqual(
+      profile,
+    );
+    expect(prisma.profile.findUnique).toHaveBeenCalledWith({
+      where: { userId: profile.userId },
+      include: { shopConfig: true },
     });
   });
 
-  describe('addAddress', () => {
-    const mockAddressDto: CreateAddressDto = {
+  it('creates a profile when one does not exist', async () => {
+    prisma.profile.findUnique.mockResolvedValue(null);
+    prisma.profile.create.mockResolvedValue(profile);
+
+    await expect(service.getOrCreateProfile(profile.userId)).resolves.toEqual(
+      profile,
+    );
+    expect(prisma.profile.create).toHaveBeenCalledWith({
+      data: {
+        userId: profile.userId,
+        displayName: 'User-r-id',
+      },
+      include: { shopConfig: true },
+    });
+  });
+
+  it('makes the first address the default address', async () => {
+    const dto = {
       contactName: 'John Doe',
       phone: '0912345678',
       provinceCode: '01',
       districtCode: '001',
       wardCode: '00001',
       streetLine: '123 Main St',
+      fullAddress: '123 Main St, Hanoi',
       isDefault: false,
       type: AddressType.HOME,
     };
+    const address = { id: 'address-1', profileId: profile.id, isDefault: true };
 
-    it('should set isDefault to true if first address', async () => {
-      mockAddressModel.countDocuments.mockResolvedValue(0);
-      mockAddressModel.create.mockResolvedValue({
-        ...mockAddressDto,
-        userId: 'test-user-id',
+    prisma.address.count.mockResolvedValue(0);
+    prisma.address.create.mockResolvedValue(address);
+
+    await expect(service.addAddress(profile.userId, dto)).resolves.toEqual(
+      address,
+    );
+    expect(prisma.address.create).toHaveBeenCalledWith({
+      data: {
+        profileId: profile.id,
+        contactName: dto.contactName,
+        phone: dto.phone,
+        countryCode: 'VN',
+        provinceCode: dto.provinceCode,
+        districtCode: dto.districtCode,
+        wardCode: dto.wardCode,
+        streetAddress: dto.streetLine,
+        fullAddress: dto.fullAddress,
+        type: dto.type,
         isDefault: true,
-      });
-
-      const result = await service.addAddress('test-user-id', mockAddressDto);
-
-      expect(result.isDefault).toBe(true);
-      expect(mockAddressModel.create).toHaveBeenCalledWith({
-        ...mockAddressDto,
-        userId: 'test-user-id',
-        isDefault: true,
-      });
-    });
-
-    it('should unset previous default if new address is default', async () => {
-      const dtoWithDefault = { ...mockAddressDto, isDefault: true };
-
-      mockAddressModel.countDocuments.mockResolvedValue(1);
-      mockAddressModel.updateMany.mockResolvedValue({});
-      mockAddressModel.create.mockResolvedValue({
-        ...dtoWithDefault,
-        userId: 'test-user-id',
-      });
-
-      await service.addAddress('test-user-id', dtoWithDefault);
-
-      expect(mockAddressModel.updateMany).toHaveBeenCalledWith(
-        { userId: 'test-user-id' },
-        { $set: { isDefault: false } },
-      );
+      },
     });
   });
 
-  describe('setDefaultAddress', () => {
-    it('should throw NotFoundException for invalid addressId', async () => {
-      await expect(
-        service.setDefaultAddress('test-user-id', 'invalid-id'),
-      ).rejects.toThrow(NotFoundException);
+  it('clears the previous default before adding a new default address', async () => {
+    prisma.address.count.mockResolvedValue(1);
+    prisma.address.create.mockResolvedValue({ id: 'address-2' });
+
+    await service.addAddress(profile.userId, {
+      contactName: 'Jane Doe',
+      phone: '0987654321',
+      provinceCode: '79',
+      districtCode: '760',
+      wardCode: '26734',
+      streetLine: '456 Second St',
+      type: AddressType.OFFICE,
+      isDefault: true,
     });
 
-    it('should set address as default using transaction', async () => {
-      const validId = new Types.ObjectId().toString();
-      const mockAddress = {
-        _id: validId,
-        userId: 'test-user-id',
-        isDefault: true,
-      };
-
-      mockAddressModel.updateMany.mockResolvedValue({});
-      mockAddressModel.findOneAndUpdate.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(mockAddress),
-      });
-
-      const result = await service.setDefaultAddress('test-user-id', validId);
-
-      expect(result).toEqual(mockAddress);
-      expect(mockSession.commitTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
-    });
-
-    it('should abort transaction if address not found', async () => {
-      const validId = new Types.ObjectId().toString();
-
-      mockAddressModel.updateMany.mockResolvedValue({});
-      mockAddressModel.findOneAndUpdate.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(null),
-      });
-
-      await expect(
-        service.setDefaultAddress('test-user-id', validId),
-      ).rejects.toThrow(NotFoundException);
-
-      expect(mockSession.abortTransaction).toHaveBeenCalled();
-      expect(mockSession.endSession).toHaveBeenCalled();
+    expect(prisma.address.updateMany).toHaveBeenCalledWith({
+      where: { profileId: profile.id },
+      data: { isDefault: false },
     });
   });
 
-  describe('registerShop', () => {
-    const mockShopDto: RegisterShopDto = {
-      shopName: 'Test Shop',
-      description: 'A test shop',
+  it('rejects an address that does not belong to the profile', async () => {
+    prisma.address.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.getAddressById(profile.userId, 'address-404'),
+    ).rejects.toThrow(NotFoundException);
+  });
+
+  it('sets the default address atomically', async () => {
+    const address = {
+      id: 'address-1',
+      profileId: profile.id,
+      isDefault: false,
     };
+    const updated = { ...address, isDefault: true };
+    prisma.address.findFirst.mockResolvedValue(address);
+    prisma.$transaction.mockImplementation(async (callback) =>
+      callback({
+        address: {
+          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+          update: jest.fn().mockResolvedValue(updated),
+        },
+      }),
+    );
 
-    it('should throw ConflictException if shop name is taken', async () => {
-      mockProfileModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ shopConfig: { shopName: 'Test Shop' } }),
-      });
+    await expect(
+      service.setDefaultAddress(profile.userId, address.id),
+    ).resolves.toEqual(updated);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
 
-      await expect(
-        service.registerShop('test-user-id', mockShopDto),
-      ).rejects.toThrow(ConflictException);
+  it('promotes another address after deleting the current default', async () => {
+    const current = {
+      id: 'address-1',
+      profileId: profile.id,
+      isDefault: true,
+    };
+    const next = {
+      id: 'address-2',
+      profileId: profile.id,
+      isDefault: false,
+    };
+    prisma.address.findFirst
+      .mockResolvedValueOnce(current)
+      .mockResolvedValueOnce(next);
+    prisma.address.delete.mockResolvedValue(current);
+    prisma.address.update.mockResolvedValue({ ...next, isDefault: true });
+
+    await service.deleteAddress(profile.userId, current.id);
+
+    expect(prisma.address.delete).toHaveBeenCalledWith({
+      where: { id: current.id },
     });
+    expect(prisma.address.update).toHaveBeenCalledWith({
+      where: { id: next.id },
+      data: { isDefault: true },
+    });
+  });
 
-    it('should register shop successfully', async () => {
-      const mockProfile = {
-        userId: 'test-user-id',
-        displayName: 'Test User',
-        shopConfig: undefined,
-        save: jest.fn().mockResolvedValue(true),
-      };
+  it('rejects a shop name already owned by another user', async () => {
+    prisma.shopConfig.findFirst.mockResolvedValue({ id: 'shop-2' });
 
-      mockProfileModel.findOne
-        .mockReturnValueOnce({
-          exec: jest.fn().mockResolvedValue(null),
-        })
-        .mockReturnValueOnce({
-          exec: jest.fn().mockResolvedValue(mockProfile),
-        });
+    await expect(
+      service.registerShop(profile.userId, { shopName: 'Taken Shop' }),
+    ).rejects.toThrow(ConflictException);
+  });
 
-      const result = await service.registerShop('test-user-id', mockShopDto);
+  it('creates a shop and returns the refreshed profile', async () => {
+    const refreshed = {
+      ...profile,
+      shopConfig: { id: 'shop-1', shopName: 'Test Shop' },
+    };
+    prisma.shopConfig.findFirst.mockResolvedValue(null);
+    prisma.shopConfig.create.mockResolvedValue(refreshed.shopConfig);
+    prisma.profile.findUnique
+      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(refreshed);
 
-      expect(mockProfile.save).toHaveBeenCalled();
-      expect(mockProfile.shopConfig).toEqual({
+    await expect(
+      service.registerShop(profile.userId, {
+        shopName: 'Test Shop',
+        description: 'A test shop',
+      }),
+    ).resolves.toEqual(refreshed);
+    expect(prisma.shopConfig.create).toHaveBeenCalledWith({
+      data: {
+        profileId: profile.id,
         shopName: 'Test Shop',
         description: 'A test shop',
         logoUrl: '',
-        pickupAddressId: undefined,
-      });
-    });
-  });
-
-  describe('getAddresses', () => {
-    it('should return addresses sorted by isDefault', async () => {
-      const mockAddresses = [
-        { userId: 'test-user-id', isDefault: true },
-        { userId: 'test-user-id', isDefault: false },
-      ];
-
-      mockAddressModel.find.mockReturnValue({
-        sort: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue(mockAddresses),
-        }),
-      });
-
-      const result = await service.getAddresses('test-user-id');
-
-      expect(result).toEqual(mockAddresses);
-      expect(mockAddressModel.find).toHaveBeenCalledWith({
-        userId: 'test-user-id',
-      });
-    });
-  });
-
-  describe('getAddressById', () => {
-    it('should throw NotFoundException for invalid addressId', async () => {
-      await expect(
-        service.getAddressById('test-user-id', 'invalid-id'),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should return address if found', async () => {
-      const validId = new Types.ObjectId().toString();
-      const mockAddress = { _id: validId, userId: 'test-user-id' };
-
-      mockAddressModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(mockAddress),
-      });
-
-      const result = await service.getAddressById('test-user-id', validId);
-
-      expect(result).toEqual(mockAddress);
-    });
-
-    it('should throw NotFoundException if address not found', async () => {
-      const validId = new Types.ObjectId().toString();
-
-      mockAddressModel.findOne.mockReturnValue({
-        exec: jest.fn().mockResolvedValue(null),
-      });
-
-      await expect(
-        service.getAddressById('test-user-id', validId),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('deleteAddress', () => {
-    it('should throw NotFoundException for invalid addressId', async () => {
-      await expect(
-        service.deleteAddress('test-user-id', 'invalid-id'),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should delete address and set next as default if was default', async () => {
-      const validId = new Types.ObjectId().toString();
-      const mockAddress = {
-        _id: validId,
-        userId: 'test-user-id',
-        isDefault: true,
-      };
-      const nextAddress = {
-        _id: new Types.ObjectId().toString(),
-        userId: 'test-user-id',
-        isDefault: false,
-        save: jest.fn().mockResolvedValue(true),
-      };
-
-      mockAddressModel.findOne
-        .mockReturnValueOnce({
-          exec: jest.fn().mockResolvedValue(mockAddress),
-        })
-        .mockReturnValueOnce({
-          sort: jest.fn().mockReturnValue({
-            exec: jest.fn().mockResolvedValue(nextAddress),
-          }),
-        });
-      mockAddressModel.deleteOne.mockResolvedValue({});
-
-      await service.deleteAddress('test-user-id', validId);
-
-      expect(mockAddressModel.deleteOne).toHaveBeenCalled();
-      expect(nextAddress.save).toHaveBeenCalled();
-      expect(nextAddress.isDefault).toBe(true);
+      },
     });
   });
 });

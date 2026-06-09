@@ -19,8 +19,8 @@ import {
 import { Request } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
-import { AuthService } from './services/auth.service';
-import { RegisterDto, LoginDto, RefreshTokenDto, LogoutDto } from './dto';
+import { AuthService } from '../services/auth.service';
+import { RegisterDto, LoginDto, RefreshTokenDto, LogoutDto } from '../dto';
 import {
   ApiResponse,
   LoginResponse,
@@ -29,11 +29,11 @@ import {
   UserResponse,
   DeviceInfo,
   AuthenticatedUser,
-} from './interfaces';
-import { JwtAuthGuard, PermissionsGuard } from './guards';
-import { RequirePermissions, Public, CurrentUser } from './decorators';
-import { ResponseInterceptor } from './interceptors';
-import { SUCCESS_MESSAGES, RESPONSE_CODES, PERMISSIONS } from './constants';
+} from '../interfaces';
+import { JwtAuthGuard, PermissionsGuard } from '../guards';
+import { RequirePermissions, Public, CurrentUser } from '../decorators';
+import { ResponseInterceptor } from '../interceptors';
+import { SUCCESS_MESSAGES, RESPONSE_CODES, PERMISSIONS } from '../constants';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -198,7 +198,9 @@ export class AuthController {
       message: 'Sessions retrieved successfully',
       data: sessions.map((s) => ({
         id: s.id,
-        deviceInfo: s.deviceInfo,
+        deviceId: s.deviceId,
+        deviceName: s.deviceName,
+        deviceType: s.deviceType,
         ipAddress: s.ipAddress,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,

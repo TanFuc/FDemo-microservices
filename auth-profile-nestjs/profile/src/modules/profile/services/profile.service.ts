@@ -4,16 +4,20 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { Profile, Address } from '../../../generated/client/client';
+import { Address, Prisma } from '../../../generated/client/client';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { CreateAddressDto, UpdateAddressDto } from '../dto/address.dto';
 import { RegisterShopDto } from '../dto/register-shop.dto';
+
+type ProfileWithShop = Prisma.ProfileGetPayload<{
+  include: { shopConfig: true };
+}>;
 
 @Injectable()
 export class ProfileService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getOrCreateProfile(userId: string): Promise<Profile> {
+  async getOrCreateProfile(userId: string): Promise<ProfileWithShop> {
     let profile = await this.prisma.profile.findUnique({
       where: { userId },
       include: { shopConfig: true },
@@ -37,9 +41,10 @@ export class ProfileService {
     userId: string,
     displayName: string,
     email: string,
-  ): Promise<Profile> {
+  ): Promise<ProfileWithShop> {
     const existingProfile = await this.prisma.profile.findUnique({
       where: { userId },
+      include: { shopConfig: true },
     });
 
     if (existingProfile) {
@@ -59,7 +64,7 @@ export class ProfileService {
   async updateProfile(
     userId: string,
     dto: UpdateProfileDto,
-  ): Promise<Profile> {
+  ): Promise<ProfileWithShop> {
     const profile = await this.getOrCreateProfile(userId);
 
     // Filter out undefined fields and handle nested objects if necessary
@@ -99,8 +104,16 @@ export class ProfileService {
 
     return this.prisma.address.create({
       data: {
-        ...dto,
         profileId: profile.id,
+        contactName: dto.contactName,
+        phone: dto.phone,
+        countryCode: 'VN',
+        provinceCode: dto.provinceCode,
+        districtCode: dto.districtCode,
+        wardCode: dto.wardCode,
+        streetAddress: dto.streetLine,
+        fullAddress: dto.fullAddress,
+        type: dto.type,
         isDefault,
       },
     });
@@ -151,7 +164,17 @@ export class ProfileService {
 
     return this.prisma.address.update({
       where: { id: addressId },
-      data: dto,
+      data: {
+        contactName: dto.contactName,
+        phone: dto.phone,
+        provinceCode: dto.provinceCode,
+        districtCode: dto.districtCode,
+        wardCode: dto.wardCode,
+        streetAddress: dto.streetLine,
+        fullAddress: dto.fullAddress,
+        type: dto.type,
+        isDefault: dto.isDefault,
+      },
     });
   }
 
@@ -211,7 +234,7 @@ export class ProfileService {
   async registerShop(
     userId: string,
     dto: RegisterShopDto,
-  ): Promise<Profile> {
+  ): Promise<ProfileWithShop> {
     const existingShop = await this.prisma.shopConfig.findFirst({
       where: {
         shopName: dto.shopName,
@@ -246,7 +269,7 @@ export class ProfileService {
   async updateShop(
     userId: string,
     dto: Partial<RegisterShopDto>,
-  ): Promise<Profile> {
+  ): Promise<ProfileWithShop> {
     const profile = await this.getOrCreateProfile(userId);
 
     if (!profile.shopConfig) {

@@ -216,7 +216,7 @@ export class TokenService {
   async revokeDeviceTokens(userId: string, deviceId: string): Promise<void> {
     try {
       await this.refreshTokenRepository.update(
-        { userId, deviceInfo: deviceId, isRevoked: false },
+        { userId, deviceId, isRevoked: false },
         { isRevoked: true },
       );
       this.logger.debug(`Revoked tokens for user ${userId}, device ${deviceId}`);
@@ -276,7 +276,7 @@ export class TokenService {
       id: jti,
       userId,
       tokenHash,
-      deviceInfo: deviceInfo.deviceId,
+      deviceId: deviceInfo.deviceId,
       ipAddress: deviceInfo.ipAddress,
       expiresAt,
       isRevoked: false,

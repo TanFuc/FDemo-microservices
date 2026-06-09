@@ -18,7 +18,7 @@ interface AuthService {
 
 @Injectable()
 export class GrpcAuthGuard implements CanActivate, OnModuleInit {
-  private authService: AuthService;
+  private authService!: AuthService;
   private readonly logger = new Logger(GrpcAuthGuard.name);
 
   constructor(

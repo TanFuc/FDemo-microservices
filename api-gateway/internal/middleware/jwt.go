@@ -3,7 +3,7 @@ package middleware
 import (
 	"strings"
 
-	"api-gateway/internal/config"
+	"microservices/api-gateway/internal/config"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
