@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // WebhookLogRepository defines the interface for webhook log persistence

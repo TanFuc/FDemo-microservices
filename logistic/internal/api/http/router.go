@@ -3,10 +3,10 @@ package http
 import (
 	"github.com/gin-gonic/gin"
 
+	"microservices/logistic/internal/api/http/handlers"
+	"microservices/logistic/internal/api/http/middleware"
+	"microservices/logistic/internal/core/services"
 	"microservices/pkg/authclient"
-	"tafu-logistic/logistics-service/internal/api/http/handlers"
-	"tafu-logistic/logistics-service/internal/api/http/middleware"
-	"tafu-logistic/logistics-service/internal/core/services"
 )
 
 // Router holds the HTTP router and handlers

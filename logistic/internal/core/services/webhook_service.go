@@ -8,16 +8,16 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // WebhookService handles webhook processing from providers
 type WebhookService struct {
-	providerFactory   ports.ProviderFactory
-	repository        ports.ShippingOrderRepository
-	webhookLogRepo    ports.WebhookLogRepository
-	publisher         ports.EventPublisher
+	providerFactory ports.ProviderFactory
+	repository      ports.ShippingOrderRepository
+	webhookLogRepo  ports.WebhookLogRepository
+	publisher       ports.EventPublisher
 }
 
 // NewWebhookService creates a new webhook service
@@ -41,10 +41,10 @@ func NewWebhookServiceWithLogging(
 	publisher ports.EventPublisher,
 ) *WebhookService {
 	return &WebhookService{
-		providerFactory:   providerFactory,
-		repository:        repository,
-		webhookLogRepo:    webhookLogRepo,
-		publisher:         publisher,
+		providerFactory: providerFactory,
+		repository:      repository,
+		webhookLogRepo:  webhookLogRepo,
+		publisher:       publisher,
 	}
 }
 

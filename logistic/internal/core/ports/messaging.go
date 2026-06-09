@@ -5,25 +5,25 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // ShipmentCreatedEvent is published when a shipment is created
 type ShipmentCreatedEvent struct {
-	InternalOrderID uuid.UUID            `json:"internal_order_id"`
-	TrackingCode    string               `json:"tracking_code"`
-	Provider        domain.ProviderName  `json:"provider"`
-	ShippingFee     float64              `json:"shipping_fee"`
-	LabelURL        string               `json:"label_url"`
+	InternalOrderID uuid.UUID           `json:"internal_order_id"`
+	TrackingCode    string              `json:"tracking_code"`
+	Provider        domain.ProviderName `json:"provider"`
+	ShippingFee     float64             `json:"shipping_fee"`
+	LabelURL        string              `json:"label_url"`
 }
 
 // StatusUpdatedEvent is published when shipment status changes
 type StatusUpdatedEvent struct {
-	InternalOrderID uuid.UUID            `json:"internal_order_id"`
-	TrackingCode    string               `json:"tracking_code"`
-	Provider        domain.ProviderName  `json:"provider"`
-	CarrierStatus   string               `json:"carrier_status"`
-	SystemStatus    domain.SystemStatus  `json:"system_status"`
+	InternalOrderID uuid.UUID           `json:"internal_order_id"`
+	TrackingCode    string              `json:"tracking_code"`
+	Provider        domain.ProviderName `json:"provider"`
+	CarrierStatus   string              `json:"carrier_status"`
+	SystemStatus    domain.SystemStatus `json:"system_status"`
 }
 
 // EventPublisher defines the interface for publishing events

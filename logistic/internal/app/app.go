@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
+	goredis "github.com/redis/go-redis/v9"
 
 	"microservices/logistic/internal/adapters/cache/redis"
 	"microservices/logistic/internal/adapters/messaging/nats"
@@ -17,9 +18,9 @@ import (
 	"microservices/logistic/internal/adapters/providers/ghtk"
 	"microservices/logistic/internal/adapters/repository/postgres"
 	"microservices/logistic/internal/config"
+	"microservices/logistic/internal/core/services"
 	httphandler "microservices/logistic/internal/handler/http"
 	"microservices/logistic/internal/router"
-	"microservices/logistic/internal/core/services"
 	"microservices/pkg/authclient"
 	"microservices/pkg/logger"
 )
@@ -28,7 +29,7 @@ type App struct {
 	cfg             *config.Config
 	httpRouter      *router.Router
 	dbPool          *pgxpool.Pool
-	redisClient     *redis.Client
+	redisClient     *goredis.Client
 	natsPublisher   *nats.Publisher
 	natsConsumer    *nats.Consumer
 	paymentConsumer *nats.PaymentConsumer

@@ -3,7 +3,7 @@ package dto
 import (
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // CalculateFeeRequest represents the request body for fee calculation
@@ -17,14 +17,14 @@ type CalculateFeeRequest struct {
 
 // CreateShipmentRequest represents the request body for creating a shipment
 type CreateShipmentRequest struct {
-	InternalOrderID string             `json:"internal_order_id" binding:"required,uuid"`
-	Provider        string             `json:"provider" binding:"required"`
-	Sender          ContactInfo        `json:"sender" binding:"required"`
-	Receiver        ContactInfo        `json:"receiver" binding:"required"`
-	Parcels         []Parcel           `json:"parcels" binding:"required,min=1,dive"`
-	IsCOD           bool               `json:"is_cod"`
-	CODAmount       float64            `json:"cod_amount"`
-	Note            string             `json:"note"`
+	InternalOrderID string      `json:"internal_order_id" binding:"required,uuid"`
+	Provider        string      `json:"provider" binding:"required"`
+	Sender          ContactInfo `json:"sender" binding:"required"`
+	Receiver        ContactInfo `json:"receiver" binding:"required"`
+	Parcels         []Parcel    `json:"parcels" binding:"required,min=1,dive"`
+	IsCOD           bool        `json:"is_cod"`
+	CODAmount       float64     `json:"cod_amount"`
+	Note            string      `json:"note"`
 }
 
 // ContactInfo represents contact details in request

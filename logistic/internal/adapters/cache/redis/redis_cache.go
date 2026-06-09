@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/ports"
 )
 
 const (

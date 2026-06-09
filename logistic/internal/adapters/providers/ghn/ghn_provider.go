@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // Config holds GHN API configuration
@@ -48,7 +48,7 @@ func (p *Provider) GetName() domain.ProviderName {
 // CalculateFee calculates shipping fee via GHN API
 func (p *Provider) CalculateFee(ctx context.Context, req *ports.RateRequest) (float64, error) {
 	payload := map[string]interface{}{
-		"service_type_id": 2, // Standard delivery
+		"service_type_id":  2, // Standard delivery
 		"from_district_id": req.FromDistrictID,
 		"to_district_id":   req.ToDistrictID,
 		"weight":           req.WeightGram,
@@ -116,24 +116,24 @@ func (p *Provider) CreateOrder(ctx context.Context, req *ports.ShipRequest) (*po
 	}
 
 	payload := map[string]interface{}{
-		"service_type_id":    2, // Standard delivery
-		"payment_type_id":    1, // Sender pays
-		"required_note":      "KHONGCHOXEMHANG",
-		"client_order_code":  req.InternalOrderID,
-		"from_name":          req.Sender.Name,
-		"from_phone":         req.Sender.Phone,
-		"from_address":       req.Sender.Address,
-		"from_ward_code":     req.Sender.WardCode,
-		"from_district_id":   req.Sender.DistrictID,
-		"to_name":            req.Receiver.Name,
-		"to_phone":           req.Receiver.Phone,
-		"to_address":         req.Receiver.Address,
-		"to_ward_code":       req.Receiver.WardCode,
-		"to_district_id":     req.Receiver.DistrictID,
-		"weight":             totalWeight,
-		"cod_amount":         int(req.CODAmount),
-		"content":            req.Note,
-		"items":              items,
+		"service_type_id":   2, // Standard delivery
+		"payment_type_id":   1, // Sender pays
+		"required_note":     "KHONGCHOXEMHANG",
+		"client_order_code": req.InternalOrderID,
+		"from_name":         req.Sender.Name,
+		"from_phone":        req.Sender.Phone,
+		"from_address":      req.Sender.Address,
+		"from_ward_code":    req.Sender.WardCode,
+		"from_district_id":  req.Sender.DistrictID,
+		"to_name":           req.Receiver.Name,
+		"to_phone":          req.Receiver.Phone,
+		"to_address":        req.Receiver.Address,
+		"to_ward_code":      req.Receiver.WardCode,
+		"to_district_id":    req.Receiver.DistrictID,
+		"weight":            totalWeight,
+		"cod_amount":        int(req.CODAmount),
+		"content":           req.Note,
+		"items":             items,
 	}
 
 	body, err := json.Marshal(payload)
@@ -167,8 +167,8 @@ func (p *Provider) CreateOrder(ctx context.Context, req *ports.ShipRequest) (*po
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 		Data    struct {
-			OrderCode   string `json:"order_code"`
-			TotalFee    int    `json:"total_fee"`
+			OrderCode string `json:"order_code"`
+			TotalFee  int    `json:"total_fee"`
 		} `json:"data"`
 	}
 

@@ -38,7 +38,10 @@ func TestIntegration_FullUploadFlow(t *testing.T) {
 	ctx := context.Background()
 
 	// Load config
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
 
 	// Initialize MinIO client
 	minioClient, err := storage.NewMinIOClient(cfg.MinIO)
@@ -72,7 +75,7 @@ func TestIntegration_FullUploadFlow(t *testing.T) {
 
 	// Create HTTP handler and server
 	mediaHandler := handler.NewMediaHandler(mediaUseCase)
-	router := handler.NewRouter(mediaHandler)
+	router := handler.NewRouter(mediaHandler, nil)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -194,7 +197,10 @@ func TestIntegration_FullUploadFlow(t *testing.T) {
 }
 
 func TestGetUploadURL_InvalidFileType(t *testing.T) {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
 	cfg.Media.AllowedMimeTypes = []string{"image/jpeg", "image/png"}
 
 	// Create mock storage and queue
@@ -203,7 +209,7 @@ func TestGetUploadURL_InvalidFileType(t *testing.T) {
 
 	mediaUseCase := usecase.NewMediaUseCase(mockStorage, mockQueue, cfg.Media, cfg.NATS.Subject)
 	mediaHandler := handler.NewMediaHandler(mediaUseCase)
-	router := handler.NewRouter(mediaHandler)
+	router := handler.NewRouter(mediaHandler, nil)
 	server := httptest.NewServer(router)
 	defer server.Close()
 
@@ -227,13 +233,16 @@ func TestGetUploadURL_InvalidFileType(t *testing.T) {
 }
 
 func TestHealthCheck(t *testing.T) {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
 	mockStorage := &mockStorageClient{}
 	mockQueue := &mockMessageQueue{}
 
 	mediaUseCase := usecase.NewMediaUseCase(mockStorage, mockQueue, cfg.Media, cfg.NATS.Subject)
 	mediaHandler := handler.NewMediaHandler(mediaUseCase)
-	router := handler.NewRouter(mediaHandler)
+	router := handler.NewRouter(mediaHandler, nil)
 	server := httptest.NewServer(router)
 	defer server.Close()
 

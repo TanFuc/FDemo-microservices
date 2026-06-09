@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/core/services"
 )
 
 // HealthHandler handles health check requests
@@ -86,10 +86,10 @@ func (h *HealthHandler) DBStats(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"acquired_connections":   stats.AcquiredConns(),
-		"idle_connections":       stats.IdleConns(),
-		"total_connections":      stats.TotalConns(),
-		"max_connections":        stats.MaxConns(),
+		"acquired_connections":     stats.AcquiredConns(),
+		"idle_connections":         stats.IdleConns(),
+		"total_connections":        stats.TotalConns(),
+		"max_connections":          stats.MaxConns(),
 		"constructing_connections": stats.ConstructingConns(),
 	})
 }

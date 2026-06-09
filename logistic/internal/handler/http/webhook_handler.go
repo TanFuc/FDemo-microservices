@@ -1,6 +1,9 @@
 package http
 
 import (
+	"bytes"
+	"net/http"
+
 	"github.com/gofiber/fiber/v2"
 
 	"microservices/logistic/internal/api/dto"
@@ -46,15 +49,23 @@ func (h *WebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 	}
 
 	// Process webhook
-	result, err := h.webhookService.ProcessWebhook(c.Context(), providerName, body)
+	req, err := http.NewRequestWithContext(c.UserContext(), http.MethodPost, "/", bytes.NewReader(body))
+	if err != nil {
+		return response.InternalError(c, err.Error())
+	}
+	c.Request().Header.VisitAll(func(key, value []byte) {
+		req.Header.Add(string(key), string(value))
+	})
+
+	result, err := h.webhookService.HandleWebhook(c.UserContext(), providerName, req)
 	if err != nil {
 		return response.InternalError(c, err.Error())
 	}
 
 	return response.Success(c, &dto.WebhookResponse{
 		TrackingCode:  result.TrackingCode,
-		OldStatus:     result.OldStatus,
-		NewStatus:     result.NewStatus,
+		OldStatus:     string(result.OldStatus),
+		NewStatus:     string(result.NewStatus),
 		CarrierStatus: result.CarrierStatus,
 	})
 }

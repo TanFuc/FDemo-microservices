@@ -52,12 +52,12 @@ func (h *HealthHandler) HealthDetailed(c *fiber.Ctx) error {
 		})
 	}
 
-	status, err := h.healthService.CheckHealth(c.Context())
-	if err != nil {
+	status := h.healthService.Check(c.UserContext())
+	if status.Status != "healthy" {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"success": false,
 			"status":  "unhealthy",
-			"error":   err.Error(),
+			"details": status,
 		})
 	}
 
@@ -80,12 +80,12 @@ func (h *HealthHandler) Ready(c *fiber.Ctx) error {
 		})
 	}
 
-	status, err := h.healthService.CheckHealth(c.Context())
-	if err != nil {
+	status := h.healthService.Check(c.UserContext())
+	if status.Status != "healthy" {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"success": false,
 			"ready":   false,
-			"error":   err.Error(),
+			"details": status,
 		})
 	}
 

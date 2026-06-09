@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // Config holds GHTK API configuration
@@ -161,9 +161,9 @@ func (p *Provider) CreateOrder(ctx context.Context, req *ports.ShipRequest) (*po
 		Success bool   `json:"success"`
 		Message string `json:"message"`
 		Order   struct {
-			Label        string `json:"label"`
-			Fee          int    `json:"fee"`
-			TrackingID   string `json:"tracking_id"`
+			Label      string `json:"label"`
+			Fee        int    `json:"fee"`
+			TrackingID string `json:"tracking_id"`
 		} `json:"order"`
 	}
 

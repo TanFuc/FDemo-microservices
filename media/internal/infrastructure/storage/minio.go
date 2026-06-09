@@ -10,6 +10,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"microservices/media/internal/config"
 )
 
@@ -66,16 +67,13 @@ func (m *MinIOClient) EnsureBucket(ctx context.Context) error {
 		}
 
 		// Set lifecycle rule to delete temp files after 24 hours
-		lifecycleConfig := `<LifecycleConfiguration>
-			<Rule>
-				<ID>DeleteTempFiles</ID>
-				<Prefix>temp/</Prefix>
-				<Status>Enabled</Status>
-				<Expiration>
-					<Days>1</Days>
-				</Expiration>
-			</Rule>
-		</LifecycleConfiguration>`
+		lifecycleConfig := lifecycle.NewConfiguration()
+		lifecycleConfig.Rules = []lifecycle.Rule{{
+			ID:         "DeleteTempFiles",
+			Status:     "Enabled",
+			RuleFilter: lifecycle.Filter{Prefix: "temp/"},
+			Expiration: lifecycle.Expiration{Days: 1},
+		}}
 
 		if err := m.client.SetBucketLifecycle(ctx, m.bucketName, lifecycleConfig); err != nil {
 			// Log but don't fail - lifecycle might not be supported

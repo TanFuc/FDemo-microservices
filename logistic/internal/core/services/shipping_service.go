@@ -7,9 +7,9 @@ import (
 
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
-	"tafu-logistic/logistics-service/pkg/retry"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
+	"microservices/logistic/pkg/retry"
 )
 
 // ShippingService handles shipping-related use cases
@@ -48,9 +48,9 @@ type CalculateFeeRequest struct {
 
 // CalculateFeeResponse contains the calculated fee
 type CalculateFeeResponse struct {
-	Provider    domain.ProviderName `json:"provider"`
-	Fee         float64             `json:"fee"`
-	FromCache   bool                `json:"from_cache"`
+	Provider  domain.ProviderName `json:"provider"`
+	Fee       float64             `json:"fee"`
+	FromCache bool                `json:"from_cache"`
 }
 
 // CalculateFee calculates shipping fee with caching

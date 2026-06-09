@@ -11,13 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"tafu-logistic/logistics-service/internal/adapters/providers"
-	"tafu-logistic/logistics-service/internal/adapters/providers/mock"
-	"tafu-logistic/logistics-service/internal/api/dto"
-	apihttp "tafu-logistic/logistics-service/internal/api/http"
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
-	"tafu-logistic/logistics-service/internal/core/services"
+	"microservices/logistic/internal/adapters/providers/mock"
+	"microservices/logistic/internal/api/dto"
+	apihttp "microservices/logistic/internal/api/http"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
+	"microservices/logistic/internal/core/services"
 )
 
 // MockRepository implements ports.ShippingOrderRepository for testing

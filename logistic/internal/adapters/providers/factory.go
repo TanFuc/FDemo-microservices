@@ -3,11 +3,11 @@ package providers
 import (
 	"fmt"
 
-	"tafu-logistic/logistics-service/internal/adapters/providers/ghn"
-	"tafu-logistic/logistics-service/internal/adapters/providers/ghtk"
-	"tafu-logistic/logistics-service/internal/adapters/providers/mock"
-	"tafu-logistic/logistics-service/internal/core/domain"
-	"tafu-logistic/logistics-service/internal/core/ports"
+	"microservices/logistic/internal/adapters/providers/ghn"
+	"microservices/logistic/internal/adapters/providers/ghtk"
+	"microservices/logistic/internal/adapters/providers/mock"
+	"microservices/logistic/internal/core/domain"
+	"microservices/logistic/internal/core/ports"
 )
 
 // ProviderConfig holds configuration for all providers

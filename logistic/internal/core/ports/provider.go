@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"tafu-logistic/logistics-service/internal/core/domain"
+	"microservices/logistic/internal/core/domain"
 )
 
 // RateRequest contains parameters for calculating shipping fee
