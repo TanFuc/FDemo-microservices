@@ -1,3 +1,5 @@
+//go:build legacy
+
 package usecase
 
 import (
@@ -12,11 +14,11 @@ import (
 )
 
 var (
-	ErrProductNotFound   = errors.New("product not found")
-	ErrProductExists     = errors.New("product with this slug already exists")
-	ErrCategoryInvalid   = errors.New("category not found")
-	ErrBrandInvalid      = errors.New("brand not found")
-	ErrInvalidSpecs      = errors.New("product specs do not match category attribute definitions")
+	ErrProductNotFound = errors.New("product not found")
+	ErrProductExists   = errors.New("product with this slug already exists")
+	ErrCategoryInvalid = errors.New("category not found")
+	ErrBrandInvalid    = errors.New("brand not found")
+	ErrInvalidSpecs    = errors.New("product specs do not match category attribute definitions")
 )
 
 type ProductUsecase struct {

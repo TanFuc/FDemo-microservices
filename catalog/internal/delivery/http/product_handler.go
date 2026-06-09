@@ -1,3 +1,5 @@
+//go:build legacy
+
 package http
 
 import (
@@ -102,17 +104,17 @@ func (h *ProductHandler) Create(c *fiber.Ctx) error {
 	email, _ := c.Locals("email").(string)
 
 	dto := usecase.CreateProductDTO{
-		Name:        req.Name,
-		CategoryID:  categoryID,
-		BrandID:     brandID,
-		Thumbnail:   req.Thumbnail,
-		Images:      req.Images,
-		VideoURL:    req.VideoURL,
-		Description: req.Description,
-		Specs:       req.Specs,
-		Variations:  req.Variations,
-		Metadata:    req.Metadata,
-		CreatedBy:   userID,
+		Name:           req.Name,
+		CategoryID:     categoryID,
+		BrandID:        brandID,
+		Thumbnail:      req.Thumbnail,
+		Images:         req.Images,
+		VideoURL:       req.VideoURL,
+		Description:    req.Description,
+		Specs:          req.Specs,
+		Variations:     req.Variations,
+		Metadata:       req.Metadata,
+		CreatedBy:      userID,
 		CreatedByEmail: email,
 	}
 

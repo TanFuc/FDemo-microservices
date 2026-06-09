@@ -1,3 +1,5 @@
+//go:build legacy
+
 package handler
 
 import (
@@ -23,8 +25,8 @@ func NewInventoryHandler(useCase usecase.InventoryUseCase, authMiddleware *authc
 }
 
 type ReserveRequest struct {
-	OrderID string                    `json:"order_id"`
-	Items   []domain.ReservationItem  `json:"items"`
+	OrderID string                   `json:"order_id"`
+	Items   []domain.ReservationItem `json:"items"`
 }
 
 type OrderRequest struct {

@@ -1,3 +1,5 @@
+//go:build legacy
+
 package usecase
 
 import (
@@ -10,9 +12,9 @@ import (
 )
 
 type CampaignUsecase struct {
-	voucherRepo      domain.VoucherRepository
-	userVoucherRepo  domain.UserVoucherRepository
-	voucherCache     domain.VoucherCacheRepository
+	voucherRepo     domain.VoucherRepository
+	userVoucherRepo domain.UserVoucherRepository
+	voucherCache    domain.VoucherCacheRepository
 }
 
 func NewCampaignUsecase(
