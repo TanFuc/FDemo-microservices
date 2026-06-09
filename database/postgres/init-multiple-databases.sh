@@ -1,26 +1,23 @@
 #!/bin/bash
-# ============================================================================
-# PostgreSQL Multiple Database Initialization Script
-# Purpose: Create multiple databases on PostgreSQL startup
-# Usage: Mount this file to /docker-entrypoint-initdb.d/
-# ============================================================================
+# Create all service databases before consolidated schemas are applied.
 
-set -e
-set -u
+set -euo pipefail
 
-function create_user_and_database() {
-    local database=$1
+create_database() {
+    local database="$1"
+
     echo "Creating database '$database'..."
     psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
-        CREATE DATABASE $database;
-        GRANT ALL PRIVILEGES ON DATABASE $database TO $POSTGRES_USER;
+        CREATE DATABASE "$database";
+        GRANT ALL PRIVILEGES ON DATABASE "$database" TO "$POSTGRES_USER";
 EOSQL
 }
 
-if [ -n "$POSTGRES_MULTIPLE_DATABASES" ]; then
+if [[ -n "${POSTGRES_MULTIPLE_DATABASES:-}" ]]; then
     echo "Multiple database creation requested: $POSTGRES_MULTIPLE_DATABASES"
-    for db in $(echo $POSTGRES_MULTIPLE_DATABASES | tr ',' ' '); do
-        create_user_and_database $db
+    IFS=',' read -ra databases <<< "$POSTGRES_MULTIPLE_DATABASES"
+    for database in "${databases[@]}"; do
+        create_database "$database"
     done
-    echo "Multiple databases created!"
+    echo "Multiple databases created."
 fi

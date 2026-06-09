@@ -9,7 +9,7 @@
 // ===================
 // Database: tafu_profile
 // ===================
-use tafu_profile;
+db = db.getSiblingDB("tafu_profile");
 
 // Collection: profiles
 db.createCollection("profiles", {
@@ -54,7 +54,7 @@ db.createCollection("profiles", {
 db.profiles.createIndex({ userId: 1 }, { unique: true });
 db.profiles.createIndex(
     { "shopConfig.shopName": 1 },
-    { unique: true, sparse: true, partialFilterExpression: { "shopConfig.shopName": { $exists: true } } }
+    { unique: true, partialFilterExpression: { "shopConfig.shopName": { $exists: true } } }
 );
 db.profiles.createIndex({ email: 1 }, { sparse: true });
 db.profiles.createIndex({ createdAt: -1 });
@@ -84,12 +84,12 @@ db.createCollection("addresses", {
 db.addresses.createIndex({ userId: 1 });
 db.addresses.createIndex({ userId: 1, isDefault: 1 });
 
-print("✅ tafu_profile database initialized");
+print("tafu_profile database initialized");
 
 // ===================
 // Database: tafu_catalog
 // ===================
-use tafu_catalog;
+db = db.getSiblingDB("tafu_catalog");
 
 // Collection: categories
 db.createCollection("categories");
@@ -151,24 +151,24 @@ db.products.createIndex({ name: "text", description: "text" });
 db.products.createIndex({ "metadata.isFlashSale": 1 }, { sparse: true });
 db.products.createIndex({ "metadata.campaignId": 1 }, { sparse: true });
 
-print("✅ tafu_catalog database initialized");
+print("tafu_catalog database initialized");
 
 // ===================
 // Database: tafu_cart
 // ===================
-use tafu_cart;
+db = db.getSiblingDB("tafu_cart");
 
 // Collection: carts (MongoDB backup for Redis)
 db.createCollection("carts");
 db.carts.createIndex({ _id: 1 });  // _id = userId
 db.carts.createIndex({ updatedAt: 1 }, { expireAfterSeconds: 2592000 });  // 30 days TTL
 
-print("✅ tafu_cart database initialized");
+print("tafu_cart database initialized");
 
 // ===================
 // Database: tafu_review
 // ===================
-use tafu_review;
+db = db.getSiblingDB("tafu_review");
 
 // Collection: reviews
 db.createCollection("reviews", {
@@ -209,12 +209,12 @@ db.reviews.createIndex({ rating: 1 });
 db.createCollection("product_ratings");
 db.product_ratings.createIndex({ _id: 1 });  // _id = productId
 
-print("✅ tafu_review database initialized");
+print("tafu_review database initialized");
 
 // ===================
 // Database: tafu_notification
 // ===================
-use tafu_notification;
+db = db.getSiblingDB("tafu_notification");
 
 // Collection: notification_logs
 db.createCollection("notification_logs", {
@@ -252,12 +252,12 @@ db.createCollection("notification_templates");
 db.notification_templates.createIndex({ name: 1 }, { unique: true });
 db.notification_templates.createIndex({ type: 1 });
 
-print("✅ tafu_notification database initialized");
+print("tafu_notification database initialized");
 
 // ===================
 // Database: tafu_media
 // ===================
-use tafu_media;
+db = db.getSiblingDB("tafu_media");
 
 // Collection: media_files
 db.createCollection("media_files", {
@@ -292,8 +292,8 @@ db.media_files.createIndex({ purpose: 1 });
 db.media_files.createIndex({ status: 1 });
 db.media_files.createIndex({ createdAt: -1 });
 
-print("✅ tafu_media database initialized");
+print("tafu_media database initialized");
 
 print("\n========================================");
-print("🎉 All MongoDB databases initialized!");
+print("All MongoDB databases initialized.");
 print("========================================");

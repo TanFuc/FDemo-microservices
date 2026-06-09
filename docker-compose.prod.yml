@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # API Gateway
   api-gateway:
@@ -496,7 +494,7 @@ services:
       - POSTGRES_MULTIPLE_DATABASES=identity_db,order_db,inventory_db,payment_db,logistics_db,campaign_db
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./scripts/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+      - ./database/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/00-init-multiple-databases.sh:ro
     networks:
       - tafu-network
 

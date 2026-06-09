@@ -338,40 +338,9 @@ CREATE TRIGGER update_stock_reservations_updated_at
 -- Engine: ClickHouse
 -- ============================================================================
 
--- Run on ClickHouse server:
-
-CREATE DATABASE IF NOT EXISTS analytics_db;
-
-CREATE TABLE IF NOT EXISTS analytics_db.user_events (
-    event_id UUID DEFAULT generateUUIDv4(),
-    user_id String,
-    session_id String,
-    event_type String,
-    metadata String,  -- JSON string
-    url String,
-    referrer String,
-    ip_address String,
-    user_agent String,
-    device_type String,  -- mobile, desktop, tablet
-    country_code String,
-    created_at DateTime DEFAULT now()
-) ENGINE = MergeTree()
-PARTITION BY toYYYYMM(created_at)
-ORDER BY (event_type, created_at, user_id)
-TTL created_at + INTERVAL 365 DAY;  -- Auto-delete after 1 year
-
--- Materialized view for hourly aggregations
-CREATE MATERIALIZED VIEW IF NOT EXISTS analytics_db.product_views_hourly
-ENGINE = SummingMergeTree()
-PARTITION BY toYYYYMM(hour)
-ORDER BY (product_id, hour)
-AS SELECT
-    JSONExtractString(metadata, 'product_id') AS product_id,
-    toStartOfHour(created_at) AS hour,
-    count() AS view_count
-FROM analytics_db.user_events
-WHERE event_type = 'view_item'
-GROUP BY product_id, hour;
+-- ClickHouse DDL must not run through the PostgreSQL entrypoint.
+-- The canonical schema is mounted separately from:
+-- analytic/migrations/001_init_schema.sql
 
 -- ============================================================================
 -- MONGODB COLLECTIONS (tafu-profile, tafu-catalog, tafu-cart, 
