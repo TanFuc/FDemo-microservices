@@ -10,11 +10,11 @@ import (
 type ScheduleStatus string
 
 const (
-	ScheduleStatusPending   ScheduleStatus = "PENDING"
+	ScheduleStatusPending    ScheduleStatus = "PENDING"
 	ScheduleStatusProcessing ScheduleStatus = "PROCESSING"
-	ScheduleStatusSent      ScheduleStatus = "SENT"
-	ScheduleStatusFailed    ScheduleStatus = "FAILED"
-	ScheduleStatusCancelled ScheduleStatus = "CANCELLED"
+	ScheduleStatusSent       ScheduleStatus = "SENT"
+	ScheduleStatusFailed     ScheduleStatus = "FAILED"
+	ScheduleStatusCancelled  ScheduleStatus = "CANCELLED"
 )
 
 // RecurrenceType represents the type of recurrence
@@ -31,102 +31,102 @@ const (
 type TargetType string
 
 const (
-	TargetTypeUser     TargetType = "USER"      // Single user
-	TargetTypeSegment  TargetType = "SEGMENT"   // User segment
+	TargetTypeUser      TargetType = "USER"      // Single user
+	TargetTypeSegment   TargetType = "SEGMENT"   // User segment
 	TargetTypeBroadcast TargetType = "BROADCAST" // All users
-	TargetTypeCustom   TargetType = "CUSTOM"    // Custom query
+	TargetTypeCustom    TargetType = "CUSTOM"    // Custom query
 )
 
 // ScheduledNotification represents a scheduled notification
 type ScheduledNotification struct {
-	ID          primitive.ObjectID     `bson:"_id,omitempty" json:"id"`
-	Name        string                 `bson:"name" json:"name"`
-	Description string                 `bson:"description,omitempty" json:"description,omitempty"`
+	ID          primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Name        string             `bson:"name" json:"name"`
+	Description string             `bson:"description,omitempty" json:"description,omitempty"`
 
 	// Template reference
-	TemplateID  primitive.ObjectID     `bson:"templateId" json:"templateId"`
-	TemplateCode string                `bson:"templateCode" json:"templateCode"`
+	TemplateID   primitive.ObjectID `bson:"templateId" json:"templateId"`
+	TemplateCode string             `bson:"templateCode" json:"templateCode"`
 
 	// Targeting
-	TargetType  TargetType             `bson:"targetType" json:"targetType"`
-	TargetUserIDs []string             `bson:"targetUserIds,omitempty" json:"targetUserIds,omitempty"`
-	TargetSegment string               `bson:"targetSegment,omitempty" json:"targetSegment,omitempty"`
-	TargetQuery  map[string]interface{} `bson:"targetQuery,omitempty" json:"targetQuery,omitempty"`
+	TargetType    TargetType             `bson:"targetType" json:"targetType"`
+	TargetUserIDs []string               `bson:"targetUserIds,omitempty" json:"targetUserIds,omitempty"`
+	TargetSegment string                 `bson:"targetSegment,omitempty" json:"targetSegment,omitempty"`
+	TargetQuery   map[string]interface{} `bson:"targetQuery,omitempty" json:"targetQuery,omitempty"`
 
 	// Channel
-	Channel     NotificationChannel    `bson:"channel" json:"channel"`
+	Channel NotificationChannel `bson:"channel" json:"channel"`
 
 	// Content (merged with template)
-	Data        map[string]interface{} `bson:"data" json:"data"` // Template variables
-	CustomSubject string               `bson:"customSubject,omitempty" json:"customSubject,omitempty"`
-	CustomBody    string               `bson:"customBody,omitempty" json:"customBody,omitempty"`
+	Data          map[string]interface{} `bson:"data" json:"data"` // Template variables
+	CustomSubject string                 `bson:"customSubject,omitempty" json:"customSubject,omitempty"`
+	CustomBody    string                 `bson:"customBody,omitempty" json:"customBody,omitempty"`
 
 	// Scheduling
-	ScheduledAt time.Time              `bson:"scheduledAt" json:"scheduledAt"`
-	Timezone    string                 `bson:"timezone" json:"timezone"`
+	ScheduledAt time.Time `bson:"scheduledAt" json:"scheduledAt"`
+	Timezone    string    `bson:"timezone" json:"timezone"`
 
 	// Recurrence
-	RecurrenceType RecurrenceType      `bson:"recurrenceType" json:"recurrenceType"`
-	RecurrenceEnd  *time.Time          `bson:"recurrenceEnd,omitempty" json:"recurrenceEnd,omitempty"`
-	DaysOfWeek     []int               `bson:"daysOfWeek,omitempty" json:"daysOfWeek,omitempty"` // 0-6 for weekly
-	DayOfMonth     *int                `bson:"dayOfMonth,omitempty" json:"dayOfMonth,omitempty"` // 1-28 for monthly
+	RecurrenceType RecurrenceType `bson:"recurrenceType" json:"recurrenceType"`
+	RecurrenceEnd  *time.Time     `bson:"recurrenceEnd,omitempty" json:"recurrenceEnd,omitempty"`
+	DaysOfWeek     []int          `bson:"daysOfWeek,omitempty" json:"daysOfWeek,omitempty"` // 0-6 for weekly
+	DayOfMonth     *int           `bson:"dayOfMonth,omitempty" json:"dayOfMonth,omitempty"` // 1-28 for monthly
 
 	// Execution tracking
-	Status       ScheduleStatus        `bson:"status" json:"status"`
-	LastRunAt    *time.Time            `bson:"lastRunAt,omitempty" json:"lastRunAt,omitempty"`
-	NextRunAt    *time.Time            `bson:"nextRunAt,omitempty" json:"nextRunAt,omitempty"`
-	RunCount     int                   `bson:"runCount" json:"runCount"`
+	Status    ScheduleStatus `bson:"status" json:"status"`
+	LastRunAt *time.Time     `bson:"lastRunAt,omitempty" json:"lastRunAt,omitempty"`
+	NextRunAt *time.Time     `bson:"nextRunAt,omitempty" json:"nextRunAt,omitempty"`
+	RunCount  int            `bson:"runCount" json:"runCount"`
 
 	// Results tracking
-	TotalTargets   int                 `bson:"totalTargets" json:"totalTargets"`
-	SentCount      int                 `bson:"sentCount" json:"sentCount"`
-	FailedCount    int                 `bson:"failedCount" json:"failedCount"`
-	LastError      string              `bson:"lastError,omitempty" json:"lastError,omitempty"`
+	TotalTargets int    `bson:"totalTargets" json:"totalTargets"`
+	SentCount    int    `bson:"sentCount" json:"sentCount"`
+	FailedCount  int    `bson:"failedCount" json:"failedCount"`
+	LastError    string `bson:"lastError,omitempty" json:"lastError,omitempty"`
 
 	// Priority and options
-	Priority     int                   `bson:"priority" json:"priority"` // Higher = more urgent
-	RespectQuietHours bool             `bson:"respectQuietHours" json:"respectQuietHours"`
-	RespectPreferences bool            `bson:"respectPreferences" json:"respectPreferences"`
+	Priority           int  `bson:"priority" json:"priority"` // Higher = more urgent
+	RespectQuietHours  bool `bson:"respectQuietHours" json:"respectQuietHours"`
+	RespectPreferences bool `bson:"respectPreferences" json:"respectPreferences"`
 
 	// Campaign association
-	CampaignID   *primitive.ObjectID   `bson:"campaignId,omitempty" json:"campaignId,omitempty"`
+	CampaignID *primitive.ObjectID `bson:"campaignId,omitempty" json:"campaignId,omitempty"`
 
 	// Metadata
-	Metadata     map[string]interface{} `bson:"metadata,omitempty" json:"metadata,omitempty"`
+	Metadata map[string]interface{} `bson:"metadata,omitempty" json:"metadata,omitempty"`
 
 	// Audit
-	CreatedBy    string                `bson:"createdBy" json:"createdBy"`
-	UpdatedBy    string                `bson:"updatedBy,omitempty" json:"updatedBy,omitempty"`
-	CancelledBy  string                `bson:"cancelledBy,omitempty" json:"cancelledBy,omitempty"`
-	CancelReason string                `bson:"cancelReason,omitempty" json:"cancelReason,omitempty"`
+	CreatedBy    string `bson:"createdBy" json:"createdBy"`
+	UpdatedBy    string `bson:"updatedBy,omitempty" json:"updatedBy,omitempty"`
+	CancelledBy  string `bson:"cancelledBy,omitempty" json:"cancelledBy,omitempty"`
+	CancelReason string `bson:"cancelReason,omitempty" json:"cancelReason,omitempty"`
 
 	// Timestamps
-	CreatedAt    time.Time             `bson:"createdAt" json:"createdAt"`
-	UpdatedAt    time.Time             `bson:"updatedAt" json:"updatedAt"`
+	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
+	UpdatedAt time.Time `bson:"updatedAt" json:"updatedAt"`
 }
 
 // NewScheduledNotification creates a new scheduled notification
 func NewScheduledNotification(name string, templateID primitive.ObjectID, templateCode string, channel NotificationChannel, scheduledAt time.Time, createdBy string) *ScheduledNotification {
 	now := time.Now()
 	return &ScheduledNotification{
-		ID:                primitive.NewObjectID(),
-		Name:              name,
-		TemplateID:        templateID,
-		TemplateCode:      templateCode,
-		TargetType:        TargetTypeBroadcast,
-		Channel:           channel,
-		Data:              make(map[string]interface{}),
-		ScheduledAt:       scheduledAt,
-		Timezone:          "Asia/Ho_Chi_Minh",
-		RecurrenceType:    RecurrenceTypeOnce,
-		Status:            ScheduleStatusPending,
-		RunCount:          0,
-		Priority:          0,
-		RespectQuietHours: true,
+		ID:                 primitive.NewObjectID(),
+		Name:               name,
+		TemplateID:         templateID,
+		TemplateCode:       templateCode,
+		TargetType:         TargetTypeBroadcast,
+		Channel:            channel,
+		Data:               make(map[string]interface{}),
+		ScheduledAt:        scheduledAt,
+		Timezone:           "Asia/Ho_Chi_Minh",
+		RecurrenceType:     RecurrenceTypeOnce,
+		Status:             ScheduleStatusPending,
+		RunCount:           0,
+		Priority:           0,
+		RespectQuietHours:  true,
 		RespectPreferences: true,
-		CreatedBy:         createdBy,
-		CreatedAt:         now,
-		UpdatedAt:         now,
+		CreatedBy:          createdBy,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 }
 
@@ -240,19 +240,26 @@ func (sn *ScheduledNotification) calculateNextRun() {
 
 	case RecurrenceTypeWeekly:
 		// Find the next scheduled day of week
-		nextRun = now
+		found := false
 		for i := 1; i <= 7; i++ {
-			nextRun = now.AddDate(0, 0, i)
-			weekday := int(nextRun.Weekday())
+			candidate := now.AddDate(0, 0, i)
+			weekday := int(candidate.Weekday())
 			for _, day := range sn.DaysOfWeek {
 				if day == weekday {
-					nextRun = time.Date(nextRun.Year(), nextRun.Month(), nextRun.Day(),
+					nextRun = time.Date(candidate.Year(), candidate.Month(), candidate.Day(),
 						sn.ScheduledAt.Hour(), sn.ScheduledAt.Minute(), 0, 0, now.Location())
-					goto found
+					found = true
+					break
 				}
 			}
+			if found {
+				break
+			}
 		}
-	found:
+		if !found {
+			sn.NextRunAt = nil
+			return
+		}
 
 	case RecurrenceTypeMonthly:
 		if sn.DayOfMonth != nil {

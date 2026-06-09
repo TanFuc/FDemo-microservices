@@ -104,7 +104,7 @@ func (h *PaymentHandler) CreatePayment(c *fiber.Ctx) error {
 		if errors.Is(err, usecase.ErrInvalidCurrency) {
 			return response.BadRequest(c, "Invalid currency")
 		}
-		return response.InternalServerError(c, "Failed to create payment")
+		return response.InternalError(c, "Failed to create payment")
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
@@ -143,7 +143,7 @@ func (h *PaymentHandler) GetPaymentsByOrder(c *fiber.Ctx) error {
 
 	txs, err := h.uc.GetTransactionsByOrderID(c.Context(), orderID)
 	if err != nil {
-		return response.InternalServerError(c, "Failed to get transactions")
+		return response.InternalError(c, "Failed to get transactions")
 	}
 
 	return response.Success(c, fiber.Map{

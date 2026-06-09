@@ -1,7 +1,6 @@
 package http
 
 import (
-	"microservices/pkg/authclient"
 	"microservices/review/internal/core/domain"
 	"microservices/review/internal/core/dto"
 	"microservices/review/internal/core/service"

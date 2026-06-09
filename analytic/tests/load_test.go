@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -19,8 +20,8 @@ import (
 // TestBatchIngestion tests that 5000 events can be ingested without data loss.
 // This test requires running ClickHouse and NATS instances.
 func TestBatchIngestion(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+	if testing.Short() || os.Getenv("INTEGRATION_TEST") != "true" {
+		t.Skip("Skipping integration test")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -144,8 +145,8 @@ func TestBatchIngestion(t *testing.T) {
 
 // TestHighThroughput tests sustained high throughput ingestion.
 func TestHighThroughput(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping integration test in short mode")
+	if testing.Short() || os.Getenv("INTEGRATION_TEST") != "true" {
+		t.Skip("Skipping integration test")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

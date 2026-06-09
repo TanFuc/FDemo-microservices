@@ -27,7 +27,10 @@ import (
 
 func main() {
 	// Load configuration
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
 
 	// Initialize MongoDB
 	mongoClient, err := connectMongoDB(cfg.MongoDB.URI)
@@ -129,12 +132,12 @@ func main() {
 
 	// Graceful shutdown
 	go func() {
-		if err := app.Listen(":" + cfg.Server.Port); err != nil {
+		if err := app.Listen(":" + cfg.App.Port); err != nil {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()
 
-	log.Printf("Server started on port %s", cfg.Server.Port)
+	log.Printf("Server started on port %s", cfg.App.Port)
 
 	// Wait for interrupt signal
 	quit := make(chan os.Signal, 1)

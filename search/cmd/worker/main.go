@@ -22,14 +22,18 @@ func main() {
 	logger.Info("starting search-service worker")
 
 	// Load configuration
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("failed to load configuration", "error", err)
+		os.Exit(1)
+	}
 
 	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Initialize Elasticsearch client
-	elasticClient, err := elastic.NewClient(cfg.ElasticAddresses, logger)
+	elasticClient, err := elastic.NewClient(cfg.Elasticsearch.Addresses, logger)
 	if err != nil {
 		logger.Error("failed to create elasticsearch client", "error", err)
 		os.Exit(1)
@@ -43,7 +47,7 @@ func main() {
 	}
 
 	// Initialize NATS consumer
-	consumer, err := nats.NewConsumer(cfg.NatsURL, elasticClient, logger)
+	consumer, err := nats.NewConsumer(cfg.NATS.URL, elasticClient, logger)
 	if err != nil {
 		logger.Error("failed to create nats consumer", "error", err)
 		os.Exit(1)

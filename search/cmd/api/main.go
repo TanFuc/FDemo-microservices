@@ -29,14 +29,18 @@ func main() {
 	slogger.Info("starting search-service api")
 
 	// Load configuration
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		slogger.Error("failed to load configuration", "error", err)
+		os.Exit(1)
+	}
 
 	// Create context with cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// Initialize Elasticsearch client
-	elasticClient, err := elastic.NewClient(cfg.ElasticAddresses, slogger)
+	elasticClient, err := elastic.NewClient(cfg.Elasticsearch.Addresses, slogger)
 	if err != nil {
 		slogger.Error("failed to create elasticsearch client", "error", err)
 		os.Exit(1)
@@ -50,7 +54,7 @@ func main() {
 	}
 
 	// Initialize Redis client
-	redisClient, err := cache.NewRedisClient(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB, slogger)
+	redisClient, err := cache.NewRedisClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB, slogger)
 	if err != nil {
 		slogger.Error("failed to create redis client", "error", err)
 		os.Exit(1)
@@ -86,12 +90,12 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		if err := app.Listen(":" + cfg.APIPort); err != nil {
+		if err := app.Listen(":" + cfg.App.Port); err != nil {
 			slogger.Error("server error", "error", err)
 		}
 	}()
 
-	slogger.Info("api server started", "port", cfg.APIPort)
+	slogger.Info("api server started", "port", cfg.App.Port)
 
 	// Wait for shutdown signal
 	sigChan := make(chan os.Signal, 1)

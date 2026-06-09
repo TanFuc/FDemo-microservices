@@ -19,7 +19,6 @@ var (
 	testRedisClient *redisrepo.CartRepository
 	testMongoRepo   *mongorepo.CartRepository
 	testUsecase     *usecase.CartUsecase
-	redisClient     interface{ FlushDB(context.Context) }
 )
 
 func TestMain(m *testing.M) {
@@ -38,14 +37,6 @@ func TestMain(m *testing.M) {
 		panic("Failed to connect to Redis: " + err.Error())
 	}
 	testRedisClient = redisrepo.NewCartRepository(client)
-
-	// Store reference for FlushDB
-	type flusher interface {
-		FlushDB(context.Context) interface{ Err() error }
-	}
-	if f, ok := interface{}(client).(flusher); ok {
-		redisClient = f
-	}
 
 	// Initialize MongoDB
 	mongoConfig := mongorepo.NewConfigFromEnv()
