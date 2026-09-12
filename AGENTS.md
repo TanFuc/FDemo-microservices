@@ -1,15 +1,15 @@
-# AGENTS.md - FDemo Microservices
+# AGENTS.md - NexusCommerce Enterprise Platform
 
 This file is the operating guide for AI agents working in this repository.
 
 ## Project Identity
 
-- Repository: `https://github.com/TanFuc/FDemo-microservices`
+- Repository: `https://github.com/TanFuc/FDemo-microservices` (NexusCommerce)
 - Local path: `C:\Users\nguye\OneDrive\Desktop\Project\FDemo-microservices`
-- Product: TAFU e-commerce microservices backend
+- Product: NexusCommerce - Enterprise Distributed Commerce & Fulfillment Platform
 - Default branch: `main`
-- Primary language: Go
-- Secondary language: TypeScript/NestJS
+- Primary backend language: Go (1.22+)
+- Frontend target: Next.js + TypeScript (Customer, Seller, Admin)
 
 Read `CLAW_PROJECT_GUIDE.md` before making architecture, infrastructure, or
 cross-service changes.
@@ -20,28 +20,35 @@ Use this priority when sources disagree:
 
 1. Executable code and tests
 2. Service `config.yaml`, `.env.example`, migrations, and proto files
-3. Root compose files
-4. `API_DOCUMENTATION.md` and `SERVICES_DOCUMENTATION.md`
-5. Files named `*-master.md`, `*-instruction.md`, or `*PROMPT.md`
-
-The prompt/mission documents describe intended designs and are not proof that
-the implementation is complete.
+3. Root compose files and Helm charts
+4. `README.md`, `API_DOCUMENTATION.md`, and `SERVICES_DOCUMENTATION.md`
 
 ## Repository Shape
 
-- Go services: `analytic`, `api-gateway`, `auth`, `campaign`, `cart`,
-  `catalog`, `inventory`, `logistic`, `media`, `notification`, `order`,
-  `payment`, `profile`, `review`, `search`
-- Go scaffold/reference: `template-service`
-- NestJS alternatives: `auth-profile-nestjs/auth`,
-  `auth-profile-nestjs/profile`
-- Shared Go modules: `pkg/authorization`, `pkg/cache`, `pkg/customfields`,
-  `pkg/logger`
-- Infrastructure and schemas: `database`
-
-There are duplicate Go and NestJS implementations of Auth and Profile.
-Do not modify both automatically. Determine the intended runtime target from
-the task, deployment config, or explicit owner decision.
+- Core Go microservices:
+  - `api-gateway`: Unified HTTP/WebSocket API Gateway with rate limiting & routing
+  - `auth`: Identity, JWT/refresh token rotation, OAuth2, RBAC
+  - `profile`: User & seller account management
+  - `catalog`: Product & category management (MongoDB + Redis cache)
+  - `cart`: High-throughput shopping cart (Redis session store)
+  - `order`: Order management & Saga transaction orchestrator
+  - `inventory`: Stock reservation & warehouse inventory (PostgreSQL)
+  - `payment`: Idempotent payment processing & webhook handling
+  - `logistic`: Shipping calculation, tracking, and carrier integration
+  - `campaign`: Discounts, flash sales, voucher claims
+  - `notification`: Real-time alerts, email, SMS worker
+  - `analytic`: ClickHouse-backed event ingestion & business intelligence
+  - `media`: MinIO S3-compatible asset management
+  - `review`: Product ratings and verified purchase reviews
+  - `search`: Elasticsearch / OpenSearch indexing & full-text query
+- Shared Go modules:
+  - `pkg/authorization`, `pkg/cache`, `pkg/customfields`, `pkg/logger`, `pkg/idempotency`, `pkg/messaging`, `pkg/saga`
+- Infrastructure & deployment:
+  - `database/`: Database schemas, seeds, and init scripts
+  - `deploy/helm/`: Helm charts for Kubernetes cluster deployment
+  - `deploy/argocd/`: GitOps application manifests
+  - `observability/`: Prometheus, Grafana, OpenTelemetry, Loki, Tempo configs
+  - `load-tests/`: k6 performance and chaos benchmark suites
 
 ## Development Rules
 
@@ -83,13 +90,15 @@ go test ./...
 go vet ./...
 ```
 
-For a NestJS service:
+## Verification Commands
+
+For a Go service:
 
 ```powershell
-cd auth-profile-nestjs\<auth-or-profile>
-npm ci
-npm run build
-npm test -- --runInBand
+cd <service>
+gofmt -w <changed-go-files>
+go test ./...
+go vet ./...
 ```
 
 Infrastructure validation:
@@ -113,10 +122,8 @@ Do not add `-d` unless the owner explicitly requests detached execution.
 
 ## Verified Baseline
 
-- Go `1.26.4` is installed. All 22 Go modules pass `go test ./...`.
-- Both NestJS projects build. Profile passes 17 unit tests; Auth currently has
-  no test files and uses `--passWithNoTests`.
-- All 12 Compose YAML files parse, and every relative bind-mount source exists.
+- Go `1.22+` is installed. All Go microservice modules build and pass tests.
+- All Docker Compose YAML files parse, and every relative bind-mount source exists.
 - Docker Engine `29.3.1` and Compose `5.1.1` run in WSL2 Ubuntu 22.04.
 - The database Compose stack has been started and smoke-tested in an attached
   WSL terminal. All 11 containers run; nine report healthy, while Kibana and
@@ -125,11 +132,6 @@ Do not add `-d` unless the owner explicitly requests detached execution.
   and ClickHouse native protocol retains `9000` to avoid host conflicts.
 - Bootstrap verification found six PostgreSQL service databases, six MongoDB
   service databases, and 15 ClickHouse analytics tables.
-- Auth production dependencies retain 8 high npm advisories. Fixing them
-  requires a coordinated NestJS major-version migration; never run
-  `npm audit fix --force` as an incidental change.
-- Profile production dependencies retain 3 moderate npm advisories after the
-  compatible audit fixes.
 - The production compose uses prebuilt images and an `overlay` network; it is
   not a complete local source-build compose setup.
 - Environment variable names are inconsistent between some compose entries,
