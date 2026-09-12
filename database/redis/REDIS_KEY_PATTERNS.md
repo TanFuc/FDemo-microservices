@@ -54,7 +54,7 @@
 # TTL: 2592000 (30 days), refreshed on interaction
 # Fields: {skuId} -> JSON string
 # Example:
-#   HSET cart:user123 "SKU001" '{"skuId":"SKU001","name":"Áo thun","price":150000,"quantity":2,"thumbnail":"url","selected":true,"addedAt":1709223300}'
+#   HSET cart:user123 "SKU001" '{"skuId":"SKU001","name":"Cotton T-Shirt","price":150000,"quantity":2,"thumbnail":"url","selected":true,"addedAt":1709223300}'
 #   HGETALL cart:user123
 #   EXPIRE cart:user123 2592000
 

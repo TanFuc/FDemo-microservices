@@ -1,11 +1,11 @@
 # API Documentation - Microservices E-Commerce Platform
 
-> **Mục đích**: Tài liệu API đầy đủ cho việc implement frontend
-> **Cập nhật**: 2026-01-13
+> **Purpose**: Comprehensive API reference for frontend and client implementation
+> **Last Updated**: 2026-01-13
 
 ---
 
-## Mục lục
+## Table of Contents
 
 1. [Auth Service](#1-auth-service)
 2. [Profile Service](#2-profile-service)
@@ -33,7 +33,7 @@ Development: http://localhost:8080
 
 ## Authentication
 
-Hầu hết các API yêu cầu JWT token trong header:
+Most API endpoints require a JWT Bearer token in the Authorization header:
 
 ```
 Authorization: Bearer <access_token>
@@ -43,13 +43,13 @@ Authorization: Bearer <access_token>
 
 ## 1. Auth Service
 
-### 1.1 Đăng ký tài khoản
+### 1.1 Register Account
 
 **POST** `/api/v1/identity/auth/register`
 
-**Tác dụng**: Đăng ký người dùng mới với email và password
+**Purpose**: Register a new user account with email and password credentials
 
-**Bối cảnh sử dụng**: Trang đăng ký, onboarding user mới
+**Usage Context**: Registration screen, new user onboarding
 
 **Request Body (required)**:
 
@@ -81,21 +81,21 @@ Authorization: Bearer <access_token>
 }
 ```
 
-**Errors**: 400 (validation), 409 (email đã tồn tại)
+**Errors**: 400 (validation), 409 (email already registered)
 
 ---
 
-### 1.2 Đăng nhập
+### 1.2 User Login
 
 **POST** `/api/v1/identity/auth/login`
 
-**Tác dụng**: Xác thực user và trả về JWT tokens
+**Purpose**: Authenticate user credentials and return JWT access and refresh token pair
 
-**Bối cảnh sử dụng**: Trang đăng nhập
+**Usage Context**: Login screen, authentication modal
 
 **Headers (optional)**:
 
-- `X-Device-ID`: Device ID để quản lý sessions
+- `X-Device-ID`: Unique device identifier used for session management and device tracking
 
 **Request Body (required)**:
 
@@ -138,9 +138,9 @@ Authorization: Bearer <access_token>
 
 **POST** `/api/v1/identity/auth/refresh`
 
-**Tác dụng**: Lấy access token mới từ refresh token
+**Purpose**: Obtain a fresh access token using a valid refresh token
 
-**Bối cảnh sử dụng**: Khi access token hết hạn, automatic refresh
+**Usage Context**: Transparent token refresh via HTTP interceptor upon 401 Unauthorized
 
 **Headers (optional)**:
 
@@ -169,15 +169,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 1.4 Đăng xuất
+### 1.4 Logout
 
 **POST** `/api/v1/identity/auth/logout`
 
 **Auth**: Required
 
-**Tác dụng**: Đăng xuất và vô hiệu hóa tokens
+**Purpose**: Invalidate active session tokens and blacklist access token
 
-**Bối cảnh sử dụng**: Nút logout trong app
+**Usage Context**: User sign-out action
 
 **Request Body (optional)**:
 
@@ -198,15 +198,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 1.5 Đăng xuất tất cả thiết bị
+### 1.5 Revoke All Sessions / Logout Everywhere
 
 **POST** `/api/v1/identity/auth/logout-all`
 
 **Auth**: Required
 
-**Tác dụng**: Đăng xuất khỏi tất cả thiết bị
+**Purpose**: Revoke all active sessions and refresh tokens across all devices
 
-**Bối cảnh sử dụng**: Security settings, đổi mật khẩu
+**Usage Context**: Account security center, post-password reset
 
 **Response (200)**:
 
@@ -219,15 +219,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 1.6 Lấy Profile
+### 1.6 Get Current User Identity
 
 **GET** `/api/v1/identity/auth/profile`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy thông tin user đang đăng nhập
+**Purpose**: Retrieve authenticated user identity and assigned roles
 
-**Bối cảnh sử dụng**: Header user info, profile page
+**Usage Context**: App bar, user greeting, profile overview
 
 **Response (200)**:
 
@@ -248,15 +248,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 1.7 Lấy danh sách Sessions
+### 1.7 List Active Sessions
 
 **GET** `/api/v1/identity/auth/sessions`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy tất cả sessions đang active
+**Purpose**: Retrieve all active login sessions and device footprints
 
-**Bối cảnh sử dụng**: Security settings, quản lý devices
+**Usage Context**: Connected devices management, security audit
 
 **Response (200)**:
 
@@ -284,15 +284,15 @@ Authorization: Bearer <access_token>
 
 ## 2. Profile Service
 
-### 2.1 Lấy Profile của tôi
+### 2.1 Get My Profile
 
 **GET** `/api/v1/profile`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy profile đầy đủ của user
+**Purpose**: Retrieve complete user profile details including address book and shop metadata
 
-**Bối cảnh sử dụng**: Profile page, account settings
+**Usage Context**: Account profile settings screen
 
 **Response (200)**:
 
@@ -314,15 +314,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 2.2 Cập nhật Profile
+### 2.2 Update Profile
 
 **PUT** `/api/v1/profile`
 
 **Auth**: Required
 
-**Tác dụng**: Cập nhật thông tin profile
+**Purpose**: Update user demographic details (name, avatar, bio)
 
-**Bối cảnh sử dụng**: Edit profile page
+**Usage Context**: Edit profile form
 
 **Request Body (all optional)**:
 
@@ -340,15 +340,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 2.3 Lấy danh sách địa chỉ
+### 2.3 List Shipping Addresses
 
 **GET** `/api/v1/profile/addresses`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy tất cả địa chỉ của user
+**Purpose**: Retrieve all saved delivery addresses for the authenticated user
 
-**Bối cảnh sử dụng**: Checkout, address management
+**Usage Context**: Checkout address selector, address book management
 
 **Response (200)**:
 
@@ -374,15 +374,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 2.4 Thêm địa chỉ mới
+### 2.4 Add Shipping Address
 
 **POST** `/api/v1/profile/addresses`
 
 **Auth**: Required
 
-**Tác dụng**: Thêm địa chỉ giao hàng mới
+**Purpose**: Add a new shipping destination address
 
-**Bối cảnh sử dụng**: Add address trong checkout hoặc settings
+**Usage Context**: Checkout shipping step, address book form
 
 **Request Body (required)**:
 
@@ -404,7 +404,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 2.5 Cập nhật địa chỉ
+### 2.5 Update Shipping Address
 
 **PUT** `/api/v1/profile/addresses/:id`
 
@@ -412,13 +412,13 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `id` - Address ID (required)
 
-**Tác dụng**: Cập nhật địa chỉ đã có
+**Purpose**: Modify an existing delivery address
 
 **Request Body**: Same as create (all optional)
 
 ---
 
-### 2.6 Xóa địa chỉ
+### 2.6 Delete Shipping Address
 
 **DELETE** `/api/v1/profile/addresses/:id`
 
@@ -426,7 +426,7 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `id` - Address ID (required)
 
-**Tác dụng**: Xóa địa chỉ
+**Purpose**: Remove a saved shipping address
 
 **Response (200)**:
 
@@ -439,15 +439,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 2.7 Đăng ký Shop
+### 2.7 Register Merchant / Shop Profile
 
 **POST** `/api/v1/profile/shop`
 
 **Auth**: Required
 
-**Tác dụng**: Đăng ký trở thành seller
+**Purpose**: Register and onboard as a marketplace seller
 
-**Bối cảnh sử dụng**: Seller registration flow
+**Usage Context**: Seller onboarding application form
 
 **Request Body (required)**:
 
@@ -466,15 +466,15 @@ Authorization: Bearer <access_token>
 
 ## 3. Catalog Service
 
-### 3.1 Lấy danh sách sản phẩm
+### 3.1 List Products
 
 **GET** `/api/v1/catalog/products`
 
 **Auth**: Not required
 
-**Tác dụng**: Lấy danh sách sản phẩm có phân trang và filter
+**Purpose**: Retrieve paginated list of catalog products with dynamic filtering
 
-**Bối cảnh sử dụng**: Product listing, category page, home page
+**Usage Context**: Home page storefront, category browsing, product catalog
 
 **Query Params (all optional)**:
 | Param | Type | Description |
@@ -482,8 +482,8 @@ Authorization: Bearer <access_token>
 | categoryId | string | Filter theo category |
 | brandId | string | Filter theo brand |
 | status | string | Filter theo status (active/inactive) |
-| limit | int | Số items/page (default: 20) |
-| offset | int | Offset để phân trang |
+| limit | int | Number of items per page (default: 20) |
+| offset | int | Offset for pagination |
 
 **Response (200)**:
 
@@ -518,7 +518,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 3.2 Lấy chi tiết sản phẩm
+### 3.2 Get Product Details
 
 **GET** `/api/v1/catalog/products/:id`
 
@@ -526,15 +526,15 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `id` - Product ID (required)
 
-**Tác dụng**: Lấy thông tin chi tiết 1 sản phẩm
+**Purpose**: Retrieve detailed specifications, variations, and rich media for a single product
 
-**Bối cảnh sử dụng**: Product detail page
+**Usage Context**: Product detail view (PDP)
 
 **Response (200)**: Single product object
 
 ---
 
-### 3.3 Lấy sản phẩm theo slug
+### 3.3 Get Product by Slug
 
 **GET** `/api/v1/catalog/products/slug/:slug`
 
@@ -542,21 +542,21 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `slug` - Product slug (required)
 
-**Tác dụng**: Lấy sản phẩm bằng SEO-friendly URL
+**Purpose**: Retrieve product details using its SEO-friendly slug identifier
 
-**Bối cảnh sử dụng**: Direct link share, SEO
+**Usage Context**: Canonical SEO URL routing, external link sharing
 
 ---
 
-### 3.4 Tạo sản phẩm
+### 3.4 Create Product
 
 **POST** `/api/v1/catalog/products`
 
 **Auth**: Required (Seller)
 
-**Tác dụng**: Tạo sản phẩm mới
+**Purpose**: Create a new product entry with SKU variations and specs
 
-**Bối cảnh sử dụng**: Seller dashboard - add product
+**Usage Context**: Seller portal product creation wizard
 
 **Request Body**:
 
@@ -586,7 +586,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 3.5 Cập nhật sản phẩm
+### 3.5 Update Product
 
 **PUT** `/api/v1/catalog/products/:id`
 
@@ -596,7 +596,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 3.6 Xóa sản phẩm
+### 3.6 Delete Product
 
 **DELETE** `/api/v1/catalog/products/:id`
 
@@ -606,15 +606,15 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 3.7 Lấy danh sách Categories
+### 3.7 List Categories
 
 **GET** `/api/v1/catalog/categories`
 
 **Auth**: Not required
 
-**Tác dụng**: Lấy tất cả categories
+**Purpose**: Retrieve recursive category tree and attribute definitions
 
-**Bối cảnh sử dụng**: Navigation menu, filter sidebar
+**Usage Context**: Store navigation navbar, category sidebar filter
 
 **Response (200)**:
 
@@ -635,7 +635,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 3.8 Tạo Category
+### 3.8 Create Category
 
 **POST** `/api/v1/catalog/categories`
 
@@ -657,7 +657,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 3.9 Lấy danh sách Brands
+### 3.9 List Brands
 
 **GET** `/api/v1/catalog/brands`
 
@@ -667,7 +667,7 @@ Authorization: Bearer <access_token>
 
 ## 4. Cart Service
 
-### 4.1 Lấy giỏ hàng
+### 4.1 Get Shopping Cart
 
 **GET** `/api/v1/cart/:userId`
 
@@ -675,9 +675,9 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `userId` - User ID (required)
 
-**Tác dụng**: Lấy giỏ hàng của user
+**Purpose**: Retrieve active shopping cart items and calculated pricing summary
 
-**Bối cảnh sử dụng**: Cart page, mini cart, checkout
+**Usage Context**: Cart page, header mini-cart dropdown, checkout screen
 
 **Response (200)**:
 
@@ -702,7 +702,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 4.2 Thêm vào giỏ hàng
+### 4.2 Add Item to Cart
 
 **POST** `/api/v1/cart/:userId/items`
 
@@ -710,9 +710,9 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `userId` - User ID (required)
 
-**Tác dụng**: Thêm sản phẩm vào giỏ hàng
+**Purpose**: Atomically increment item quantity or add new SKU to user cart
 
-**Bối cảnh sử dụng**: "Add to cart" button
+**Usage Context**: "Add to cart" button
 
 **Request Body**:
 
@@ -737,7 +737,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 4.3 Xóa item khỏi giỏ hàng
+### 4.3 Remove Item from Cart
 
 **DELETE** `/api/v1/cart/:userId/items/:skuId`
 
@@ -758,7 +758,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 4.4 Cập nhật số lượng
+### 4.4 Update Item Quantity
 
 **PUT** `/api/v1/cart/:userId/items/:skuId/quantity`
 
@@ -774,13 +774,13 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 4.5 Cập nhật selection
+### 4.5 Update Item Selection
 
 **PUT** `/api/v1/cart/:userId/items/:skuId/selection`
 
 **Auth**: Required
 
-**Tác dụng**: Chọn/bỏ chọn item để checkout
+**Purpose**: Select or deselect specific items to include in immediate checkout
 
 **Request Body**:
 
@@ -792,27 +792,27 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 4.6 Xóa toàn bộ giỏ hàng
+### 4.6 Clear Shopping Cart
 
 **DELETE** `/api/v1/cart/:userId`
 
 **Auth**: Required
 
-**Tác dụng**: Clear cart
+**Purpose**: Purge all items from the current user shopping cart
 
 ---
 
 ## 5. Order Service
 
-### 5.1 Tạo đơn hàng
+### 5.1 Create Order
 
 **POST** `/api/v1/orders`
 
 **Auth**: Required
 
-**Tác dụng**: Tạo đơn hàng mới từ cart
+**Purpose**: Create a new pending order from selected cart items and initiate Saga reservation
 
-**Bối cảnh sử dụng**: Checkout - place order
+**Usage Context**: Checkout "Place Order" confirmation button
 
 **Request Body**:
 
@@ -869,7 +869,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 5.2 Lấy chi tiết đơn hàng
+### 5.2 Get Order Details
 
 **GET** `/api/v1/orders/:id`
 
@@ -877,13 +877,13 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `id` - Order UUID (required)
 
-**Tác dụng**: Xem chi tiết đơn hàng
+**Purpose**: Retrieve complete order metadata, shipping progress, and item snapshots
 
-**Bối cảnh sử dụng**: Order detail page, order tracking
+**Usage Context**: Order tracking page, buyer order receipt
 
 ---
 
-### 5.3 Lấy danh sách đơn hàng
+### 5.3 List Orders
 
 **GET** `/api/v1/orders/user/:userId`
 
@@ -896,7 +896,7 @@ Authorization: Bearer <access_token>
 - `limit`: int (default 10)
 - `offset`: int (default 0)
 
-**Tác dụng**: Xem lịch sử đơn hàng
+**Purpose**: Retrieve paginated customer order history with status filters
 
 **Response (200)**:
 
@@ -910,13 +910,13 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 5.4 Hủy đơn hàng
+### 5.4 Cancel Order
 
 **POST** `/api/v1/orders/:id/cancel`
 
 **Auth**: Required
 
-**Tác dụng**: Hủy đơn hàng (chỉ khi status là PENDING)
+**Purpose**: Cancel an order and trigger Saga stock release compensation (only valid when status is PENDING)
 
 **Response (200)**:
 
@@ -930,47 +930,47 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 5.5 Đánh dấu đã thanh toán
+### 5.5 Mark Order as Paid
 
 **POST** `/api/v1/orders/:id/pay`
 
 **Auth**: Required (Internal/Admin)
 
-**Tác dụng**: Cập nhật trạng thái PAID
+**Purpose**: Internal / admin transition to mark order status as PAID
 
 ---
 
-### 5.6 Đánh dấu đang giao
+### 5.6 Mark Order as Shipped
 
 **POST** `/api/v1/orders/:id/ship`
 
 **Auth**: Required (Admin/Seller)
 
-**Tác dụng**: Cập nhật trạng thái SHIPPED
+**Purpose**: Internal transition updating order status to SHIPPED
 
 ---
 
-### 5.7 Đánh dấu hoàn thành
+### 5.7 Mark Order as Completed
 
 **POST** `/api/v1/orders/:id/complete`
 
 **Auth**: Required
 
-**Tác dụng**: Cập nhật trạng thái COMPLETED
+**Purpose**: Finalize order lifecycle upon delivery confirmation
 
 ---
 
 ## 6. Payment Service
 
-### 6.1 Tạo thanh toán
+### 6.1 Create Payment Intent
 
 **POST** `/api/v1/payments`
 
 **Auth**: Required
 
-**Tác dụng**: Khởi tạo giao dịch thanh toán
+**Purpose**: Initialize payment transaction and obtain client gateway checkout URL or token
 
-**Bối cảnh sử dụng**: Sau khi tạo order, redirect đến payment
+**Usage Context**: Post-order placement redirect to payment gateway
 
 **Request Body**:
 
@@ -1000,7 +1000,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 6.2 Lấy thông tin thanh toán
+### 6.2 Get Payment Details
 
 **GET** `/api/v1/payments/:id`
 
@@ -1010,7 +1010,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 6.3 Lấy thanh toán theo order
+### 6.3 Get Payment by Order ID
 
 **GET** `/api/v1/payments/order/:orderId`
 
@@ -1029,7 +1029,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 6.4 Webhook từ Provider
+### 6.4 Payment Provider Webhook
 
 **POST** `/api/v1/payments/webhook/:provider`
 
@@ -1037,13 +1037,13 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `provider` - Provider name (momo/stripe/zalopay)
 
-**Tác dụng**: Nhận callback từ payment provider
+**Purpose**: Ingest asynchronous payment status webhook callback from external provider
 
 ---
 
 ## 7. Inventory Service
 
-### 7.1 Lấy thông tin tồn kho
+### 7.1 Get Inventory Stock
 
 **GET** `/api/v1/inventory/products/:skuId`
 
@@ -1051,7 +1051,7 @@ Authorization: Bearer <access_token>
 
 **Path Params**: `skuId` - SKU ID (required)
 
-**Tác dụng**: Kiểm tra số lượng tồn kho
+**Purpose**: Query current available and reserved inventory counts for an SKU
 
 **Response (200)**:
 
@@ -1066,7 +1066,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 7.2 Cập nhật tồn kho
+### 7.2 Update Inventory Stock
 
 **PUT** `/api/v1/inventory/products/:skuId`
 
@@ -1082,7 +1082,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 7.3 Lấy lịch sử tồn kho
+### 7.3 Get Stock Audit History
 
 **GET** `/api/v1/inventory/products/:skuId/history`
 
@@ -1094,7 +1094,7 @@ Authorization: Bearer <access_token>
 
 **POST** `/api/v1/inventory/reserve`
 
-**Tác dụng**: Đặt trước tồn kho khi tạo order
+**Purpose**: Atomically hold stock for an order via two-phase reservation
 
 **Request Body**:
 
@@ -1111,7 +1111,7 @@ Authorization: Bearer <access_token>
 
 **POST** `/api/v1/inventory/confirm`
 
-**Tác dụng**: Xác nhận reserve sau khi thanh toán
+**Purpose**: Finalize deduction of previously reserved inventory upon payment confirmation
 
 ---
 
@@ -1119,21 +1119,21 @@ Authorization: Bearer <access_token>
 
 **POST** `/api/v1/inventory/release`
 
-**Tác dụng**: Giải phóng stock khi hủy order
+**Purpose**: Release reserved inventory hold back to available stock on order cancellation
 
 ---
 
 ## 8. Logistic Service
 
-### 8.1 Tính phí vận chuyển
+### 8.1 Calculate Shipping Rates
 
 **POST** `/api/v1/logistics/calculate-fee`
 
 **Auth**: Required
 
-**Tác dụng**: Tính phí ship dựa trên provider
+**Purpose**: Calculate delivery fee across supported logistics carriers
 
-**Bối cảnh sử dụng**: Checkout - select shipping method
+**Usage Context**: Checkout shipping option selection
 
 **Request Body**:
 
@@ -1162,7 +1162,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 8.2 Tạo vận đơn
+### 8.2 Create Shipment Waybill
 
 **POST** `/api/v1/logistics/shipments`
 
@@ -1214,7 +1214,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 8.3 Lấy thông tin vận đơn
+### 8.3 Get Shipment Waybill Details
 
 **GET** `/api/v1/logistics/shipments/:id`
 
@@ -1222,7 +1222,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 8.4 Lấy vận đơn theo order
+### 8.4 Get Shipment by Order ID
 
 **GET** `/api/v1/logistics/shipments/order/:orderId`
 
@@ -1230,17 +1230,17 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 8.5 Tracking vận đơn
+### 8.5 Track Shipment Progress
 
 **GET** `/api/v1/logistics/shipments/:id/tracking`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy lịch sử tracking
+**Purpose**: Retrieve real-time carrier tracking checkpoints and delivery status
 
 ---
 
-### 8.6 Webhook từ đơn vị vận chuyển
+### 8.6 Carrier Status Webhook
 
 **POST** `/api/v1/logistics/webhook/:provider`
 
@@ -1250,15 +1250,15 @@ Authorization: Bearer <access_token>
 
 ## 9. Media Service
 
-### 9.1 Lấy Presigned URL để upload
+### 9.1 Get Presigned Upload URL
 
 **POST** `/api/v1/media/presigned-url`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy URL để upload file trực tiếp lên S3/MinIO
+**Purpose**: Generate a signed S3/MinIO PUT URL for direct client upload
 
-**Bối cảnh sử dụng**: Upload ảnh sản phẩm, avatar
+**Usage Context**: Media upload widget, avatar change, product image gallery
 
 **Request Body**:
 
@@ -1283,13 +1283,13 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 9.2 Xác nhận upload hoàn tất
+### 9.2 Confirm Upload Completion
 
 **POST** `/api/v1/media/confirm`
 
 **Auth**: Required
 
-**Tác dụng**: Xác nhận file đã upload xong
+**Purpose**: Verify uploaded object in storage and trigger asynchronous image optimization
 
 **Request Body**:
 
@@ -1301,7 +1301,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 9.3 Lấy thông tin media
+### 9.3 Get Media Metadata
 
 **GET** `/api/v1/media/:id`
 
@@ -1309,7 +1309,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 9.4 Xóa media
+### 9.4 Delete Media Asset
 
 **DELETE** `/api/v1/media/:id`
 
@@ -1319,15 +1319,15 @@ Authorization: Bearer <access_token>
 
 ## 10. Review Service
 
-### 10.1 Tạo đánh giá
+### 10.1 Create Verified Product Review
 
 **POST** `/api/v1/reviews`
 
 **Auth**: Required
 
-**Tác dụng**: Đánh giá sản phẩm sau khi mua
+**Purpose**: Submit rating and text review for an item from a verified completed order
 
-**Bối cảnh sử dụng**: Order completed -> write review
+**Usage Context**: Order history "Write Review" button
 
 **Request Body**:
 
@@ -1339,7 +1339,7 @@ Authorization: Bearer <access_token>
   "productId": "product_uuid", // required
   "orderId": "order_uuid", // required
   "rating": 5, // required: 1-5
-  "content": "Sản phẩm rất tốt...", // required, 1-5000 chars
+  "content": "Excellent build quality and fast shipping...", // required, 1-5000 chars
   "images": ["https://..."] // optional
 }
 ```
@@ -1356,7 +1356,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 10.2 Lấy reviews của sản phẩm
+### 10.2 Get Product Reviews
 
 **GET** `/api/v1/reviews/products/:productId`
 
@@ -1382,13 +1382,13 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 10.3 Lấy rating summary
+### 10.3 Get Product Rating Summary
 
 **GET** `/api/v1/reviews/products/:productId/rating`
 
 **Auth**: Not required
 
-**Tác dụng**: Lấy tổng hợp rating
+**Purpose**: Retrieve average star rating and breakdown distribution for a product
 
 **Response (200)**:
 
@@ -1411,7 +1411,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 10.4 Reply đánh giá (Seller)
+### 10.4 Reply to Review (Seller)
 
 **POST** `/api/v1/reviews/:id/reply`
 
@@ -1421,13 +1421,13 @@ Authorization: Bearer <access_token>
 
 ```json
 {
-  "content": "Cảm ơn bạn đã ủng hộ..." // required
+  "content": "Thank you for shopping with us! We appreciate your feedback." // required
 }
 ```
 
 ---
 
-### 10.5 Lấy reviews của tôi
+### 10.5 Get My Reviews
 
 **GET** `/api/v1/reviews/my`
 
@@ -1435,7 +1435,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 10.6 Cập nhật đánh giá
+### 10.6 Update Review
 
 **PUT** `/api/v1/reviews/:id`
 
@@ -1443,7 +1443,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 10.7 Xóa đánh giá
+### 10.7 Delete Review
 
 **DELETE** `/api/v1/reviews/:id`
 
@@ -1453,24 +1453,24 @@ Authorization: Bearer <access_token>
 
 ## 11. Search Service
 
-### 11.1 Tìm kiếm sản phẩm (GET)
+### 11.1 Search Products (GET)
 
 **GET** `/api/v1/search/products`
 
 **Auth**: Not required
 
-**Tác dụng**: Full-text search sản phẩm
+**Purpose**: Full-text product search with faceted filters and sorting
 
-**Bối cảnh sử dụng**: Search bar, search results page
+**Usage Context**: Global search bar, search catalog result page
 
 **Query Params (all optional)**:
 | Param | Type | Description |
 |-------|------|-------------|
-| keyword | string | Từ khóa tìm kiếm |
+| keyword | string | Search query keyword |
 | categoryId | string | Filter category |
 | brandId | string | Filter brand |
-| priceMin | float | Giá tối thiểu |
-| priceMax | float | Giá tối đa |
+| priceMin | float | Minimum price filter |
+| priceMax | float | Maximum price filter |
 | sortBy | string | Field sort (price, createdAt, rating) |
 | sortOrder | string | asc/desc |
 | page | int | Trang (default 1) |
@@ -1497,7 +1497,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 11.2 Gợi ý tìm kiếm
+### 11.2 Autocomplete Suggestions
 
 **GET** `/api/v1/search/suggest`
 
@@ -1507,11 +1507,11 @@ Authorization: Bearer <access_token>
 
 - `keyword`: string (required)
 
-**Tác dụng**: Autocomplete suggestions
+**Purpose**: Instant autocomplete suggestions as user types in search input
 
 ---
 
-### 11.3 Sản phẩm theo category
+### 11.3 Search Products by Category
 
 **GET** `/api/v1/search/categories/:categoryId/products`
 
@@ -1521,19 +1521,19 @@ Authorization: Bearer <access_token>
 
 ## 12. Campaign Service
 
-### 12.1 Lấy danh sách campaigns
+### 12.1 List Active Campaigns
 
 **GET** `/api/v1/campaigns`
 
 **Auth**: Not required
 
-**Tác dụng**: Lấy các campaigns đang active
+**Purpose**: Retrieve list of active marketing campaigns and flash sales
 
-**Bối cảnh sử dụng**: Home page banners, flash sales
+**Usage Context**: Storefront promotional banner carousels, flash sales widget
 
 ---
 
-### 12.2 Lấy chi tiết campaign
+### 12.2 Get Campaign Details
 
 **GET** `/api/v1/campaigns/:id`
 
@@ -1541,13 +1541,13 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 12.3 Lấy vouchers public
+### 12.3 List Public Vouchers
 
 **GET** `/api/v1/campaigns/vouchers/public`
 
 **Auth**: Not required
 
-**Tác dụng**: Danh sách vouchers có thể claim
+**Purpose**: List vouchers available for customers to claim
 
 ---
 
@@ -1557,7 +1557,7 @@ Authorization: Bearer <access_token>
 
 **Auth**: Required
 
-**Tác dụng**: Lưu voucher vào tài khoản
+**Purpose**: Atomically claim and bind a voucher code to user wallet
 
 **Request Body**:
 
@@ -1569,13 +1569,13 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 12.5 Lấy vouchers của tôi
+### 12.5 List My Vouchers
 
 **GET** `/api/v1/campaigns/vouchers/my`
 
 **Auth**: Required
 
-**Tác dụng**: Danh sách vouchers đã claim
+**Purpose**: Retrieve all claimed and valid vouchers for current user
 
 ---
 
@@ -1585,7 +1585,7 @@ Authorization: Bearer <access_token>
 
 **Auth**: Required
 
-**Tác dụng**: Áp dụng voucher vào cart để tính discount
+**Purpose**: Evaluate voucher discount against current cart items
 
 **Request Body**:
 
@@ -1616,7 +1616,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 12.7 Tạo Campaign (Admin)
+### 12.7 Create Campaign (Admin)
 
 **POST** `/api/v1/campaigns`
 
@@ -1624,7 +1624,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 12.8 Cập nhật Campaign (Admin)
+### 12.8 Update Campaign (Admin)
 
 **PUT** `/api/v1/campaigns/:id`
 
@@ -1632,7 +1632,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 12.9 Xóa Campaign (Admin)
+### 12.9 Delete Campaign (Admin)
 
 **DELETE** `/api/v1/campaigns/:id`
 
@@ -1640,7 +1640,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 12.10 Tạo Voucher cho Campaign (Admin)
+### 12.10 Create Voucher for Campaign (Admin)
 
 **POST** `/api/v1/campaigns/:id/vouchers`
 
@@ -1656,7 +1656,7 @@ Authorization: Bearer <access_token>
 
 **Auth**: Required (Admin/Seller)
 
-**Tác dụng**: Tổng hợp metrics cho dashboard
+**Purpose**: Aggregated revenue, active order counts, and GMV metrics for analytics dashboard
 
 ---
 
@@ -1695,9 +1695,9 @@ Authorization: Bearer <access_token>
 
 **Auth**: Required
 
-**Tác dụng**: Track user behavior events
+**Purpose**: Ingest real-time user behavior events into the analytics pipeline
 
-**Bối cảnh sử dụng**: Frontend tracking (page views, clicks, etc.)
+**Usage Context**: Client-side event telemetry (page views, impressions, add-to-cart clicks)
 
 **Request Body**:
 
@@ -1724,13 +1724,13 @@ Authorization: Bearer <access_token>
 
 ## 14. Notification Service
 
-### 14.1 Lấy danh sách notifications
+### 14.1 List Notifications
 
 **GET** `/api/v1/notifications`
 
 **Auth**: Required
 
-**Tác dụng**: Lấy tất cả thông báo của user
+**Purpose**: Retrieve chronological notifications for authenticated user
 
 **Query Params (optional)**:
 
@@ -1739,7 +1739,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 14.2 Lấy số unread
+### 14.2 Get Unread Notification Count
 
 **GET** `/api/v1/notifications/unread-count`
 
@@ -1755,7 +1755,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 14.3 Đánh dấu đã đọc
+### 14.3 Mark Notification as Read
 
 **PUT** `/api/v1/notifications/:id/read`
 
@@ -1763,7 +1763,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 14.4 Đánh dấu tất cả đã đọc
+### 14.4 Mark All Notifications as Read
 
 **PUT** `/api/v1/notifications/read-all`
 
@@ -1771,7 +1771,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 14.5 Lấy notification preferences
+### 14.5 Get Notification Preferences
 
 **GET** `/api/v1/notifications/preferences`
 
@@ -1779,7 +1779,7 @@ Authorization: Bearer <access_token>
 
 ---
 
-### 14.6 Cập nhật notification preferences
+### 14.6 Update Notification Preferences
 
 **PUT** `/api/v1/notifications/preferences`
 
@@ -1801,7 +1801,7 @@ Authorization: Bearer <access_token>
 
 ## Error Response Format
 
-Tất cả errors đều trả về format sau:
+All error responses adhere to the following standard JSON envelope:
 
 ```json
 {
@@ -1852,8 +1852,8 @@ X-RateLimit-Reset: 1704067200
 
 Standard pagination params:
 
-- `page` hoặc `offset`: Vị trí bắt đầu
-- `limit`: Số items (max 100)
+- `page` or `offset`: Starting pagination index / offset
+- `limit`: Number of items per page (maximum 100)
 
 Response format:
 

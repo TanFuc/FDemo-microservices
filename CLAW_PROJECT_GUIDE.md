@@ -1,61 +1,44 @@
-# Claw Project Guide - FDemo Microservices
+# Claw Project Guide - NexusCommerce Enterprise Platform
 
-Last repository scan: 2026-06-09
+Last repository scan: 2026-09-13
 
 ## 1. Purpose
 
-This repository is a backend prototype for a TAFU e-commerce platform built
-as independently deployable microservices. It covers identity, profiles,
-catalog, carts, orders, stock, payment, shipping, notifications, media,
-search, promotions, reviews, and analytics.
-
-The repository is implementation-heavy but not yet an operationally unified
-platform. It contains working code, scaffolds, design prompts, duplicate
-implementations, and deployment files at different maturity levels.
+This repository contains the backend implementation for **NexusCommerce**, an
+enterprise-grade distributed commerce and fulfillment platform engineered in Go.
+It covers identity, profiles, catalog, carts, orders, inventory, payment,
+shipping, notifications, media, search, campaigns, reviews, and analytics.
 
 ## 2. Baseline
 
 - Branch: `main`
-- Scanned commit: `b5b942186405df8fff849a0698f14ad0b82d68a5`
-- Commit subject: `Merge pull request #5 from TanFuc/develop`
-- Files: about 760
-- Go files: about 496
-- TypeScript files: about 84
-- Markdown files: about 26
-- SQL migrations/schema files: about 16
-- Proto files: about 10
-- Go modules: 22 service/shared modules
-- Node projects: 2 NestJS projects
-
-Remote branches show active/refactor work for Auth, Profile, CI/CD, and service
-structure. Do not assume `main` has resolved every architectural choice.
+- Primary Backend Language: Go (1.22+)
+- Frontend Target: Next.js + TypeScript
+- Go modules: 15 core microservices + 7 shared `pkg` modules
+- Infrastructure: Docker Compose, Helm Charts, ArgoCD GitOps, OpenTelemetry, Prometheus, Grafana, Loki, Tempo
+- Datastores: PostgreSQL 15 (Multi-database), MongoDB 6.0, Redis 7, ClickHouse 23.8, Elasticsearch 8.11, MinIO
 
 ## 3. Architecture Map
 
-| Area | Directory | Main storage/infrastructure | Main interfaces |
+| Area | Directory | Main Storage / Infrastructure | Main Interfaces |
 |---|---|---|---|
-| Edge routing | `api-gateway` | Redis | HTTP reverse proxy, JWT |
-| Identity | `auth` | PostgreSQL, Redis | HTTP, gRPC, NATS |
-| Identity alternative | `auth-profile-nestjs/auth` | PostgreSQL, Redis | HTTP, gRPC |
-| Profile | `profile` | MongoDB | HTTP, NATS |
-| Profile alternative | `auth-profile-nestjs/profile` | MongoDB/Prisma artifacts | HTTP, gRPC |
-| Catalog | `catalog` | MongoDB, Redis | HTTP, gRPC, NATS |
-| Cart | `cart` | Redis, MongoDB | HTTP, gRPC client |
-| Order | `order` | PostgreSQL | HTTP, gRPC client, NATS |
-| Inventory | `inventory` | PostgreSQL, Redis/Lua | HTTP, gRPC |
-| Payment | `payment` | PostgreSQL | HTTP/webhooks, NATS |
-| Logistics | `logistic` | PostgreSQL, Redis | HTTP/webhooks, NATS |
-| Notification | `notification` | MongoDB, RabbitMQ | HTTP, WebSocket, NATS |
-| Media | `media` | MinIO | HTTP, NATS, worker |
-| Search | `search` | Elasticsearch, Redis | HTTP, NATS consumer |
-| Campaign | `campaign` | PostgreSQL, Redis/Lua | HTTP, gRPC |
-| Review | `review` | MongoDB, Redis | HTTP, Order gRPC client |
-| Analytics | `analytic` | ClickHouse | HTTP, NATS consumer |
-| Shared packages | `pkg/*` | N/A | Go modules |
-| Infrastructure | `database` | SQL, Mongo init, Redis docs | Bootstrap assets |
-
-`template-service` is a reference/scaffold, not one of the documented product
-services.
+| Edge Routing | `api-gateway` | Redis | HTTP Reverse Proxy, JWT, Rate Limiting |
+| Identity & RBAC | `auth` | PostgreSQL (`identity_db`), Redis | HTTP, gRPC, Event Bus |
+| Profile & Shop | `profile` | MongoDB (`profile_db`) | HTTP, Event Bus |
+| Catalog | `catalog` | MongoDB (`catalog_db`), Redis | HTTP, gRPC, Event Bus |
+| Cart | `cart` | Redis, MongoDB (`cart_db`) | HTTP, gRPC Client |
+| Order & Saga | `order` | PostgreSQL (`order_db`), Outbox | HTTP, gRPC Client, Event Bus |
+| Inventory | `inventory` | PostgreSQL (`inventory_db`), Redis/Lua | HTTP, gRPC |
+| Payment | `payment` | PostgreSQL (`payment_db`) | HTTP, Webhooks, Event Bus |
+| Logistics | `logistic` | PostgreSQL (`logistics_db`), Redis | HTTP, Webhooks, Event Bus |
+| Notification | `notification` | MongoDB, RabbitMQ | HTTP, WebSocket, Event Bus |
+| Media Storage | `media` | MinIO (S3 API) | HTTP, Event Bus, Worker |
+| Full-Text Search | `search` | Elasticsearch 8.11, Redis | HTTP, Event Consumer |
+| Campaign & Vouchers | `campaign` | PostgreSQL (`campaign_db`), Redis/Lua | HTTP, gRPC |
+| Verified Reviews | `review` | MongoDB (`review_db`), Redis | HTTP, Order gRPC Client |
+| Analytics | `analytic` | ClickHouse | HTTP, Event Consumer |
+| Distributed Modules | `pkg/*` | N/A | Idempotency, Messaging, Saga, Cache, Auth |
+| Infrastructure & Ops | `deploy/`, `observability/`, `database/` | Helm, ArgoCD, Prometheus, Grafana | GitOps & Monitoring Assets |
 
 ## 4. Main Business Flows
 

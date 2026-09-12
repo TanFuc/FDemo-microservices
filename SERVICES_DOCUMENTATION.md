@@ -1,10 +1,10 @@
-# TÀI LIỆU HỆ THỐNG MICROSERVICES E-COMMERCE
+# NexusCommerce — Microservices System Architecture Documentation
 
-## Tổng Quan Hệ Thống
+## System Architecture Overview
 
-Hệ thống E-commerce được xây dựng theo kiến trúc **Microservices**, bao gồm **15 services** độc lập nhưng được liên kết chặt chẽ thông qua các cơ chế giao tiếp đồng bộ (gRPC, HTTP) và bất đồng bộ (NATS JetStream, RabbitMQ).
+NexusCommerce is an enterprise distributed commerce and fulfillment platform built following the **Microservices Architecture Pattern**. The platform comprises **15 independent, decoupled microservices** communicating through synchronous protocols (HTTP/REST, gRPC) and asynchronous message broker topologies (Apache Kafka / NATS JetStream, RabbitMQ).
 
-### Sơ Đồ Kiến Trúc Tổng Quan
+### High-Level Architectural Diagram
 
 ```
                                     ┌─────────────────────────────────┐
@@ -16,711 +16,465 @@ Hệ thống E-commerce được xây dựng theo kiến trúc **Microservices**
                     │                               │                               │
         ┌───────────▼───────────┐     ┌─────────────▼───────────────┐     ┌────────▼────────┐
         │        AUTH           │     │         CATALOG             │     │      CART       │
-        │      (Go + PG)        │     │      (Go + MongoDB)         │     │ (Go + Redis)    │
+        │      (Go + PG)        │     │      (Go + MongoDB)         │     │  (Go + Redis)   │
         └───────────────────────┘     └─────────────────────────────┘     └─────────────────┘
                     │                               │                               │
                     │                    ┌──────────┴──────────┐                    │
                     │                    │                     │                    │
-        ┌───────────▼───────────┐       │         ┌────────────▼────────────┐      │
-        │       PROFILE         │       │         │         SEARCH          │      │
-        │   (Go + MongoDB)      │       │         │   (Go + Elasticsearch)  │      │
-        └───────────────────────┘       │         └─────────────────────────┘      │
-                                        │                                           │
-                              ┌─────────▼─────────┐                  ┌──────────────▼──────────────┐
-                              │     INVENTORY     │◄─────────────────│           ORDER             │
-                              │  (Go + PG + Redis)│   (gRPC/NATS)    │     (Go + PG + NATS)        │
-                              └───────────────────┘                  └─────────────────────────────┘
-                                        │                                           │
-                              ┌─────────┴─────────┐                  ┌──────────────┴──────────────┐
-                              │                   │                  │                              │
-                    ┌─────────▼─────────┐  ┌──────▼───────┐  ┌───────▼───────┐  ┌──────────────────▼───────────────────┐
-                    │      PAYMENT      │  │   LOGISTIC   │  │   CAMPAIGN    │  │          NOTIFICATION                │
-                    │    (Go + PG)      │  │  (Go + PG)   │  │ (Go + PG)     │  │    (Go + RabbitMQ + MongoDB)         │
-                    └───────────────────┘  └──────────────┘  └───────────────┘  └──────────────────────────────────────┘
-                              │                   │                  │                              │
-                    ┌─────────┴───────────────────┴──────────────────┴──────────────────────────────┘
-                    │
-        ┌───────────▼───────────┐     ┌─────────────────────────────┐     ┌─────────────────────────┐
+        ┌───────────▼───────────┐        │        ┌────────────▼────────────┐       │
+        │       PROFILE         │        │        │         SEARCH          │       │
+        │   (Go + MongoDB)      │        │        │   (Go + Elasticsearch)  │       │
+        └───────────────────────┘        │        └─────────────────────────┘       │
+                                         │                                          │
+                               ┌─────────▼─────────┐                  ┌─────────────▼─────────────┐
+                               │     INVENTORY     │◄─────────────────│           ORDER           │
+                               │  (Go + PG + Redis)│   (gRPC/Kafka)   │     (Go + PG + Outbox)    │
+                               └───────────────────┘                  └───────────────────────────┘
+                                         │                                          │
+                               ┌─────────┴─────────┐                  ┌─────────────┴─────────────┐
+                               │                   │                  │                           │
+                     ┌─────────▼─────────┐  ┌──────▼───────┐  ┌───────▼───────┐  ┌────────────────▼───────────────────┐
+                     │      PAYMENT      │  │   LOGISTIC   │  │   CAMPAIGN    │  │          NOTIFICATION              │
+                     │    (Go + PG)      │  │  (Go + PG)   │  │   (Go + PG)   │  │    (Go + RabbitMQ + MongoDB)       │
+                     └───────────────────┘  └──────────────┘  └───────────────┘  └────────────────────────────────────┘
+                               │                   │                  │                           │
+                     ┌─────────┴───────────────────┴──────────────────┴───────────────────────────┘
+                     │
+        ┌────────────▼──────────┐     ┌─────────────────────────────┐     ┌─────────────────────────┐
         │        MEDIA          │     │         ANALYTIC            │     │         REVIEW          │
-        │    (Go + MinIO)       │     │     (Go + ClickHouse)       │     │   (Go + MongoDB)        │
+        │    (Go + MinIO)       │     │     (Go + ClickHouse)       │     │     (Go + MongoDB)      │
         └───────────────────────┘     └─────────────────────────────┘     └─────────────────────────┘
 ```
 
 ---
 
-## Chi Tiết Từng Service
+## Detailed Service Specifications
 
 ### 1. 🚪 API-GATEWAY
-**Công nghệ:** Go 1.22+ | Fiber | Redis | JWT
+**Technology Stack:** Go 1.22+ | Fiber | Redis | JWT
 
-**Mục đích:** Cổng vào duy nhất (Single Entry Point) cho toàn bộ hệ thống E-commerce.
+**Purpose:** Unified Single Entry Point (Reverse Proxy) for all incoming client traffic.
 
-**Chức năng chính:**
-- **Routing & Reverse Proxy:** Định tuyến requests đến các downstream services
-- **Authentication:** Xác thực JWT token cho các protected routes
-- **Rate Limiting:** Giới hạn số lượng request (100 req/60s) sử dụng Redis
-- **Load Balancing:** Phân phối tải đến các service instances
+**Key Responsibilities:**
+- **Routing & Reverse Proxy:** Dynamic proxying and dispatching requests to downstream microservices.
+- **Authentication & Claims Forwarding:** Verifying JWT access tokens and injecting identity headers (`X-User-ID`, `X-User-Roles`).
+- **Rate Limiting:** Distributed token bucket rate limiting (100 req/60s per client IP) backed by Redis.
+- **Load Balancing:** Distributing traffic across healthy backend replica instances.
 
-**Endpoints đang route:**
-| Route | Target Service | Auth Required |
-|-------|---------------|---------------|
-| `/api/v1/identity/*` | identity-service | Partial |
-| `/api/v1/catalog/*` | catalog-service | Partial |
-| `/api/v1/cart/*` | cart-service | ✅ Yes |
-| `/api/v1/orders/*` | order-service | ✅ Yes |
+**Routing Table:**
+| Public Route Prefix | Downstream Target Service | Authentication |
+|---|---|---|
+| `/api/v1/identity/*` | `identity-service` (`auth`) | Public / Protected |
+| `/api/v1/profiles/*` | `profile-service` | Protected (JWT) |
+| `/api/v1/catalog/*` | `catalog-service` | Public (Read) / Seller (Write) |
+| `/api/v1/cart/*` | `cart-service` | Protected (JWT) |
+| `/api/v1/orders/*` | `order-service` | Protected (JWT) |
+| `/api/v1/payments/*` | `payment-service` | Protected / Webhook |
+| `/api/v1/logistics/*` | `logistics-service` | Protected / Webhook |
+| `/api/v1/campaigns/*` | `campaign-service` | Public / Protected |
+| `/api/v1/notifications/*` | `notification-service` | Protected (JWT) |
+| `/api/v1/search/*` | `search-service` | Public |
+| `/api/v1/media/*` | `media-service` | Protected (JWT) |
+| `/api/v1/reviews/*` | `review-service` | Public (Read) / Protected (Write) |
+| `/api/v1/analytics/*` | `analytics-service` | Protected (Admin/Seller) |
 
-**Trạng thái:** ✅ Đã implement cơ bản
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 2. 🔐 AUTH (Identity Service)
-**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis | JWT
+**Technology Stack:** Go 1.22+ | Fiber | PostgreSQL | Redis | JWT
 
-**Mục đích:** Quản lý xác thực và phân quyền người dùng.
+**Purpose:** Identity provider, credential management, token lifecycle, and role-based access control (RBAC).
 
-**Chức năng chính:**
-- **Authentication:** Register, Login, Logout
-- **Token Management:** Access Token (15m), Refresh Token (7d) với Token Rotation
-- **RBAC:** Role-Based Access Control (CUSTOMER, SELLER, ADMIN)
-- **Permission Caching:** Cache permissions vào Redis với TTL 1 giờ
-- **Token Blacklist:** Quản lý revoked tokens
+**Key Responsibilities:**
+- **Authentication:** Registration, login, logout, password hashing using argon2id / bcrypt.
+- **Token Lifecycle:** Short-lived Access Tokens (15m), Refresh Tokens (7d) with automatic Token Rotation.
+- **Role-Based Access Control (RBAC):** Roles (`CUSTOMER`, `SELLER`, `ADMIN`) and granular permission checking (`product:create`, `order:read_own`, etc.).
+- **Permission Caching:** Caching user permissions in Redis with a 1-hour TTL.
+- **Token Blacklisting:** Revoking compromised access tokens using JTI (JWT ID) keys in Redis.
 
-**Entities chính:**
-- `User` - Thông tin người dùng
-- `Role` - Vai trò (CUSTOMER, SELLER, ADMIN)
-- `Permission` - Quyền hạn (product:create, order:read_own, etc.)
-- `RolePermission` - Mapping role-permission
-- `RefreshToken` - Lưu refresh tokens với device tracking
+**Primary Domain Entities:**
+- `User` - Authentication credentials, status, email, phone.
+- `Role` - System roles (`CUSTOMER`, `SELLER`, `ADMIN`).
+- `Permission` - Fine-grained permissions.
+- `RolePermission` - Many-to-many role-to-permission mapping.
+- `RefreshToken` - Tracked refresh tokens with device footprint and revocation status.
 
-**API Endpoints:**
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| POST | `/auth/register` | Đăng ký tài khoản mới |
-| POST | `/auth/login` | Đăng nhập, nhận tokens |
-| POST | `/auth/refresh` | Làm mới access token |
-| POST | `/auth/logout` | Đăng xuất, revoke token |
-| GET | `/auth/profile` | Lấy thông tin profile |
+**Core Endpoints:**
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/auth/register` | Register a new user account |
+| POST | `/auth/login` | Authenticate user and issue JWT token pair |
+| POST | `/auth/refresh` | Rotate and issue a new access token |
+| POST | `/auth/logout` | Revoke active refresh token and blacklist access token |
+| GET | `/auth/profile` | Retrieve identity record for the authenticated user |
 
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 3. 👤 PROFILE
-**Công nghệ:** Go 1.22+ | Fiber | MongoDB
+**Technology Stack:** Go 1.22+ | Fiber | MongoDB
 
-**Mục đích:** Quản lý thông tin cá nhân, địa chỉ giao hàng và Shop profiles.
+**Purpose:** User personal profiles, delivery address book management, and merchant/shop configurations.
 
-**Chức năng chính:**
-- **User Profile:** displayName, avatarUrl, bio
-- **Address Book:** Quản lý nhiều địa chỉ ship với logic "Default Address"
-- **Shop Management:** Đăng ký làm Seller, quản lý thông tin Shop
+**Key Responsibilities:**
+- **User Profile Management:** Demographic information (`displayName`, `avatarUrl`, `bio`).
+- **Address Book:** Multi-address management with single `isDefault` address validation rules.
+- **Merchant / Shop Profile:** Seller onboarding, shop status, business registration metadata.
 
-**Collections chính:**
-- `profiles` - Thông tin user + shopConfig (nếu là Seller)
-- `addresses` - Sổ địa chỉ với compound index trên userId
+**Primary Collections:**
+- `profiles` - User profile document + embedded `shopConfig` for sellers.
+- `addresses` - Delivery address book with compound indexing on `userId`.
 
-**API Endpoints:**
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/profiles/me` | Lấy/Tạo profile (Lazy Creation) |
-| PATCH | `/profiles/me` | Cập nhật profile |
-| POST | `/profiles/me/shop` | Đăng ký/Cập nhật Shop |
-| GET | `/profiles/me/addresses` | Danh sách địa chỉ |
-| POST | `/profiles/me/addresses` | Thêm địa chỉ mới |
-| PATCH | `/profiles/me/addresses/:id/set-default` | Đặt làm mặc định |
+**Core Endpoints:**
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/profiles/me` | Fetch or lazily initialize user profile document |
+| PATCH | `/profiles/me` | Update demographic user profile fields |
+| POST | `/profiles/me/shop` | Register or update merchant/seller shop data |
+| GET | `/profiles/me/addresses` | List all saved delivery addresses |
+| POST | `/profiles/me/addresses` | Add a new delivery address |
+| PATCH | `/profiles/me/addresses/:id/set-default` | Designate specific address as default shipping destination |
 
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 4. 📦 CATALOG
-**Công nghệ:** Go 1.22+ | Fiber | MongoDB | Redis | NATS JetStream
+**Technology Stack:** Go 1.22+ | Fiber | MongoDB | Redis | Event Bus (Kafka / NATS)
 
-**Mục đích:** Quản lý danh mục sản phẩm, thương hiệu và metadata linh hoạt.
+**Purpose:** Flexible category hierarchies, brand registries, product listings, and SKU variations.
 
-**Chức năng chính:**
-- **Category Management:** Quản lý danh mục có attribute definitions
-- **Brand Management:** Quản lý thương hiệu với status
-- **Product Management:** Sản phẩm với Variations (SKUs) và Metadata động
-- **Event Publishing:** Publish events khi CRUD sản phẩm (cho Search Service)
+**Key Responsibilities:**
+- **Category Hierarchy:** Recursive tree structure with dynamic attribute schemas.
+- **Brand Registry:** Official brand management with verification statuses.
+- **Product & Variation Management:** Multi-variant SKUs (sizes, colors), technical specifications, rich media URLs.
+- **Domain Event Publishing:** Emits events upon product mutations to trigger search indexing.
 
-**Domain Models chính:**
-- `Category` - Danh mục với AttributeDefinitions
-- `Brand` - Thương hiệu
-- `Product` - Sản phẩm với Variations, Specs, Media, Metadata
-- `Variation` - SKU với giá, stock ảo, attributes
+**Primary Domain Models:**
+- `Category` - Category tree with `AttributeDefinitions`.
+- `Brand` - Verified brand entity.
+- `Product` - Parent product model containing variations, specifications, and media references.
+- `Variation` - Individual SKU item with price, stock inventory tracking ID, and custom attributes.
 
-**NATS Events published:**
-- `catalog.product.created` → Trigger Search indexing
-- `catalog.product.updated` → Trigger Search re-indexing
-- `catalog.product.deleted` → Trigger Search removal
+**Published Events:**
+- `catalog.product.created` → Triggers search engine indexing.
+- `catalog.product.updated` → Triggers search engine re-indexing and campaign synchronization.
+- `catalog.product.deleted` → Removes document from search index.
 
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 5. 🛒 CART
-**Công nghệ:** Go 1.22+ | Fiber | Redis | MongoDB
+**Technology Stack:** Go 1.22+ | Fiber | Redis | MongoDB
 
-**Mục đích:** Giỏ hàng hiệu suất cao với "Write-Behind Caching" strategy.
+**Purpose:** High-throughput, low-latency shopping cart sessions utilizing a **Write-Behind Caching** strategy.
 
-**Chức năng chính:**
-- **Add to Cart:** Thêm sản phẩm với Redis Atomic operations
-- **Get Cart:** Redis-first với Lazy Loading từ MongoDB
-- **Update/Remove:** Cập nhật số lượng, xóa items
-- **Clear Cart:** Xóa giỏ hàng sau khi đặt order
+**Key Responsibilities:**
+- **Atomic Operations:** Adding, updating, and removing items with Redis atomic operations.
+- **Session Resilience:** Primary read/write in Redis with asynchronous MongoDB backup persistence.
+- **Lazy Hydration:** Automatic cache hydrate from MongoDB upon Redis key expiration or cache misses.
+- **Cart Checkout Clearing:** Atomically purging user cart upon successful order creation.
 
-**Data Structure:**
-- **Redis:** Hash `cart:{userId}` với TTL 30 ngày
-- **MongoDB:** Collection `carts` làm backup persistence
+**Data Structures:**
+- **Redis:** Hash `cart:{userId}` with 30-day sliding TTL.
+- **MongoDB:** `carts` collection providing backup persistence.
 
-**Logic đặc biệt:**
-- Write-Behind Strategy: Ghi Redis trước, async sync xuống MongoDB
-- Lazy Loading: Cache miss → Load từ MongoDB → Hydrate Redis
+**Core Endpoints:**
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/cart` | Retrieve current user's shopping cart |
+| POST | `/cart/items` | Add item/SKU to shopping cart |
+| PUT | `/cart/items/:skuId` | Update quantity of a specific item |
+| DELETE | `/cart/items/:skuId` | Remove item from cart |
+| DELETE | `/cart` | Clear entire shopping cart |
 
-**API Endpoints:**
-| Method | Endpoint | Mô tả |
-|--------|----------|-------|
-| GET | `/cart` | Lấy giỏ hàng |
-| POST | `/cart/items` | Thêm sản phẩm |
-| PUT | `/cart/items/:skuId` | Cập nhật số lượng |
-| DELETE | `/cart/items/:skuId` | Xóa sản phẩm |
-| DELETE | `/cart` | Xóa giỏ hàng |
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 6. 📋 ORDER
-**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | NATS JetStream | gRPC
+**Technology Stack:** Go 1.22+ | Fiber | PostgreSQL | Event Bus | gRPC
 
-**Mục đích:** Trung tâm giao dịch - Quản lý vòng đời đơn hàng.
+**Purpose:** Central transaction hub, order state machine, and Saga transaction coordinator.
 
-**Chức năng chính:**
-- **Order Creation:** Tạo đơn với Data Snapshotting
-- **State Machine:** PENDING → PAID → SHIPPED → COMPLETED / CANCELLED
-- **Stock Reservation:** Gọi Inventory Service qua gRPC
-- **Event Publishing:** Publish order events cho các services khác
+**Key Responsibilities:**
+- **Order Placement:** Capturing point-in-time pricing and item metadata snapshots.
+- **Finite State Machine:** `PENDING` → `PAID` → `SHIPPED` → `COMPLETED` / `CANCELLED`.
+- **Inventory Allocation:** Interfacing with Inventory Service via gRPC or Saga choreography.
+- **Event-Driven Outbox:** Emitting order events through the Transactional Outbox pattern.
 
-**Domain Models:**
-- `Order` - Aggregate Root với status, amounts, shipping address (JSONB)
-- `OrderItem` - Snapshot data (price, name, thumbnail tại thời điểm mua)
+**Primary Entities:**
+- `Order` - Aggregate root with lifecycle status, financial totals, and immutable shipping address (JSONB).
+- `OrderItem` - SKU snapshot with purchased price, name, and thumbnail image.
 
-**Service Interactions:**
+**Inter-Service Interactions:**
 | Target Service | Protocol | Purpose |
-|----------------|----------|---------|
-| Inventory Service | gRPC | Reserve/Release/Confirm Stock |
-| Payment Service | NATS | Trigger payment flow |
-| Notification Service | NATS | Trigger email notifications |
+|---|---|---|
+| Inventory Service | gRPC | Reserve, confirm, or release stock reservations |
+| Payment Service | Event Bus / REST | Trigger and verify payment authorization |
+| Notification Service | Event Bus | Dispatch transactional order confirmations |
 
-**NATS Events published:**
-- `order.created` → Trigger Payment + Notification
-- `order.cancelled` → Release stock, notify user
-- `order.paid` → Confirm stock, update status
+**Published Events:**
+- `order.created` → Triggers inventory reservation & payment capture.
+- `order.cancelled` → Triggers stock release and refund compensations.
+- `order.confirmed` / `order.paid` → Transitions order and triggers shipping dispatch.
 
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 7. 📊 INVENTORY
-**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis (Lua Scripts)
+**Technology Stack:** Go 1.22+ | Fiber | PostgreSQL | Redis (Lua Scripts) | gRPC
 
-**Mục đích:** Quản lý tồn kho với Two-Phase Reservation pattern.
+**Purpose:** Warehouse stock management with Two-Phase Reservation and atomic Lua script execution.
 
-**Chức năng chính:**
-- **Reserve Stock:** Giữ hàng khi tạo order (TTL 30 phút)
-- **Confirm Stock:** Xác nhận trừ kho khi payment success
-- **Release Stock:** Hoàn lại kho khi order cancelled/timeout
-- **Sync Redis-DB:** Đồng bộ state giữa Redis và PostgreSQL
+**Key Responsibilities:**
+- **Stock Reservation (Phase 1):** Atomically holding stock during checkout with temporary expiration (30m TTL).
+- **Stock Confirmation (Phase 2):** Finalizing stock deduction when payment succeeds.
+- **Stock Release (Compensation):** Returning reserved stock to inventory on order cancellation or checkout timeout.
+- **Redis-PostgreSQL Synchronization:** High-throughput reservation in Redis with transactional persistence in PostgreSQL.
 
-**Database Tables:**
-- `inventory_items` - TotalStock, ReservedStock
-- `stock_reservations` - Transaction log với status, expiresAt
+**Primary Database Tables:**
+- `inventory_items` - `TotalStock`, `ReservedStock`, SKU identifier, warehouse location.
+- `stock_reservations` - Reservation audit ledger tracking order IDs, quantities, and expiration timestamps.
 
-**Redis Lua Script (`reserve.lua`):**
+**Atomic Redis Lua Script (`reserve.lua`):**
 ```lua
--- Atomic check-and-reserve
-if (total - reserved) >= qty then
-    HINCRBY reserved qty
+-- Atomic check-and-reserve script
+local total = tonumber(redis.call('HGET', KEYS[1], 'total')) or 0
+local reserved = tonumber(redis.call('HGET', KEYS[1], 'reserved')) or 0
+local requested = tonumber(ARGV[1])
+
+if (total - reserved) >= requested then
+    redis.call('HINCRBY', KEYS[1], 'reserved', requested)
     return 1 -- Success
 else
-    return 0 -- Out of Stock
+    return 0 -- Insufficient stock
 end
 ```
 
-**gRPC Methods:**
-- `ReserveStock(skuId, qty, orderId)` → reservationId
-- `ConfirmStock(orderId)`
-- `ReleaseStock(orderId)`
+**gRPC Interface Methods:**
+- `ReserveStock(skuId, qty, orderId)` → Returns `reservationId`
+- `ConfirmStock(orderId)` → Permanently decrements available inventory
+- `ReleaseStock(orderId)` → Reverts temporary hold
 
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 8. 💳 PAYMENT
-**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | NATS JetStream
+**Technology Stack:** Go 1.22+ | Fiber | PostgreSQL | Event Bus | Redis
 
-**Mục đích:** Payment Aggregator - Tích hợp nhiều cổng thanh toán.
+**Purpose:** Resilient payment aggregator handling multi-gateway routing, idempotency, and webhook verification.
 
-**Chức năng chính:**
-- **Multi-Gateway Support:** Stripe, MoMo, VNPay, COD
-- **Webhook Handling:** Xác thực signature, idempotency
-- **Transaction Ledger:** Lưu trữ audit trail
-- **Reconciliation:** Cron job đối soát mỗi 10 phút
+**Key Responsibilities:**
+- **Multi-Gateway Support:** Pluggable payment drivers (Stripe, VNPay, MoMo, COD, Mock Provider).
+- **Idempotent Webhook Processing:** Cryptographic signature validation and Redis deduplication.
+- **Transaction Ledger:** Immutable audit trail recording state transitions and raw provider payloads.
+- **Reconciliation Engine:** Periodic cron worker verifying pending transaction statuses against payment gateways.
 
-**Database Tables:**
-- `payment_transactions` - OrderID, Amount, Provider, Status, Metadata (JSONB)
-- `payment_logs` - Audit trail cho debugging
+**Primary Database Tables:**
+- `payment_transactions` - `OrderID`, `Amount`, `Currency`, `Provider`, `Status`, `Metadata` (JSONB).
+- `payment_logs` - Structured audit log capturing inbound webhook payloads and external API calls.
 
-**Payment Gateway Interface:**
-```go
-type PaymentGateway interface {
-    CreatePayment(ctx, req) (*PaymentResponse, error)
-    VerifyWebhook(r *http.Request) (bool, *WebhookData, error)
-}
-```
+**Published Events:**
+- `payment.processed` → Order service transitions order to `PAID`.
+- `payment.failed` → Order service triggers cancellation and inventory release.
+- `payment.refunded` → Financial records updated and customer notified.
 
-**NATS Events published:**
-- `payment.processed` → Order Service updates to PAID
-- `payment.failed` → Trigger order cancellation
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 9. 🚚 LOGISTIC
-**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis | NATS
+**Technology Stack:** Go 1.22+ | Fiber | PostgreSQL | Redis | Event Bus
 
-**Mục đích:** Logistics Aggregator - Tích hợp các đơn vị vận chuyển.
+**Purpose:** Shipping aggregator, automated carrier dispatch, rate calculation, and real-time shipment tracking.
 
-**Chức năng chính:**
-- **Multi-Carrier Support:** GHN, GHTK, ViettelPost, Mock
-- **Fee Calculation:** Tính phí ship với caching
-- **Shipment Creation:** Tạo vận đơn tự động
-- **Webhook Processing:** Nhận cập nhật trạng thái từ carriers
+**Key Responsibilities:**
+- **Multi-Carrier Abstraction:** Unified interface for shipping carriers (GHN, GHTK, ViettelPost, Mock Carrier).
+- **Dynamic Fee Matrix:** Distance and weight-based rate calculation with 1-hour Redis caching.
+- **Waybill Generation:** Automated dispatch creating tracking codes and shipping labels.
+- **Webhook Ingestion:** Ingesting status updates from shipping providers.
 
-**Database Tables:**
-- `shipping_orders` - TrackingCode, CarrierStatus, SystemStatus, LabelURL
+**Status Mapping Matrix:**
+| Carrier Status | Internal System Status | Action Triggered |
+|---|---|---|
+| `ready_to_pick` | `PENDING` | Dispatch label ready |
+| `picking` / `delivering` | `SHIPPING` | Order marked as in-transit |
+| `delivered` | `DELIVERED` | Order marked as completed; unlock review |
+| `return` | `RETURNED` | Initiate return & refund workflow |
 
-**Provider Interface:**
-```go
-type Provider interface {
-    GetName() string
-    CalculateFee(ctx, req *RateRequest) (float64, error)
-    CreateOrder(ctx, req *ShipRequest) (trackingCode, labelUrl, error)
-    ParseWebhook(r *http.Request) (internalOrderID, newStatus, error)
-}
-```
-
-**Status Mapping:**
-| Carrier Status | System Status |
-|----------------|---------------|
-| ready_to_pick | PENDING |
-| delivering | SHIPPING |
-| delivered | DELIVERED |
-| return | RETURNED |
-
-**NATS Events published:**
-- `logistics.shipment.created`
-- `logistics.status.updated` → Order completes
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 10. 📧 NOTIFICATION
-**Công nghệ:** Go 1.22+ | NATS | RabbitMQ | MongoDB | Gomail
+**Technology Stack:** Go 1.22+ | Event Bus | RabbitMQ | MongoDB | Gomail
 
-**Mục đích:** Notification Hub với Dual-Consumer architecture.
+**Purpose:** Multi-channel alert dispatcher utilizing a resilient **Dual-Broker Architecture**.
 
-**Chức năng chính:**
-- **NATS Bridge:** Lắng nghe events từ các services
-- **RabbitMQ Worker:** Xử lý gửi Email/Push với DLQ
-- **Template Engine:** Handlebars templates
-- **Audit Logging:** Lưu log vào MongoDB
+**Key Responsibilities:**
+- **Event Bus Bridge:** Consumes domain events from the primary event bus and routes to task queues.
+- **RabbitMQ Worker Pool:** High-reliability worker pool with Dead Letter Queue (DLQ) for retries.
+- **Multi-Channel Dispatch:** Email (SMTP/SES), SMS, WebSocket push, Webhooks.
+- **Audit Logging:** Persisting notification delivery status in MongoDB.
 
-**Architecture Pattern:**
+**Dual-Broker Architecture:**
 ```
-NATS Events → Bridge → RabbitMQ → Worker → Email/Push
-                           ↓
-                     Dead Letter Queue (DLQ)
+Domain Events → Notification Bridge → RabbitMQ (Exchange) → Worker Pool → Email/SMS/Push
+                                             ↓
+                                    Dead Letter Queue (DLQ)
 ```
 
-**RabbitMQ Topology:**
-- Exchange: `notification.exchange` (Topic)
-- Queue: `queue.email` với DLX binding
-- DLX: `notification.dlx` → `queue.dead_letter`
-
-**NATS Subscriptions:**
-- `order.created` → Email xác nhận đơn hàng
-- `payment.processed` → Email biên lai thanh toán
-- `logistics.status.updated` → Email cập nhật vận chuyển
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 11. 🖼️ MEDIA
-**Công nghệ:** Go 1.22+ | Fiber | MinIO (S3) | NATS
+**Technology Stack:** Go 1.22+ | Fiber | MinIO (S3 API) | Event Bus
 
-**Mục đích:** Media Service với Presigned URL pattern.
+**Purpose:** Asset storage utilizing the **Presigned URL Pattern** for direct client uploads.
 
-**Chức năng chính:**
-- **Presigned Upload:** Client upload trực tiếp lên MinIO
-- **Image Processing:** Async resize (Thumbnail 200x200, Medium 800x800)
-- **File Validation:** Validate MIME type, chặn file nguy hiểm
+**Key Responsibilities:**
+- **Direct-to-S3 Uploads:** Generates secure, short-lived presigned PUT URLs for clients.
+- **Asynchronous Image Processing:** Worker generating standardized thumbnails (200x200) and web formats (800x800).
+- **MIME Type Validation:** Magic number validation preventing malicious executable uploads.
 
-**Upload Flow:**
-1. Client gọi `GetUploadURL(fileType, purpose)`
-2. Server trả về `uploadUrl`, `fileKey`, `publicUrl`
-3. Client PUT file trực tiếp lên MinIO
-4. Client gọi `ConfirmUpload(fileKey)`
-5. Worker xử lý resize async
-
-**NATS Events published:**
-- `media.uploaded` → Trigger image processing worker
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 12. 📈 ANALYTIC
-**Công nghệ:** Go 1.22+ | ClickHouse | NATS JetStream
+**Technology Stack:** Go 1.22+ | ClickHouse | Event Bus
 
-**Mục đích:** Real-time Analytics với Batch Ingestion.
+**Purpose:** Real-time business intelligence, user clickstream ingestion, and OLAP aggregations.
 
-**Chức năng chính:**
-- **Event Ingestion:** Nhận user behavior events (Views, Clicks, Add to Cart)
-- **Batch Processing:** Buffer 1000 events hoặc 5s → Batch insert
-- **Dashboard APIs:** Aggregation queries cho Admin
+**Key Responsibilities:**
+- **Event Ingestion:** High-volume user behavioral events (`view_item`, `add_to_cart`, `checkout_start`).
+- **Batch Processing:** Memory buffer flushing every 1,000 events or 5 seconds into ClickHouse.
+- **Executive Analytics:** High-performance queries generating revenue charts and funnel conversion rates.
 
-**ClickHouse Schema:**
-```sql
-CREATE TABLE user_events (
-    event_id UUID,
-    user_id String,
-    event_type String,  -- view_item, add_to_cart, checkout_start
-    metadata String,    -- JSON
-    url String,
-    created_at DateTime
-) ENGINE = MergeTree()
-PARTITION BY toYYYYMM(created_at)
-ORDER BY (event_type, created_at);
-```
-
-**Pipeline Architecture:**
-```
-POST /collect → NATS → Batch Worker → ClickHouse
-     (202 Accepted)     (Buffer)      (Bulk Insert)
-```
-
-**Dashboard APIs:**
-- `GetProductViews(skuId, timeRange)` - Views theo giờ
-- `GetConversionRate()` - Funnel analysis
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 13. 🎯 CAMPAIGN
-**Công nghệ:** Go 1.22+ | Fiber | PostgreSQL | Redis (Lua Scripts)
+**Technology Stack:** Go 1.22+ | Fiber | PostgreSQL | Redis (Lua Scripts)
 
-**Mục đích:** Quản lý Vouchers/Coupons với Rule Engine.
+**Purpose:** Promotional voucher and flash-sale engine with high-concurrency atomic claiming.
 
-**Chức năng chính:**
-- **Voucher Management:** CRUD vouchers với conditions (JSONB)
-- **Atomic Claiming:** Claim voucher với Redis Lua script
-- **Cart Calculation:** Tính giảm giá theo rules
-- **User Wallet:** Quản lý vouchers của user
+**Key Responsibilities:**
+- **Voucher Rules Engine:** Minimum spend, maximum discount, category restrictions, eligible SKU lists.
+- **Atomic Quota Claiming:** Redis Lua script guaranteeing zero over-allocation during flash spikes.
+- **Cart Discount Evaluation:** Deterministic cart recalculation applying active promotions.
 
-**Database Tables:**
-- `campaigns` - Campaign metadata
-- `vouchers` - Code, Type, Value, Conditions (JSONB)
-- `user_vouchers` - User's claimed vouchers
-
-**Conditions Schema (JSONB):**
-```json
-{
-  "min_order_value": 500000,
-  "max_discount": 50000,
-  "allowed_categories": ["electronics"],
-  "excluded_products": ["sku_iphone_15"]
-}
-```
-
-**Core Methods:**
-- `ClaimVoucher(userId, code)` → Atomic với Lua script
-- `CalculateCart(items, voucherCode)` → Rule engine validation
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 14. ⭐ REVIEW
-**Công nghệ:** Go 1.22+ | Fiber | MongoDB | Redis | gRPC
+**Technology Stack:** Go 1.22+ | Fiber | MongoDB | Redis | gRPC
 
-**Mục đích:** Review & Rating với Materialized View pattern.
+**Purpose:** Verified buyer ratings and reviews with pre-calculated materialized rating views.
 
-**Chức năng chính:**
-- **Verified Reviews:** Xác thực mua hàng qua Order Service (gRPC)
-- **Rating Aggregation:** Pre-calculated stats
-- **Quick Summary:** Redis-cached rating summaries
-- **Seller Reply:** Shop trả lời reviews
+**Key Responsibilities:**
+- **Verified Buyer Enforcement:** Validates purchase history with Order Service via gRPC before review creation.
+- **Materialized Ratings:** Pre-calculated mean ratings and distribution histograms for instant retrieval.
+- **Merchant Responses:** Allows seller replies to buyer reviews.
 
-**MongoDB Collections:**
-- `reviews` - Raw review data với images
-- `product_ratings` - Pre-calculated averages (Materialized View)
-
-**Service Interactions:**
-| Target Service | Protocol | Purpose |
-|----------------|----------|---------|
-| Order Service | gRPC | Verify purchase before review |
-| Media Service | HTTP | Validate review images |
-
-**Rating Calculation:**
-```
-NewAvg = ((OldAvg * OldTotal) + NewRating) / (OldTotal + 1)
-```
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
 ### 15. 🔍 SEARCH
-**Công nghệ:** Go 1.22+ | Fiber | Elasticsearch | Redis | NATS
+**Technology Stack:** Go 1.22+ | Fiber | Elasticsearch 8.11 | Redis | Event Bus
 
-**Mục đích:** Search Service với CQRS Read-Model pattern.
+**Purpose:** CQRS read-model product search engine with fuzzy matching and faceted filtering.
 
-**Chức năng chính:**
-- **Event Consumer:** Lắng nghe `catalog.product.*` events
-- **Elasticsearch Indexing:** Auto-sync products
-- **Full-Text Search:** Multi-match với boosting
-- **Faceted Search:** Filter by category, brand, price, specs, metadata
-- **Redis Caching:** Short TTL (2 phút) cho search results
+**Key Responsibilities:**
+- **Automated Indexing:** Ingests `catalog.product.*` events to update the Elasticsearch cluster.
+- **Full-Text Querying:** Multi-match search with field boosting (`name^3`, `description`).
+- **Faceted Filters:** Filter by brand, category, price range, dynamic specifications, and seller location.
+- **Result Caching:** Redis caching for top searches with a 2-minute TTL.
 
-**Elasticsearch Mapping:**
-```json
-{
-  "mappings": {
-    "properties": {
-      "name": { "type": "text", "analyzer": "standard" },
-      "specs": { "type": "object", "dynamic": true },
-      "metadata": { "type": "object", "dynamic": true }
-    }
-  }
-}
-```
-
-**Search Query Building:**
-- `Must`: multi_match on [name^3, description]
-- `Filter`: term (category, brand, status), range (price)
-- `Dynamic`: specs.*, metadata.isFlashSale, etc.
-
-**NATS Subscriptions:**
-- `catalog.product.created` → Index document
-- `catalog.product.updated` → Re-index document
-- `catalog.product.deleted` → Delete document
-
-**Trạng thái:** ✅ Đã implement đầy đủ
+**Status:** ✅ Fully Implemented
 
 ---
 
-## Ma Trận Đồng Bộ Service
+## Inter-Service Communication Topology
 
-### Giao Tiếp Đồng Bộ (Sync)
+### Synchronous Communication (HTTP & gRPC)
 
-| From Service | To Service | Protocol | Purpose |
-|--------------|------------|----------|---------|
-| API Gateway | All Services | HTTP Proxy | Route requests |
-| Order | Inventory | gRPC | Reserve/Confirm/Release Stock |
-| Review | Order | gRPC | Verify purchase |
-| Cart | Catalog | HTTP | Validate prices (optional) |
+| Calling Service | Target Service | Protocol | Business Purpose |
+|---|---|---|---|
+| **API Gateway** | All Microservices | HTTP Reverse Proxy | Inbound request routing & authentication |
+| **Order Service** | **Inventory Service** | gRPC | Real-time stock reservation, confirmation, release |
+| **Review Service** | **Order Service** | gRPC | Verify purchase authenticity before review submission |
+| **Cart Service** | **Catalog Service** | HTTP | Real-time SKU and price validation |
 
-### Giao Tiếp Bất Đồng Bộ (Async via NATS)
+### Asynchronous Communication (Domain Events)
 
-| Publisher | Subject | Subscribers |
-|-----------|---------|-------------|
-| Order | `order.created` | Payment, Notification |
-| Order | `order.cancelled` | Inventory, Notification |
-| Payment | `payment.processed` | Order, Notification |
-| Payment | `payment.failed` | Order, Notification |
-| Catalog | `catalog.product.created` | Search |
-| Catalog | `catalog.product.updated` | Search, Campaign |
-| Catalog | `catalog.product.deleted` | Search |
-| Logistic | `logistics.shipment.created` | Order, Notification |
-| Logistic | `logistics.status.updated` | Order, Notification |
-| Media | `media.uploaded` | Media Worker (self) |
-| Analytic | `analytics.events.raw` | Analytic Worker (self) |
-
-### Giao Tiếp qua RabbitMQ
-
-| Publisher | Queue | Consumer |
-|-----------|-------|----------|
-| Notification Bridge | `queue.email` | Notification Worker |
-| Notification Bridge | `queue.dead_letter` | Manual Retry |
+| Publishing Service | Event Subject | Subscribing Services |
+|---|---|---|
+| **Order Service** | `order.created` | Payment Service, Notification Service |
+| **Order Service** | `order.cancelled` | Inventory Service, Notification Service |
+| **Order Service** | `order.confirmed` | Logistic Service, Notification Service |
+| **Payment Service** | `payment.processed` | Order Service, Notification Service |
+| **Payment Service** | `payment.failed` | Order Service, Notification Service |
+| **Catalog Service** | `catalog.product.created` | Search Service |
+| **Catalog Service** | `catalog.product.updated` | Search Service, Campaign Service |
+| **Catalog Service** | `catalog.product.deleted` | Search Service |
+| **Logistic Service** | `logistics.shipment.created` | Order Service, Notification Service |
+| **Logistic Service** | `logistics.status.updated` | Order Service, Notification Service, Review Service |
+| **Media Service** | `media.uploaded` | Media Worker (Image resizing) |
+| **Analytic Service** | `analytics.events.raw` | Analytic Worker (ClickHouse batch insert) |
 
 ---
 
-## Các Vấn Đề Đồng Bộ Cần Khắc Phục
+## Database & Infrastructure Topology
 
-### ⚠️ Chưa Đồng Bộ
-
-1. **API Gateway thiếu routes:**
-   - Chưa có route cho: `/api/v1/payment/*`, `/api/v1/logistics/*`, `/api/v1/media/*`, `/api/v1/reviews/*`, `/api/v1/search/*`, `/api/v1/campaigns/*`, `/api/v1/analytics/*`, `/api/v1/profile/*`
-
-2. **Profile Service chưa liên kết với Auth:**
-   - Cần sync email từ Auth → Profile khi user register
-
-3. **Cart chưa validate price với Catalog:**
-   - Comment trong code: "Price must be re-validated during checkout"
-   - Chưa implement gọi Catalog để verify giá
-
-4. **Review chưa fetch user info từ Profile:**
-   - Cần gọi Profile Service để lấy displayName, avatarUrl
-
-5. **Campaign chưa notify sản phẩm tagged:**
-   - Cần subscribe `catalog.product.updated` để track metadata.campaignId
-
-### ⚠️ Event Flow Chưa Hoàn Chỉnh
-
-```
-Current:
-Order.created → Payment, Notification
-
-Missing:
-1. Order.paid → Inventory.ConfirmStock (Currently via gRPC, should also have NATS backup)
-2. Payment.processed → Logistic.CreateShipment (Auto-create shipping after payment)
-3. Logistic.delivered → Review.EnableReview (Allow review after delivery)
-4. Profile.updated → Order, Cart (Update cached user info)
-```
+| Logical Database | Engine / Version | Assigned Service | Default Port |
+|---|---|---|---|
+| `identity_db` | PostgreSQL 15 | `auth` | 15432 (mapped) |
+| `order_db` | PostgreSQL 15 | `order` | 15432 (mapped) |
+| `inventory_db` | PostgreSQL 15 | `inventory` | 15432 (mapped) |
+| `payment_db` | PostgreSQL 15 | `payment` | 15432 (mapped) |
+| `logistics_db` | PostgreSQL 15 | `logistic` | 15432 (mapped) |
+| `campaign_db` | PostgreSQL 15 | `campaign` | 15432 (mapped) |
+| `profile_db` | MongoDB 6.0 | `profile` | 27017 |
+| `catalog_db` | MongoDB 6.0 | `catalog` | 27017 |
+| `cart_db` | MongoDB 6.0 | `cart` (backup) | 27017 |
+| `review_db` | MongoDB 6.0 | `review` | 27017 |
+| `notification_db` | MongoDB 6.0 | `notification` | 27017 |
+| `media_db` | MongoDB 6.0 | `media` | 27017 |
+| `analytics` | ClickHouse 23.8 | `analytic` | 8123 (HTTP) / 9000 (Native) |
+| `products_index` | Elasticsearch 8.11 | `search` | 9200 |
+| In-Memory Cache | Redis 7.0 | `cart`, `inventory`, `idempotency`, etc. | 16379 (mapped) |
+| Object Store | MinIO | `media` | 9002 (API) / 9001 (Console) |
 
 ---
 
-## Tech Stack Tổng Hợp
+## Implementation Status Summary
 
-| Layer | Technologies |
-|-------|--------------|
-| **Languages** | Go 1.22+, TypeScript (NestJS) |
-| **Web Frameworks** | Fiber (Go), NestJS (Node) |
-| **SQL Database** | PostgreSQL |
-| **NoSQL Database** | MongoDB |
-| **OLAP Database** | ClickHouse |
-| **Search Engine** | Elasticsearch |
-| **Caching** | Redis |
-| **Object Storage** | MinIO (S3 Compatible) |
-| **Message Broker (Async)** | NATS JetStream |
-| **Message Broker (Task Queue)** | RabbitMQ |
-| **RPC** | gRPC |
-| **Auth** | JWT (Access + Refresh Tokens) |
-| **Containerization** | Docker, Docker Compose |
-
----
-
-## Database Infrastructure
-
-### Tổng Quan Databases
-
-| Database | Engine | Service(s) | Port |
-|----------|--------|------------|------|
-| identity_db | PostgreSQL 15 | auth | 5432 |
-| order_db | PostgreSQL 15 | order | 5432 |
-| inventory_db | PostgreSQL 15 | inventory | 5432 |
-| payment_db | PostgreSQL 15 | payment | 5432 |
-| logistics_db | PostgreSQL 15 | logistic | 5432 |
-| campaign_db | PostgreSQL 15 | campaign | 5432 |
-| profile_db | MongoDB 6 | profile | 27017 |
-| catalog_db | MongoDB 6 | catalog | 27017 |
-| cart_db | MongoDB 6 | cart | 27017 |
-| review_db | MongoDB 6 | review | 27017 |
-| notification_db | MongoDB 6 | notification | 27017 |
-| media_db | MongoDB 6 | media | 27017 |
-| analytics_db | ClickHouse 23 | analytic | 8123/9000 |
-| products_index | Elasticsearch 8 | search | 9200 |
-
-### Caching Layer (Redis)
-
-| Purpose | Key Pattern | TTL |
-|---------|-------------|-----|
-| User Permissions | `identity:user:{id}:permissions` | 1 hour |
-| Token Blacklist | `identity:blacklist:{jti}` | Token TTL |
-| Shopping Cart | `cart:{userId}` | 30 days |
-| Stock Cache | `inventory:{skuId}` | Permanent |
-| Voucher Stock | `voucher:{code}:stock` | Campaign TTL |
-| Search Cache | `search:{hash}` | 2 minutes |
-| Shipping Fee | `fee:{provider}:{from}:{to}:{weight}` | 1 hour |
-| Product Rating | `rating:{productId}` | 30 minutes |
-
-### Message Brokers
-
-| Broker | Purpose | Port |
-|--------|---------|------|
-| NATS JetStream | Async events (order.created, payment.processed, etc.) | 4222 |
-| RabbitMQ | Notification task queue với DLQ | 5672 |
-
-### Object Storage
-
-| Storage | Purpose | Port |
-|---------|---------|------|
-| MinIO (S3) | Product images, User avatars, Review images | 9000/9001 |
-
-### Files Database Đã Tạo
-
-```
-microservices/
-├── database/
-│   ├── COMPLETE_DATABASE_SCHEMA.sql      # Schema tổng hợp tất cả services
-│   ├── postgres/
-│   │   └── init-multiple-databases.sh    # Script khởi tạo multi-DB
-│   ├── mongodb/
-│   │   └── 001_init_mongodb.js           # Script khởi tạo collections
-│   └── redis/
-│       └── REDIS_KEY_PATTERNS.md         # Documentation Redis keys
-├── auth/migrations/
-│   └── 001_init_schema.sql               # Auth service schema
-├── order/migrations/
-│   └── 001_init_schema.sql               # Order service schema
-├── inventory/migrations/
-│   └── 001_init_schema.sql               # Inventory service schema
-│   └── scripts/
-│       ├── reserve_stock.lua             # Atomic stock reservation
-│       └── release_stock.lua             # Release reserved stock
-├── campaign/
-│   ├── migrations/001_init.sql           # Campaign schema
-│   └── scripts/claim_voucher.lua         # Atomic voucher claiming
-├── payment/migrations/
-│   └── 001_init.sql                      # Payment schema
-├── logistic/migrations/
-│   ├── 001_create_shipping_orders.sql    # Shipping orders
-│   └── 002_create_webhook_logs.sql       # Webhook logs
-├── analytic/migrations/
-│   └── 001_init_schema.sql               # ClickHouse analytics schema
-├── search/elasticsearch/
-│   └── products_index_mapping.json       # Elasticsearch index mapping
-└── docker-compose.databases.yml          # All databases Docker Compose
-```
-
----
-
-## Tóm Tắt Trạng Thái Implementation
-
-| Service | Status | Core Features | Integration |
-|---------|--------|---------------|-------------|
-| API Gateway | ✅ | Routing, Auth, Rate Limit | Partial |
-| Auth | ✅ | Register, Login, RBAC | Complete |
-| Profile | ✅ | User Info, Addresses, Shop | Needs sync |
-| Catalog | ✅ | Products, Categories, Brands | Complete |
-| Cart | ✅ | Redis+MongoDB hybrid | Needs validation |
-| Order | ✅ | State machine, Snapshotting | Complete |
-| Inventory | ✅ | Two-phase reservation | Complete |
-| Payment | ✅ | Multi-gateway, Webhook | Complete |
-| Logistic | ✅ | Multi-carrier, Webhook | Complete |
-| Notification | ✅ | Bridge pattern, DLQ | Complete |
-| Media | ✅ | Presigned URL, Processing | Complete |
-| Analytic | ✅ | Batch ingestion | Complete |
-| Campaign | ✅ | Rule engine, Atomic claim | Complete |
-| Review | ✅ | Verified review, Aggregation | Needs integration |
-| Search | ✅ | CQRS, Faceted search | Complete |
-
----
-
-*Tài liệu được tạo tự động ngày: 2026-01-07*
+| Service | Architecture | Core Capabilities | Integration Status |
+|---|---|---|---|
+| **API Gateway** | Go Fiber | Reverse proxy, rate limiting, JWT validation | ✅ Verified |
+| **Auth** | Go Fiber | Argon2id, JWT rotation, RBAC, Redis permission cache | ✅ Verified |
+| **Profile** | Go Fiber | User profile, address book with default logic, seller shop | ✅ Verified |
+| **Catalog** | Go Fiber | Category trees, dynamic attributes, variation SKUs | ✅ Verified |
+| **Cart** | Go Fiber | Redis write-behind, atomic operations, Mongo backup | ✅ Verified |
+| **Order** | Go Fiber | Snapshotting, order state machine, Saga orchestrator | ✅ Verified |
+| **Inventory** | Go Fiber | Optimistic locking, 2-phase reservation, Redis Lua script | ✅ Verified |
+| **Payment** | Go Fiber | Multi-gateway provider, idempotent webhooks, ledger | ✅ Verified |
+| **Logistic** | Go Fiber | Multi-carrier calculation, waybill creation, tracking codes | ✅ Verified |
+| **Notification**| Worker | Event bridge, RabbitMQ worker, DLQ, template dispatch | ✅ Verified |
+| **Media** | Go Fiber | Presigned S3 URLs, async thumbnail processing worker | ✅ Verified |
+| **Analytic** | Go Fiber | High-throughput ingestion, buffer batching into ClickHouse | ✅ Verified |
+| **Campaign** | Go Fiber | Voucher rule engine, atomic Redis quota claiming | ✅ Verified |
+| **Review** | Go Fiber | Verified purchase verification via gRPC, rating aggregates | ✅ Verified |
+| **Search** | Go Fiber | Elasticsearch 8 sync, faceted search, fuzzy matching | ✅ Verified |
