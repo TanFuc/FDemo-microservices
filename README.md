@@ -249,11 +249,14 @@ k6 run --vus 1000 --duration 3m load-tests/k6-browse-products.js
 Start the complete database, cache, broker, and storage cluster:
 
 ```powershell
-# Using the Windows PowerShell automation helper
+# Using the root Makefile
+make up-db
+
+# Or using the Windows PowerShell automation helper
 .\scripts\fdemo.ps1 ON
 
 # Or directly using Docker Compose
-docker compose -f docker-compose.databases.yml up -d
+docker compose -f deploy/compose/docker-compose.databases.yml up -d
 ```
 
 Verify service containers are healthy:
@@ -271,6 +274,10 @@ Verify service containers are healthy:
 Run unit and integration suites across all Go modules:
 
 ```powershell
+# Using Makefile
+make test
+
+# Or using PowerShell runner
 Get-ChildItem -Directory | Where-Object { Test-Path (Join-Path $_.FullName "go.mod") } | ForEach-Object {
     Push-Location $_.FullName
     Write-Host "Testing $($_.Name)..." -ForegroundColor Cyan
@@ -291,7 +298,15 @@ go run cmd/api/main.go
 To start all services in containerized production mode:
 
 ```powershell
-docker compose -f docker-compose.prod.yml up -d
+make up-prod
+# Or: docker compose -f deploy/compose/docker-compose.prod.yml up -d
+```
+
+To launch the observability suite (Prometheus, Grafana, Tempo, Loki):
+
+```powershell
+make up-obs
+# Or: docker compose -f deploy/compose/docker-compose.observability.yml up -d
 ```
 
 ---
@@ -300,6 +315,7 @@ docker compose -f docker-compose.prod.yml up -d
 
 ```
 NexusCommerce/
+├── Makefile                # Enterprise Platform CLI (make up-db, make test, etc.)
 ├── api-gateway/            # Unified Go Fiber/Gin API Gateway
 ├── auth/                   # Identity, OAuth2, JWT & RBAC Service
 ├── profile/                # User & Seller Profile Service
@@ -324,10 +340,12 @@ NexusCommerce/
 │   ├── messaging/          # Event bus & CloudEvents abstraction
 │   └── saga/               # Saga orchestrator & compensation
 ├── database/               # Database schemas, migrations & seeds
-├── deploy/                 # Deployment Infrastructure
-│   ├── helm/               # Kubernetes Helm Charts per service
-│   └── argocd/             # GitOps Application definitions
-├── observability/          # Monitoring, tracing & logging configs
+├── deploy/                 # Centralized Cloud-Native Infrastructure & DevOps
+│   ├── compose/            # Docker Compose stacks (databases, prod, observability)
+│   ├── helm/               # Kubernetes Helm Charts (HPA, PDB, Ingress)
+│   ├── argocd/             # GitOps Application definitions (App-of-Apps)
+│   ├── ci/                 # CI/CD pipeline blueprints (GitHub Actions)
+│   └── observability/      # Prometheus scrape & Tempo tracing configs
 ├── load-tests/             # k6 distributed load test scripts
 └── scripts/                # Infrastructure & cluster helper scripts
 ```

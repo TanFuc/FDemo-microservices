@@ -1,0 +1,112 @@
+name: NexusCommerce CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ==========================================================================
+  # 1. Go Verification Matrix (Unit Tests & Vet)
+  # ==========================================================================
+  go-test:
+    name: Test & Vet / ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - pkg/idempotency
+          - pkg/messaging
+          - pkg/saga
+          - pkg/logger
+          - pkg/cache
+          - pkg/authorization
+          - pkg/customfields
+          - api-gateway
+          - auth
+          - profile
+          - catalog
+          - cart
+          - order
+          - inventory
+          - payment
+          - logistic
+          - campaign
+          - notification
+          - review
+          - media
+          - analytic
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: ${{ matrix.service }}/go.sum
+
+      - name: Download Dependencies
+        working-directory: ${{ matrix.service }}
+        run: go mod download
+
+      - name: Vet Code
+        working-directory: ${{ matrix.service }}
+        run: go vet ./...
+
+      - name: Run Unit Tests
+        working-directory: ${{ matrix.service }}
+        run: go test -v -race -covermode=atomic ./...
+
+  # ==========================================================================
+  # 2. Docker Compose Infrastructure Validation
+  # ==========================================================================
+  compose-lint:
+    name: Validate Docker Compose Stacks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Validate Databases Compose
+        run: docker compose -f deploy/compose/docker-compose.databases.yml config --quiet
+
+      - name: Validate Production Compose
+        run: docker compose -f deploy/compose/docker-compose.prod.yml config --quiet
+        env:
+          VERSION: latest
+          INTERNAL_SERVICE_KEY: ci-test-key
+          DB_USER: postgres
+          DB_PASSWORD: ci-password
+          JWT_SECRET: ci-jwt-secret-minimum-32-chars-long
+          JWT_REFRESH_SECRET: ci-jwt-refresh-secret-minimum-32-chars
+
+      - name: Validate Observability Compose
+        run: docker compose -f deploy/compose/docker-compose.observability.yml config --quiet
+
+  # ==========================================================================
+  # 3. Helm & Kubernetes Manifest Linting
+  # ==========================================================================
+  helm-lint:
+    name: Lint Helm Charts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.0
+
+      - name: Lint Nexus Service Chart
+        run: |
+          helm lint deploy/helm/nexus-service
+          helm lint deploy/helm/nexus-service -f deploy/helm/nexus-service/values-staging.yaml
+          helm lint deploy/helm/nexus-service -f deploy/helm/nexus-service/values-prod.yaml

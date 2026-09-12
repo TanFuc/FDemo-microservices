@@ -90,22 +90,12 @@ go test ./...
 go vet ./...
 ```
 
-## Verification Commands
-
-For a Go service:
-
-```powershell
-cd <service>
-gofmt -w <changed-go-files>
-go test ./...
-go vet ./...
-```
-
 Infrastructure validation:
 
 ```powershell
-wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f docker-compose.databases.yml config
-wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f docker-compose.prod.yml config
+wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f deploy/compose/docker-compose.databases.yml config
+wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f deploy/compose/docker-compose.prod.yml config
+wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f deploy/compose/docker-compose.observability.yml config
 ```
 
 Run integration tests only with their required databases and brokers. Several
@@ -115,7 +105,7 @@ Run the development infrastructure in a separate visible terminal and keep
 Compose attached:
 
 ```powershell
-wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f docker-compose.databases.yml up
+wsl.exe -d Ubuntu-22.04 --cd /mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices --exec docker compose -f deploy/compose/docker-compose.databases.yml up
 ```
 
 Do not add `-d` unless the owner explicitly requests detached execution.

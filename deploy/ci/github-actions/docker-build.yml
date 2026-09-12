@@ -1,0 +1,46 @@
+name: NexusCommerce Docker Build & Push
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to build (or "all")'
+        required: true
+        default: 'all'
+      tag:
+        description: 'Docker image tag'
+        required: true
+        default: 'latest'
+
+jobs:
+  build-and-push:
+    name: Build & Push Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Core Microservices
+        run: |
+          echo "Building microservices container images for release ${{ github.ref_name }}"
+          # Docker build invocation example:
+          # docker buildx build --platform linux/amd64,linux/arm64 -t ghcr.io/${{ github.repository }}/order-service:${{ github.ref_name }} ./order --push

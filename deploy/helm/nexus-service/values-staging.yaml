@@ -1,0 +1,34 @@
+# Staging Environment Overrides for nexus-service
+replicaCount: 1
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+
+pdb:
+  enabled: false
+
+resources:
+  limits:
+    cpu: 250m
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+ingress:
+  hosts:
+    - host: staging-api.nexuscommerce.internal
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: nexus-staging-tls
+      hosts:
+        - staging-api.nexuscommerce.internal
+
+env:
+  ENVIRONMENT: staging
+  LOG_LEVEL: debug
+  METRICS_ENABLED: "true"

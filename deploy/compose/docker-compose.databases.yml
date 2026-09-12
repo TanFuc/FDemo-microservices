@@ -1,9 +1,8 @@
 # ============================================================================
-# TAFU Microservices - Docker Compose with All Databases
-# Version: 1.0.0
-# Date: 2026-01-07
-# Purpose: Complete infrastructure setup for development
-# Usage: docker-compose -f docker-compose.databases.yml up -d
+# NexusCommerce - Docker Compose Infrastructure (All Databases & Brokers)
+# Version: 2.0.0
+# Purpose: Complete enterprise infrastructure stack for development
+# Usage: docker compose -f deploy/compose/docker-compose.databases.yml up -d
 # ============================================================================
 
 services:
@@ -20,8 +19,8 @@ services:
       POSTGRES_MULTIPLE_DATABASES: identity_db,order_db,inventory_db,payment_db,logistics_db,campaign_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/00-init-multiple-databases.sh:ro
-      - ./database/COMPLETE_DATABASE_SCHEMA.sql:/docker-entrypoint-initdb.d/99-complete-schema.sql:ro
+      - ../../database/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/00-init-multiple-databases.sh:ro
+      - ../../database/COMPLETE_DATABASE_SCHEMA.sql:/docker-entrypoint-initdb.d/99-complete-schema.sql:ro
     ports:
       - "15432:5432"
     networks:
@@ -44,7 +43,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-tafu_mongo_2024}
     volumes:
       - mongodb_data:/data/db
-      - ./database/mongodb/001_init_mongodb.js:/docker-entrypoint-initdb.d/001_init_mongodb.js:ro
+      - ../../database/mongodb/001_init_mongodb.js:/docker-entrypoint-initdb.d/001_init_mongodb.js:ro
     ports:
       - "27017:27017"
     networks:
@@ -130,7 +129,7 @@ services:
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-tafu_click_2024}
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      - ./analytic/migrations/001_init_schema.sql:/docker-entrypoint-initdb.d/001_init_schema.sql:ro
+      - ../../analytic/migrations/001_init_schema.sql:/docker-entrypoint-initdb.d/001_init_schema.sql:ro
     ports:
       - "8123:8123" # HTTP
       - "9000:9000" # Native

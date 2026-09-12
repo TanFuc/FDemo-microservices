@@ -1,0 +1,51 @@
+# ============================================================================
+# NexusCommerce - Prometheus Metrics Scraping Configuration
+# ============================================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "nexus-gateway"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["api-gateway:8080"]
+
+  - job_name: "nexus-auth-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["identity-service:3000"]
+
+  - job_name: "nexus-order-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["order-service:3000"]
+
+  - job_name: "nexus-inventory-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["inventory-service:3000"]
+
+  - job_name: "nexus-payment-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["payment-service:3000"]
+
+  - job_name: "nexus-cart-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["cart-service:3000"]
+
+  - job_name: "nexus-catalog-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["catalog-service:3000"]
+
+  - job_name: "nexus-logistic-service"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["logistics-service:3000"]

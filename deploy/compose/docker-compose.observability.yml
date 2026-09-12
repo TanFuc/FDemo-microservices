@@ -1,4 +1,9 @@
-version: "3.8"
+# ============================================================================
+# NexusCommerce - Observability Stack (Prometheus, Grafana, Tempo, Loki)
+# Version: 2.0.0
+# Purpose: Metrics, Distributed Tracing & Centralized Logging
+# Usage: docker compose -f deploy/compose/docker-compose.observability.yml up -d
+# ============================================================================
 
 services:
   # Prometheus for metrics collection
@@ -7,7 +12,7 @@ services:
     container_name: nexus-prometheus
     restart: unless-stopped
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -39,6 +44,7 @@ services:
     restart: unless-stopped
     command: [ "-config.file=/etc/tempo.yaml" ]
     volumes:
+      - ../observability/tempo/tempo.yaml:/etc/tempo.yaml:ro
       - tempo_data:/var/tempo
     ports:
       - "3200:3200" # Tempo HTTP

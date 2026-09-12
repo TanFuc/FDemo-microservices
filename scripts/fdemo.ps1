@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 $Distro = "Ubuntu-22.04"
 $RepoWindows = "C:\Users\nguye\OneDrive\Desktop\Project\FDemo-microservices"
 $RepoWsl = "/mnt/c/Users/nguye/OneDrive/Desktop/Project/FDemo-microservices"
-$ComposeFile = "docker-compose.databases.yml"
+$ComposeFile = "deploy/compose/docker-compose.databases.yml"
 $ProjectName = "fdemo-microservices"
 
 function Invoke-Compose {
