@@ -380,6 +380,79 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "search\.env") -Content $searchEnv
 
+# 17. realtime/.env
+$realtimeEnv = @"
+SERVER_PORT=3015
+NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
+JWT_SECRET=$($Common.JwtAccessSecret)
+INTERNAL_SERVICE_KEY=$($Common.InternalKey)
+REDIS_HOST=$($Net.RedisHost)
+REDIS_PORT=$($Net.RedisPort)
+REDIS_PASSWORD=$($Common.RedisPassword)
+"@
+Set-EnvFile -FilePath (Join-Path $RootDir "realtime\.env") -Content $realtimeEnv
+
+# 18. api-gateway/.env
+if ($Mode -eq "Host") {
+    $gwIdentity    = "http://localhost:3001"
+    $gwProfile     = "http://localhost:3002"
+    $gwCatalog     = "http://localhost:3003"
+    $gwCart        = "http://localhost:3004"
+    $gwOrder       = "http://localhost:3005"
+    $gwInventory   = "http://localhost:3006"
+    $gwPayment     = "http://localhost:3007"
+    $gwLogistic    = "http://localhost:3008"
+    $gwCampaign    = "http://localhost:3009"
+    $gwNotification= "http://localhost:3010"
+    $gwMedia       = "http://localhost:3011"
+    $gwReview      = "http://localhost:3012"
+    $gwSearch      = "http://localhost:3013"
+    $gwAnalytic    = "http://localhost:3014"
+    $gwRealtime    = "http://localhost:3015"
+} else {
+    $gwIdentity    = "http://identity-service:3000"
+    $gwProfile     = "http://profile-service:3000"
+    $gwCatalog     = "http://catalog-service:3000"
+    $gwCart        = "http://cart-service:3000"
+    $gwOrder       = "http://order-service:3000"
+    $gwInventory   = "http://inventory-service:3000"
+    $gwPayment     = "http://payment-service:3000"
+    $gwLogistic    = "http://logistics-service:3000"
+    $gwCampaign    = "http://campaign-service:3000"
+    $gwNotification= "http://notification-service:3000"
+    $gwMedia       = "http://media-service:3000"
+    $gwReview      = "http://review-service:3000"
+    $gwSearch      = "http://search-service:3000"
+    $gwAnalytic    = "http://analytics-service:3000"
+    $gwRealtime    = "http://realtime-service:3015"
+}
+
+$gatewayEnv = @"
+PORT=8080
+IDENTITY_URL=$gwIdentity
+PROFILE_URL=$gwProfile
+CATALOG_URL=$gwCatalog
+CART_URL=$gwCart
+ORDER_URL=$gwOrder
+INVENTORY_URL=$gwInventory
+PAYMENT_URL=$gwPayment
+LOGISTIC_URL=$gwLogistic
+CAMPAIGN_URL=$gwCampaign
+NOTIFICATION_URL=$gwNotification
+MEDIA_URL=$gwMedia
+REVIEW_URL=$gwReview
+SEARCH_URL=$gwSearch
+ANALYTIC_URL=$gwAnalytic
+REALTIME_URL=$gwRealtime
+
+REDIS_HOST=$($Net.RedisHost)
+REDIS_PORT=$($Net.RedisPort)
+REDIS_PASSWORD=$($Common.RedisPassword)
+JWT_SECRET=$($Common.JwtAccessSecret)
+INTERNAL_SERVICE_KEY=$($Common.InternalKey)
+"@
+Set-EnvFile -FilePath (Join-Path $RootDir "api-gateway\.env") -Content $gatewayEnv
+
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host " Successfully synchronized all microservice .env files!" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green

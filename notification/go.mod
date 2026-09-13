@@ -16,6 +16,7 @@ require (
 	microservices/pkg/authorization v0.0.0
 	microservices/pkg/cache v0.0.0
 	microservices/pkg/logger v0.0.0
+	microservices/pkg/realtime v0.0.0
 	microservices/pkg/response v0.0.0
 )
 
@@ -24,6 +25,7 @@ replace (
 	microservices/pkg/authorization => ../pkg/authorization
 	microservices/pkg/cache => ../pkg/cache
 	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/realtime => ../pkg/realtime
 	microservices/pkg/response => ../pkg/response
 )
 

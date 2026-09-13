@@ -16,6 +16,7 @@ MODULES=(
     "pkg/idempotency"
     "pkg/logger"
     "pkg/messaging"
+    "pkg/realtime"
     "pkg/response"
     "pkg/saga"
     "api-gateway"
@@ -33,6 +34,7 @@ MODULES=(
     "review"
     "search"
     "analytic"
+    "realtime"
 )
 
 for mod in "${MODULES[@]}"; do

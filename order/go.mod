@@ -17,6 +17,7 @@ require (
 	microservices/pkg/cache v0.0.0
 	microservices/pkg/customfields v0.0.0
 	microservices/pkg/logger v0.0.0
+	microservices/pkg/realtime v0.0.0
 )
 
 require (
@@ -88,6 +89,7 @@ replace (
 	microservices/pkg/cache => ../pkg/cache
 	microservices/pkg/customfields => ../pkg/customfields
 	microservices/pkg/logger => ../pkg/logger
+	microservices/pkg/realtime => ../pkg/realtime
 	microservices/pkg/response => ../pkg/response
 )
 
