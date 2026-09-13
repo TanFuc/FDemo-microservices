@@ -16,8 +16,8 @@ NexusCommerce is an enterprise-scale distributed e-commerce backend built with G
 - **Infrastructure Runtime**: Docker Engine 29.3.1 & Docker Compose 5.1.1 running in WSL2 (`Ubuntu-22.04`)
 - **Primary Backend Toolchain**: Go `1.22+` (Verified toolchain with Go `1.26.4`)
 - **Frontend Target**: Next.js 14+ / TypeScript (Customer Storefront, Seller Portal, Backoffice Admin)
-- **Shared Libraries**: 7 internal Go packages in `pkg/*`
-- **Microservices Count**: 15 standalone Go service modules
+- **Shared Libraries**: 10 internal Go packages in `pkg/*`
+- **Microservices Count**: 16 standalone Go service modules
 
 ---
 
@@ -86,18 +86,22 @@ NexusCommerce is an enterprise-scale distributed e-commerce backend built with G
 | **`media`** | Object storage integration, presigned S3 upload URLs, image resizing, media variants | MinIO (S3-compatible bucket `nexus-media`) | HTTP/REST, S3 API (Port `9002`), Worker Pipeline | `media/cmd`, `media/internal/storage` |
 | **`review`** | Verified buyer product ratings, customer reviews, seller response threads | MongoDB 6.0 (`review_db`), Redis Cache | HTTP/REST, gRPC Client (Order verification) | `review/cmd`, `review/internal/service` |
 | **`search`** | Full-text product search, faceted navigation, autocomplete, fuzzy matching | Elasticsearch 8.11 / OpenSearch, Redis | HTTP/REST, NATS Event Consumer (Sync from Catalog) | `search/cmd`, `search/internal/indexer` |
+| **`realtime`** | High-throughput WebSocket connection hub, multi-device session tracking, room subscriptions, broadcast engine | NATS Core (`realtime.>`), Redis | WebSocket (`/ws`), HTTP (`/health`) | `realtime/cmd`, `realtime/internal/hub` |
 
 ---
 
 ## 3. Shared Packages & Common Infrastructure (`pkg/`)
 
 All microservices leverage internal shared packages located in the `pkg/` root directory:
+- **`pkg/authclient`**: Lightweight HTTP/RPC client for identity and session validation across boundary services.
 - **`pkg/authorization`**: Role-based access control (RBAC), permission bitmap definitions, JWT claims parsing.
 - **`pkg/cache`**: Redis connection pooling, Cache-Aside wrappers, atomic locking patterns (`SET NX EX`), and cache stampede protection.
 - **`pkg/customfields`**: Dynamic schema definitions for arbitrary product attributes and order custom metadata.
 - **`pkg/idempotency`**: Distributed request deduplication using Redis/PostgreSQL to prevent double-charging or duplicate reservations.
 - **`pkg/logger`**: Structured JSON logging powered by Uber Zap / Zerolog with trace propagation.
 - **`pkg/messaging`**: High-level abstractions for RabbitMQ and NATS messaging, handling automatic retries, backoff, and dead-letter queues.
+- **`pkg/realtime`**: Canonical real-time event envelope contracts, targeting types (user, room, broadcast), and NATS JetStream distributed publishers.
+- **`pkg/response`**: Standardized HTTP JSON envelope format (`data`, `meta`, `error`) and unified status response handlers.
 - **`pkg/saga`**: Orchestration-based distributed transaction coordinator managing state transitions, execution logs, and compensation hooks.
 
 ---
