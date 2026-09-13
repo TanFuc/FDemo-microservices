@@ -103,7 +103,7 @@ function Set-EnvFile {
         Write-Host "[-] Skipping existing $FilePath (use -Force to overwrite)" -ForegroundColor Yellow
         return
     }
-    Set-Content -Path $FilePath -Value $Content.Trim() -Encoding utf8
+    [System.IO.File]::WriteAllText($FilePath, $Content.Trim(), [System.Text.UTF8Encoding]::new($false))
     Write-Host "[+] Generated $FilePath" -ForegroundColor Green
 }
 
@@ -166,39 +166,10 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "auth\.env") -Content $authEnv
 
-# 3. api-gateway/.env
-$gatewayEnv = @"
-# Server
-PORT=8080
-
-# Redis Configuration
-REDIS_HOST=$($Net.RedisHost):$($Net.RedisPort)
-REDIS_PASSWORD=$($Common.RedisPassword)
-
-# JWT Configuration
-JWT_SECRET=$($Common.JwtAccessSecret)
-
-# Downstream Service URLs
-CATALOG_URL=http://localhost:3002
-CART_URL=http://localhost:3003
-ORDER_URL=http://localhost:3004
-IDENTITY_URL=http://localhost:3001
-PROFILE_URL=http://localhost:3005
-INVENTORY_URL=http://localhost:3006
-PAYMENT_URL=http://localhost:3007
-LOGISTIC_URL=http://localhost:3008
-CAMPAIGN_URL=http://localhost:3009
-NOTIFICATION_URL=http://localhost:3010
-MEDIA_URL=http://localhost:3011
-REVIEW_URL=http://localhost:3012
-SEARCH_URL=http://localhost:3013
-ANALYTIC_URL=http://localhost:3014
-"@
-Set-EnvFile -FilePath (Join-Path $RootDir "api-gateway\.env") -Content $gatewayEnv
-
-# 4. profile/.env
+# 2. profile/.env
 $profileEnv = @"
-SERVER_PORT=3005
+SERVER_PORT=3002
+PORT=3002
 DB_HOST=$($Net.PostgresHost)
 DB_PORT=$($Net.PostgresPort)
 DB_USER=$($Common.PostgresUser)
@@ -212,20 +183,27 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "profile\.env") -Content $profileEnv
 
-# 5. catalog/.env
+# 3. catalog/.env
 $catalogEnv = @"
-SERVER_PORT=3002
+SERVER_PORT=3003
+PORT=3003
+APP_PORT=3003
+APP_GRPC_PORT=50053
 MONGO_URI=mongodb://$($Common.MongoUser):$($Common.MongoPassword)@$($Net.MongoHost):$($Net.MongoPort)/catalog_db?authSource=admin
+MONGODB_URI=mongodb://$($Common.MongoUser):$($Common.MongoPassword)@$($Net.MongoHost):$($Net.MongoPort)/catalog_db?authSource=admin
+MONGODB_DATABASE=catalog_db
 REDIS_HOST=$($Net.RedisHost)
 REDIS_PORT=$($Net.RedisPort)
+REDIS_ADDR=$($Net.RedisHost):$($Net.RedisPort)
 REDIS_PASSWORD=$($Common.RedisPassword)
 NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "catalog\.env") -Content $catalogEnv
 
-# 6. cart/.env
+# 4. cart/.env
 $cartEnv = @"
-SERVER_PORT=3003
+SERVER_PORT=3004
+PORT=3004
 REDIS_HOST=$($Net.RedisHost)
 REDIS_PORT=$($Net.RedisPort)
 REDIS_PASSWORD=$($Common.RedisPassword)
@@ -234,10 +212,11 @@ JWT_SECRET=$($Common.JwtAccessSecret)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "cart\.env") -Content $cartEnv
 
-# 7. order/.env
+# 5. order/.env
 $orderEnv = @"
 SERVER_HOST=0.0.0.0
-SERVER_PORT=3004
+SERVER_PORT=3005
+PORT=3005
 
 DB_HOST=$($Net.PostgresHost)
 DB_PORT=$($Net.PostgresPort)
@@ -249,16 +228,22 @@ DB_SSLMODE=disable
 NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 NATS_STREAM_NAME=ORDERS
 
-INVENTORY_GRPC_ADDRESS=localhost:50051
+REDIS_URL=$($Net.RedisHost):$($Net.RedisPort)
+REDIS_PASSWORD=$($Common.RedisPassword)
+
+INVENTORY_GRPC_ADDRESS=localhost:50052
 INVENTORY_TIMEOUT=5
 PAYMENT_SERVICE_URL=http://localhost:3007
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "order\.env") -Content $orderEnv
 
-# 8. inventory/.env
+# 6. inventory/.env
 $invEnv = @"
 SERVER_PORT=3006
-GRPC_PORT=50051
+PORT=3006
+GRPC_PORT=50052
+INVENTORY_APP_PORT=3006
+INVENTORY_APP_GRPC_PORT=50052
 
 DB_HOST=$($Net.PostgresHost)
 DB_PORT=$($Net.PostgresPort)
@@ -267,16 +252,28 @@ DB_PASSWORD=$($Common.PostgresPassword)
 DB_NAME=inventory_db
 DB_SSLMODE=disable
 
+INVENTORY_POSTGRES_HOST=$($Net.PostgresHost)
+INVENTORY_POSTGRES_PORT=$($Net.PostgresPort)
+INVENTORY_POSTGRES_USER=$($Common.PostgresUser)
+INVENTORY_POSTGRES_PASSWORD=$($Common.PostgresPassword)
+INVENTORY_POSTGRES_DATABASE=inventory_db
+INVENTORY_POSTGRES_SSL_MODE=disable
+
 REDIS_HOST=$($Net.RedisHost)
 REDIS_PORT=$($Net.RedisPort)
 REDIS_PASSWORD=$($Common.RedisPassword)
+INVENTORY_REDIS_ADDR=$($Net.RedisHost):$($Net.RedisPort)
+INVENTORY_REDIS_PASSWORD=$($Common.RedisPassword)
+
 NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "inventory\.env") -Content $invEnv
 
-# 9. payment/.env
+# 7. payment/.env
 $payEnv = @"
 SERVER_PORT=3007
+PORT=3007
+DATABASE_URL=postgres://$($Common.PostgresUser):$($Common.PostgresPassword)@$($Net.PostgresHost):$($Net.PostgresPort)/payment_db?sslmode=disable
 DB_HOST=$($Net.PostgresHost)
 DB_PORT=$($Net.PostgresPort)
 DB_USER=$($Common.PostgresUser)
@@ -291,9 +288,11 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "payment\.env") -Content $payEnv
 
-# 10. logistic/.env
+# 8. logistic/.env
 $logEnv = @"
 SERVER_PORT=3008
+PORT=3008
+DATABASE_URL=postgres://$($Common.PostgresUser):$($Common.PostgresPassword)@$($Net.PostgresHost):$($Net.PostgresPort)/logistics_db?sslmode=disable
 DB_HOST=$($Net.PostgresHost)
 DB_PORT=$($Net.PostgresPort)
 DB_USER=$($Common.PostgresUser)
@@ -301,6 +300,7 @@ DB_PASSWORD=$($Common.PostgresPassword)
 DB_NAME=logistics_db
 DB_SSLMODE=disable
 
+REDIS_URL=redis://:$($Common.RedisPassword)@$($Net.RedisHost):$($Net.RedisPort)/0
 REDIS_HOST=$($Net.RedisHost)
 REDIS_PORT=$($Net.RedisPort)
 REDIS_PASSWORD=$($Common.RedisPassword)
@@ -308,9 +308,19 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "logistic\.env") -Content $logEnv
 
-# 11. campaign/.env
+# 9. campaign/.env
 $campEnv = @"
 SERVER_PORT=3009
+PORT=3009
+APP_PORT=3009
+APP_GRPC_PORT=50059
+POSTGRES_HOST=$($Net.PostgresHost)
+POSTGRES_PORT=$($Net.PostgresPort)
+POSTGRES_USER=$($Common.PostgresUser)
+POSTGRES_PASSWORD=$($Common.PostgresPassword)
+POSTGRES_DATABASE=campaign_db
+POSTGRES_SSL_MODE=disable
+
 DB_HOST=$($Net.PostgresHost)
 DB_PORT=$($Net.PostgresPort)
 DB_USER=$($Common.PostgresUser)
@@ -325,31 +335,42 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "campaign\.env") -Content $campEnv
 
-# 12. notification/.env
+# 10. notification/.env
 $notifEnv = @"
 SERVER_PORT=3010
+PORT=3010
+APP_PORT=3010
 MONGO_URI=mongodb://$($Common.MongoUser):$($Common.MongoPassword)@$($Net.MongoHost):$($Net.MongoPort)/notification_db?authSource=admin
+MONGODB_URI=mongodb://$($Common.MongoUser):$($Common.MongoPassword)@$($Net.MongoHost):$($Net.MongoPort)/notification_db?authSource=admin
+MONGODB_DATABASE=notification_db
 RABBITMQ_URL=amqp://$($Common.RabbitUser):$($Common.RabbitPassword)@$($Net.RabbitHost):$($Net.RabbitPort)/
 NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "notification\.env") -Content $notifEnv
 
-# 13. analytic/.env
+# 11. analytic/.env
 $anaEnv = @"
 SERVER_PORT=3014
+PORT=3014
 CLICKHOUSE_HOST=$($Net.ClickHost)
 CLICKHOUSE_PORT=$($Net.ClickPortNative)
 CLICKHOUSE_DATABASE=analytics
+CLICKHOUSE_USERNAME=$($Common.ClickHouseUser)
 CLICKHOUSE_USER=$($Common.ClickHouseUser)
 CLICKHOUSE_PASSWORD=$($Common.ClickHousePassword)
 RABBITMQ_URL=amqp://$($Common.RabbitUser):$($Common.RabbitPassword)@$($Net.RabbitHost):$($Net.RabbitPort)/
+NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "analytic\.env") -Content $anaEnv
 
-# 14. media/.env
+# 12. media/.env
 $mediaEnv = @"
 SERVER_PORT=3011
+PORT=3011
+APP_PORT=3011
 MINIO_ENDPOINT=$($Net.MinioHost):$($Net.MinioPort)
+MINIO_ACCESS_KEY_ID=$($Common.MinioUser)
+MINIO_SECRET_ACCESS_KEY=$($Common.MinioPassword)
 MINIO_ACCESS_KEY=$($Common.MinioUser)
 MINIO_SECRET_KEY=$($Common.MinioPassword)
 MINIO_USE_SSL=false
@@ -358,21 +379,30 @@ NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "media\.env") -Content $mediaEnv
 
-# 15. review/.env
+# 13. review/.env
 $revEnv = @"
 SERVER_PORT=3012
+PORT=3012
+APP_PORT=3012
 MONGO_URI=mongodb://$($Common.MongoUser):$($Common.MongoPassword)@$($Net.MongoHost):$($Net.MongoPort)/review_db?authSource=admin
+MONGODB_URI=mongodb://$($Common.MongoUser):$($Common.MongoPassword)@$($Net.MongoHost):$($Net.MongoPort)/review_db?authSource=admin
 REDIS_HOST=$($Net.RedisHost)
 REDIS_PORT=$($Net.RedisPort)
 REDIS_PASSWORD=$($Common.RedisPassword)
 JWT_SECRET=$($Common.JwtAccessSecret)
+NATS_URL=nats://$($Net.NatsHost):$($Net.NatsPort)
 "@
 Set-EnvFile -FilePath (Join-Path $RootDir "review\.env") -Content $revEnv
 
-# 16. search/.env
+# 14. search/.env
 $searchEnv = @"
 SERVER_PORT=3013
+PORT=3013
+APP_PORT=3013
+API_PORT=3013
 ELASTICSEARCH_URL=http://$($Net.ElasticHost):$($Net.ElasticPort)
+ELASTIC_ADDRESSES=http://$($Net.ElasticHost):$($Net.ElasticPort)
+REDIS_ADDR=$($Net.RedisHost):$($Net.RedisPort)
 REDIS_HOST=$($Net.RedisHost)
 REDIS_PORT=$($Net.RedisPort)
 REDIS_PASSWORD=$($Common.RedisPassword)

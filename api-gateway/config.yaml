@@ -25,12 +25,12 @@ internal:
 
 redis:
   host: "localhost"
-  port: 6379
-  password: ""
+  port: 16379
+  password: "tafu_redis_2024"
   db: 0
 
 jwt:
-  secret: "your-super-secret-key-change-in-production"
+  secret: "nexus_enterprise_super_secret_jwt_access_token_32chars_min"
   issuer: "api-gateway"
 
 rate_limit:

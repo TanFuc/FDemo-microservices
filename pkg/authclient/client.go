@@ -72,8 +72,11 @@ func (c *Client) CheckPermission(ctx context.Context, token, resource, action st
 	}
 
 	var resp CheckPermissionResponse
-	err := c.conn.Invoke(ctx, "/auth.AuthService/CheckPermission", req, &resp)
+	err := c.conn.Invoke(ctx, "/auth.v1.AuthService/CheckPermission", req, &resp)
 	if err != nil {
+		if err2 := c.conn.Invoke(ctx, "/auth.AuthService/CheckPermission", req, &resp); err2 == nil {
+			return &resp, nil
+		}
 		return nil, fmt.Errorf("grpc CheckPermission failed: %w", err)
 	}
 
@@ -88,8 +91,11 @@ func (c *Client) ValidateToken(ctx context.Context, token string) (*ValidateToke
 	req := &ValidateTokenRequest{Token: token}
 
 	var resp ValidateTokenResponse
-	err := c.conn.Invoke(ctx, "/auth.AuthService/ValidateToken", req, &resp)
+	err := c.conn.Invoke(ctx, "/auth.v1.AuthService/VerifyToken", req, &resp)
 	if err != nil {
+		if err2 := c.conn.Invoke(ctx, "/auth.AuthService/ValidateToken", req, &resp); err2 == nil {
+			return &resp, nil
+		}
 		return nil, fmt.Errorf("grpc ValidateToken failed: %w", err)
 	}
 

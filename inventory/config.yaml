@@ -1,8 +1,8 @@
 app:
   name: inventory-service
   env: development
-  port: "8083"
-  grpc_port: "50053"
+  port: "3006"
+  grpc_port: "50052"
   debug: true
   read_timeout: 10s
   write_timeout: 10s
@@ -10,15 +10,15 @@ app:
 
 postgres:
   host: localhost
-  port: 5432
-  user: postgres
-  password: postgres
-  database: inventory
+  port: 15432
+  user: tafu_admin
+  password: tafu_secret_2024
+  database: inventory_db
   ssl_mode: disable
 
 redis:
-  addr: localhost:6379
-  password: ""
+  addr: localhost:16379
+  password: tafu_redis_2024
   db: 0
 
 auth:

@@ -45,7 +45,7 @@ func (r *Router) Setup() *fiber.App {
 		AllowOrigins:     "*",
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-User-ID,X-Internal-Service-Key,X-Request-ID",
-		AllowCredentials: true,
+		AllowCredentials: false,
 	}))
 	r.app.Use(logger.New())
 	r.app.Use(recover.New())

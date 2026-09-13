@@ -88,3 +88,10 @@ compose-validate: ## Validate syntax and integrity of all Docker Compose manifes
 	docker compose -f $(PROD_COMPOSE) config --quiet
 	docker compose -f $(OBS_COMPOSE) config --quiet
 	@echo "All Docker Compose configurations are valid."
+
+# ------------------------------------------------------------------------------
+# Protocol Buffers & gRPC Code Generation
+# ------------------------------------------------------------------------------
+.PHONY: proto
+proto: ## Compile all Protocol Buffer (.proto) definitions across all services
+	@bash scripts/generate-protos.sh

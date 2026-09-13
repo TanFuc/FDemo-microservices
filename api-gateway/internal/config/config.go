@@ -2,6 +2,8 @@ package config
 
 import (
 	"os"
+	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -60,6 +62,9 @@ type RateLimitConfig struct {
 }
 
 func Load(path string) (*Config, error) {
+	loadDotEnv(".env")
+	loadDotEnv("../.env")
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -75,7 +80,39 @@ func Load(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+func loadDotEnv(path string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	lines := strings.Split(string(data), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			k := strings.TrimSpace(parts[0])
+			v := strings.TrimSpace(parts[1])
+			v = strings.Trim(v, "\"'")
+			if os.Getenv(k) == "" {
+				os.Setenv(k, v)
+			}
+		}
+	}
+}
+
 func (c *Config) applyEnvOverrides() {
+	if p := os.Getenv("PORT"); p != "" {
+		if val, err := strconv.Atoi(p); err == nil {
+			c.Server.Port = val
+		}
+	} else if p := os.Getenv("SERVER_PORT"); p != "" {
+		if val, err := strconv.Atoi(p); err == nil {
+			c.Server.Port = val
+		}
+	}
 	if v := os.Getenv("CATALOG_URL"); v != "" {
 		c.Services.CatalogURL = v
 	}
@@ -123,6 +160,11 @@ func (c *Config) applyEnvOverrides() {
 	}
 	if v := os.Getenv("REDIS_HOST"); v != "" {
 		c.Redis.Host = v
+	}
+	if v := os.Getenv("REDIS_PORT"); v != "" {
+		if val, err := strconv.Atoi(v); err == nil {
+			c.Redis.Port = val
+		}
 	}
 	if v := os.Getenv("REDIS_PASSWORD"); v != "" {
 		c.Redis.Password = v

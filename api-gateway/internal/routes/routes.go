@@ -153,7 +153,8 @@ func (r *Router) setupProfileRoutes() {
 func (r *Router) setupPaymentRoutes() {
 	payment := r.app.Group("/api/v1/payments")
 
-	payment.Post("/webhook/:provider", r.createProxy(r.cfg.Services.PaymentURL))
+	payment.Post("/webhook/:provider", r.createProxyWithRewrite(r.cfg.Services.PaymentURL, "/api/v1/payments/webhook", "/api/v1/webhooks"))
+	r.app.Post("/api/v1/webhooks/:provider", r.createProxy(r.cfg.Services.PaymentURL))
 
 	protected := payment.Group("",
 		middleware.JWTAuth(&r.cfg.JWT),
@@ -167,13 +168,14 @@ func (r *Router) setupPaymentRoutes() {
 func (r *Router) setupLogisticRoutes() {
 	logistics := r.app.Group("/api/v1/logistics")
 
-	logistics.Post("/webhook/:provider", r.createProxy(r.cfg.Services.LogisticURL))
+	logistics.Post("/webhook/:provider", r.createProxyWithRewrite(r.cfg.Services.LogisticURL, "/api/v1/logistics/webhook", "/api/v1/webhooks"))
+	logistics.Post("/calculate-fee", r.createProxyWithRewrite(r.cfg.Services.LogisticURL, "/api/v1/logistics", "/api/v1/shipping"))
 
 	protected := logistics.Group("",
 		middleware.JWTAuth(&r.cfg.JWT),
 		middleware.RateLimiter(r.storage, &r.cfg.RateLimit),
 	)
-	protected.Post("/calculate-fee", r.createProxy(r.cfg.Services.LogisticURL))
+	protected.Post("/calculate-fee", r.createProxyWithRewrite(r.cfg.Services.LogisticURL, "/api/v1/logistics", "/api/v1/shipping"))
 	protected.Post("/shipments", r.createProxy(r.cfg.Services.LogisticURL))
 	protected.Get("/shipments/:id", r.createProxy(r.cfg.Services.LogisticURL))
 	protected.Get("/shipments/order/:orderId", r.createProxy(r.cfg.Services.LogisticURL))
@@ -186,7 +188,8 @@ func (r *Router) setupMediaRoutes() {
 		middleware.RateLimiter(r.storage, &r.cfg.RateLimit),
 	)
 
-	media.Post("/presigned-url", r.createProxy(r.cfg.Services.MediaURL))
+	media.Post("/presigned-url", r.createProxyWithRewrite(r.cfg.Services.MediaURL, "/api/v1/media/presigned-url", "/api/v1/media/upload-url"))
+	media.Post("/upload-url", r.createProxy(r.cfg.Services.MediaURL))
 	media.Post("/confirm", r.createProxy(r.cfg.Services.MediaURL))
 	media.Delete("/:id", r.createProxy(r.cfg.Services.MediaURL))
 	media.Get("/:id", r.createProxy(r.cfg.Services.MediaURL))
@@ -221,8 +224,9 @@ func (r *Router) setupCampaignRoutes() {
 	campaign := r.app.Group("/api/v1/campaigns")
 
 	campaign.Get("", r.createProxy(r.cfg.Services.CampaignURL))
+	campaign.Get("/active", r.createProxy(r.cfg.Services.CampaignURL))
 	campaign.Get("/:id", r.createProxy(r.cfg.Services.CampaignURL))
-	campaign.Get("/vouchers/public", r.createProxy(r.cfg.Services.CampaignURL))
+	campaign.Get("/vouchers/public", r.createProxyWithRewrite(r.cfg.Services.CampaignURL, "/api/v1/campaigns/vouchers/public", "/api/v1/campaigns/active"))
 
 	protected := campaign.Group("",
 		middleware.JWTAuth(&r.cfg.JWT),
@@ -247,7 +251,8 @@ func (r *Router) setupAnalyticRoutes() {
 	analytic.Get("/sales", r.createProxy(r.cfg.Services.AnalyticURL))
 	analytic.Get("/products/:productId", r.createProxy(r.cfg.Services.AnalyticURL))
 	analytic.Get("/users/:userId", r.createProxy(r.cfg.Services.AnalyticURL))
-	analytic.Post("/events", r.createProxy(r.cfg.Services.AnalyticURL))
+	analytic.Post("/events", r.createProxyWithRewrite(r.cfg.Services.AnalyticURL, "/api/v1/analytics/events", "/analytics/collect"))
+	analytic.Post("/collect", r.createProxyWithRewrite(r.cfg.Services.AnalyticURL, "/api/v1/analytics/collect", "/analytics/collect"))
 }
 
 func (r *Router) setupInventoryRoutes() {
