@@ -35,6 +35,7 @@ type ServicesConfig struct {
 	AnalyticURL     string `yaml:"analytic_url"`
 	InventoryURL    string `yaml:"inventory_url"`
 	NotificationURL string `yaml:"notification_url"`
+	RealtimeURL     string `yaml:"realtime_url"`
 }
 
 type InternalConfig struct {
@@ -116,6 +117,9 @@ func (c *Config) applyEnvOverrides() {
 	}
 	if v := os.Getenv("NOTIFICATION_URL"); v != "" {
 		c.Services.NotificationURL = v
+	}
+	if v := os.Getenv("REALTIME_URL"); v != "" {
+		c.Services.RealtimeURL = v
 	}
 	if v := os.Getenv("REDIS_HOST"); v != "" {
 		c.Redis.Host = v

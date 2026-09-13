@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"strings"
+
 	"microservices/api-gateway/internal/config"
 	"microservices/api-gateway/internal/middleware"
 
@@ -38,6 +40,7 @@ func (r *Router) Setup() {
 	r.setupAnalyticRoutes()
 	r.setupInventoryRoutes()
 	r.setupNotificationRoutes()
+	r.setupRealtimeRoutes()
 }
 
 func (r *Router) setupHealthCheck() {
@@ -50,16 +53,20 @@ func (r *Router) setupHealthCheck() {
 }
 
 func (r *Router) setupIdentityRoutes() {
+	// Support /api/v1/identity/auth/* with rewrite to /api/v1/auth/*
 	identity := r.app.Group("/api/v1/identity")
+	identity.All("/auth/*", r.createProxyWithRewrite(r.cfg.Services.IdentityURL, "/api/v1/identity/auth", "/api/v1/auth"))
 
-	identity.All("/auth/*", r.createProxy(r.cfg.Services.IdentityURL))
+	// Also support direct /api/v1/auth/* for seamless microservice contract parity
+	authDirect := r.app.Group("/api/v1/auth")
+	authDirect.All("/*", r.createProxy(r.cfg.Services.IdentityURL))
 
 	protected := identity.Group("",
 		middleware.JWTAuth(&r.cfg.JWT),
 		middleware.RateLimiter(r.storage, &r.cfg.RateLimit),
 	)
-	protected.All("/users/*", r.createProxy(r.cfg.Services.IdentityURL))
-	protected.All("/profile/*", r.createProxy(r.cfg.Services.IdentityURL))
+	protected.All("/users/*", r.createProxyWithRewrite(r.cfg.Services.IdentityURL, "/api/v1/identity/users", "/api/v1/users"))
+	protected.All("/profile/*", r.createProxyWithRewrite(r.cfg.Services.IdentityURL, "/api/v1/identity/profile", "/api/v1/profile"))
 }
 
 func (r *Router) setupCatalogRoutes() {
@@ -96,13 +103,34 @@ func (r *Router) setupOrderRoutes() {
 		middleware.JWTAuth(&r.cfg.JWT),
 		middleware.RateLimiter(r.storage, &r.cfg.RateLimit),
 	)
-
 	order.All("/*", r.createProxy(r.cfg.Services.OrderURL))
+
+	// Singular route alias for client contract compatibility
+	orderSingular := r.app.Group("/api/v1/order",
+		middleware.JWTAuth(&r.cfg.JWT),
+		middleware.RateLimiter(r.storage, &r.cfg.RateLimit),
+	)
+	orderSingular.All("/*", r.createProxyWithRewrite(r.cfg.Services.OrderURL, "/api/v1/order", "/api/v1/orders"))
 }
 
 func (r *Router) createProxy(targetURL string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		url := targetURL + c.OriginalURL()
+		return proxy.Do(c, url)
+	}
+}
+
+func (r *Router) createProxyWithRewrite(targetURL, stripPrefix, addPrefix string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		orig := c.OriginalURL()
+		rewritten := orig
+		if stripPrefix != "" && strings.HasPrefix(orig, stripPrefix) {
+			rewritten = strings.TrimPrefix(orig, stripPrefix)
+			if addPrefix != "" {
+				rewritten = addPrefix + rewritten
+			}
+		}
+		url := targetURL + rewritten
 		return proxy.Do(c, url)
 	}
 }
@@ -245,4 +273,22 @@ func (r *Router) setupNotificationRoutes() {
 	notification.Put("/read-all", r.createProxy(r.cfg.Services.NotificationURL))
 	notification.Get("/preferences", r.createProxy(r.cfg.Services.NotificationURL))
 	notification.Put("/preferences", r.createProxy(r.cfg.Services.NotificationURL))
+}
+
+func (r *Router) setupRealtimeRoutes() {
+	wsHandler := func(c *fiber.Ctx) error {
+		if r.cfg.Services.RealtimeURL == "" {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "Realtime WebSocket service is currently unavailable",
+			})
+		}
+		target := r.cfg.Services.RealtimeURL + "/ws"
+		if qs := c.Request().URI().QueryString(); len(qs) > 0 {
+			target += "?" + string(qs)
+		}
+		return proxy.Do(c, target)
+	}
+
+	r.app.Get("/api/v1/ws", wsHandler)
+	r.app.Get("/ws", wsHandler)
 }
