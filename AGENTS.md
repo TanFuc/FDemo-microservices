@@ -14,6 +14,20 @@ This file is the operating guide for AI agents working in this repository.
 Read `CLAW_PROJECT_GUIDE.md` before making architecture, infrastructure, or
 cross-service changes.
 
+## Documentation Language Requirement (STRICT ENGLISH ONLY)
+
+- **ALL documentation, markdown files, technical guides, run logs, architecture records, specifications, commit messages, and code comments MUST be written exclusively in English.**
+- **No Vietnamese or any other non-English language is permitted in any repository documentation or files.**
+
+## Mandatory Pre-Execution Protocol
+
+**MANDATORY RULE**: Prior to executing ANY command involving code (`run_command`, terminal) or modifying any file (`replace_file_content`, `write_to_file`), the AI Agent **MUST ALWAYS BRIEFLY REVIEW** the documents in `run-context/`:
+1. `run-context/rule.md`: Safety constraints, English-only rule, layered architecture, and WSL2/PowerShell execution guidelines.
+2. `run-context/context.md`: Architectural map, microservices directory, and active database/cache ports.
+3. `run-context/results/latest.md`: Latest execution outcome, unresolved issues, and status of previous runs.
+
+After completing an execution run or code change, the Agent **MUST** update the outcome in `run-context/results/latest.md` (in English) and archive a historical snapshot in `run-context/results/history/`.
+
 ## Source Of Truth
 
 Use this priority when sources disagree:
